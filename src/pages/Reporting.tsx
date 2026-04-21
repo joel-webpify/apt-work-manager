@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader, PageBody } from "@/components/layout/PageShell";
+import { adsCampaigns } from "@/data/mockData";
 
 const tabs = ["Revenue", "Pipeline", "Marketing", "Customers", "Google Ads"] as const;
 type Tab = typeof tabs[number];
