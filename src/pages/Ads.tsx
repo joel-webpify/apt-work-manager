@@ -186,9 +186,12 @@ function EmptyState({ label }: { label: string }) {
   );
 }
 
-function CampaignCard({ c }: { c: Campaign }) {
+function CampaignCard({ c, onClick }: { c: Campaign; onClick: () => void }) {
   return (
-    <div className="border-hairline rounded-lg bg-card p-4">
+    <button
+      onClick={onClick}
+      className="border-hairline rounded-lg bg-card p-4 text-left hover:bg-surface-hover transition-colors"
+    >
       <div className="flex items-start justify-between mb-3">
         <div>
           <div className="text-sm font-medium">{c.name}</div>
@@ -202,7 +205,7 @@ function CampaignCard({ c }: { c: Campaign }) {
         <Stat label="Cost per lead" value={`£${c.costPerLead}`} />
         <Stat label="Jobs attributed" value={c.jobsAttributed.toString()} />
       </div>
-    </div>
+    </button>
   );
 }
 
