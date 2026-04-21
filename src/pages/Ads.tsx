@@ -1,15 +1,55 @@
+import { useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { adsCampaigns } from "@/data/mockData";
+import { adsCampaigns as initialCampaigns } from "@/data/mockData";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { toast } from "sonner";
+
+type Campaign = typeof initialCampaigns[number];
 
 export default function Ads() {
-  const lsa = adsCampaigns.filter((c) => c.type === "LSA");
-  const pmax = adsCampaigns.filter((c) => c.type === "PMax");
+  const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({
+    name: "",
+    type: "LSA" as "LSA" | "PMax",
+    weeklySpend: "",
+  });
+
+  const lsa = campaigns.filter((c) => c.type === "LSA");
+  const pmax = campaigns.filter((c) => c.type === "PMax");
+
+  const resetForm = () => setForm({ name: "", type: "LSA", weeklySpend: "" });
+
+  const handleCreate = () => {
+    if (!form.name.trim() || !form.weeklySpend) {
+      toast.error("Please fill in name and weekly spend");
+      return;
+    }
+    const newCampaign: Campaign = {
+      id: `ad${Date.now()}`,
+      name: form.name.trim(),
+      type: form.type,
+      status: "Active",
+      weeklySpend: Number(form.weeklySpend),
+      leads: 0,
+      costPerLead: 0,
+      jobsAttributed: 0,
+    };
+    setCampaigns((prev) => [...prev, newCampaign]);
+    toast.success("Campaign created");
+    setOpen(false);
+    resetForm();
+  };
 
   return (
     <>
       <PageHeader
         title="Google Ads"
         description="Track LSA and Performance Max campaigns alongside your CRM jobs"
+        actions={<Btn variant="primary" onClick={() => setOpen(true)}>New campaign</Btn>}
       />
       <PageBody>
         <div className="border-hairline rounded-lg bg-card p-4 mb-6 flex items-center justify-between">
@@ -21,15 +61,23 @@ export default function Ads() {
         </div>
 
         <Section title="Local Service Ads">
-          <div className="grid grid-cols-2 gap-3">
-            {lsa.map((c) => <CampaignCard key={c.id} c={c} />)}
-          </div>
+          {lsa.length ? (
+            <div className="grid grid-cols-2 gap-3">
+              {lsa.map((c) => <CampaignCard key={c.id} c={c} />)}
+            </div>
+          ) : (
+            <EmptyState label="No LSA campaigns yet" />
+          )}
         </Section>
 
         <Section title="Performance Max">
-          <div className="grid grid-cols-2 gap-3">
-            {pmax.map((c) => <CampaignCard key={c.id} c={c} />)}
-          </div>
+          {pmax.length ? (
+            <div className="grid grid-cols-2 gap-3">
+              {pmax.map((c) => <CampaignCard key={c.id} c={c} />)}
+            </div>
+          ) : (
+            <EmptyState label="No PMax campaigns yet" />
+          )}
         </Section>
 
         <div className="mt-6 border-hairline rounded-lg bg-card">
@@ -51,6 +99,50 @@ export default function Ads() {
           </div>
         </div>
       </PageBody>
+
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-base font-medium">New campaign</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="name" className="text-xs text-muted-foreground font-normal">Campaign name</Label>
+              <Input
+                id="name"
+                placeholder="e.g. Bristol electricians — LSA"
+                value={form.name}
+                onChange={(e) => setForm({ ...form, name: e.target.value })}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground font-normal">Campaign type</Label>
+              <Select value={form.type} onValueChange={(v: "LSA" | "PMax") => setForm({ ...form, type: v })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="LSA">Local Service Ads</SelectItem>
+                  <SelectItem value="PMax">Performance Max</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="spend" className="text-xs text-muted-foreground font-normal">Weekly spend (£)</Label>
+              <Input
+                id="spend"
+                type="number"
+                min="0"
+                placeholder="250"
+                value={form.weeklySpend}
+                onChange={(e) => setForm({ ...form, weeklySpend: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Btn onClick={() => setOpen(false)}>Cancel</Btn>
+            <Btn variant="primary" onClick={handleCreate}>Create campaign</Btn>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
@@ -64,7 +156,15 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function CampaignCard({ c }: { c: typeof adsCampaigns[number] }) {
+function EmptyState({ label }: { label: string }) {
+  return (
+    <div className="border-hairline rounded-lg bg-card p-6 text-sm text-muted-foreground text-center">
+      {label}
+    </div>
+  );
+}
+
+function CampaignCard({ c }: { c: Campaign }) {
   return (
     <div className="border-hairline rounded-lg bg-card p-4">
       <div className="flex items-start justify-between mb-3">
