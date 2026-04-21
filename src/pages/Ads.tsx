@@ -85,7 +85,7 @@ export default function Ads() {
         <Section title="Local Service Ads">
           {lsa.length ? (
             <div className="grid grid-cols-2 gap-3">
-              {lsa.map((c) => <CampaignCard key={c.id} c={c} />)}
+              {lsa.map((c) => <CampaignCard key={c.id} c={c} onClick={() => setSelected(c)} />)}
             </div>
           ) : (
             <EmptyState label="No LSA campaigns yet" />
@@ -95,7 +95,7 @@ export default function Ads() {
         <Section title="Performance Max">
           {pmax.length ? (
             <div className="grid grid-cols-2 gap-3">
-              {pmax.map((c) => <CampaignCard key={c.id} c={c} />)}
+              {pmax.map((c) => <CampaignCard key={c.id} c={c} onClick={() => setSelected(c)} />)}
             </div>
           ) : (
             <EmptyState label="No PMax campaigns yet" />
