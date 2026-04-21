@@ -33,6 +33,7 @@ function getAttributedJobs(campaign: Campaign) {
 export default function Ads() {
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
   const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<Campaign | null>(null);
   const [form, setForm] = useState({
     name: "",
     type: "LSA" as "LSA" | "PMax",
