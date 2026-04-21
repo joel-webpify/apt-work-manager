@@ -1,10 +1,45 @@
-import { useState } from "react";
-import { PageHeader, PageBody, Btn, StatusDot } from "@/components/layout/PageShell";
+import { useState, type DragEvent } from "react";
+import { PageHeader, Btn, StatusDot } from "@/components/layout/PageShell";
 import { Plus, X, Phone, Mail, MapPin } from "lucide-react";
-import { jobs, stages, stageColors, type Job } from "@/data/mockData";
+import { jobs as initialJobs, stages, stageColors, type Job, type PipelineStage } from "@/data/mockData";
 
 export default function Pipeline() {
+  const [jobList, setJobList] = useState<Job[]>(initialJobs);
   const [selected, setSelected] = useState<Job | null>(null);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
+
+  const handleDragStart = (e: DragEvent<HTMLButtonElement>, jobId: string) => {
+    setDraggingId(jobId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", jobId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggingId(null);
+    setDragOverStage(null);
+  };
+
+  const handleDragOver = (e: DragEvent<HTMLDivElement>, stage: PipelineStage) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    if (dragOverStage !== stage) setDragOverStage(stage);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>, stage: PipelineStage) => {
+    e.preventDefault();
+    const jobId = e.dataTransfer.getData("text/plain") || draggingId;
+    if (!jobId) return;
+    setJobList((prev) =>
+      prev.map((j) =>
+        j.id === jobId && j.stage !== stage
+          ? { ...j, stage, daysInStage: 0 }
+          : j
+      )
+    );
+    setDraggingId(null);
+    setDragOverStage(null);
+  };
 
   return (
     <>
@@ -16,22 +51,38 @@ export default function Pipeline() {
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <div className="flex gap-3 px-8 py-6 h-full min-w-max">
           {stages.map((stage) => {
-            const stageJobs = jobs.filter((j) => j.stage === stage);
+            const stageJobs = jobList.filter((j) => j.stage === stage);
             const total = stageJobs.reduce((s, j) => s + j.value, 0);
+            const isOver = dragOverStage === stage;
             return (
-              <div key={stage} className="w-[260px] shrink-0 flex flex-col">
+              <div
+                key={stage}
+                className="w-[260px] shrink-0 flex flex-col"
+                onDragOver={(e) => handleDragOver(e, stage)}
+                onDragLeave={() => setDragOverStage((s) => (s === stage ? null : s))}
+                onDrop={(e) => handleDrop(e, stage)}
+              >
                 <div className="flex items-center gap-2 mb-2 px-1">
                   <StatusDot color={stageColors[stage]} />
                   <span className="text-sm font-medium">{stage}</span>
                   <span className="text-xs text-muted-foreground">{stageJobs.length}</span>
                   <span className="ml-auto text-xs text-muted-foreground tabular-nums">£{total}</span>
                 </div>
-                <div className="flex-1 space-y-2 overflow-y-auto pb-4">
+                <div
+                  className={`flex-1 space-y-2 overflow-y-auto pb-4 rounded-lg transition-colors ${
+                    isOver ? "bg-surface-hover" : ""
+                  }`}
+                >
                   {stageJobs.map((job) => (
                     <button
                       key={job.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, job.id)}
+                      onDragEnd={handleDragEnd}
                       onClick={() => setSelected(job)}
-                      className="w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-colors relative overflow-hidden"
+                      className={`w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-all relative overflow-hidden cursor-grab active:cursor-grabbing ${
+                        draggingId === job.id ? "opacity-40" : ""
+                      }`}
                       style={{ boxShadow: "none" }}
                     >
                       <div
