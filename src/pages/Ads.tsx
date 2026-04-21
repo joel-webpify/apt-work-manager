@@ -165,6 +165,88 @@ export default function Ads() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sheet open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
+        <SheetContent className="p-0 w-full sm:max-w-xl flex flex-col">
+          {selected && <CampaignDrawer campaign={selected} onClose={() => setSelected(null)} />}
+        </SheetContent>
+      </Sheet>
+    </>
+  );
+}
+
+function CampaignDrawer({ campaign, onClose }: { campaign: Campaign; onClose: () => void }) {
+  const attributed = getAttributedJobs(campaign);
+  const totalValue = attributed.reduce((sum, a) => sum + a.job.value, 0);
+
+  return (
+    <>
+      <div className="px-6 h-16 border-b-hairline flex items-center justify-between shrink-0">
+        <div>
+          <div className="text-base font-medium">{campaign.name}</div>
+          <div className="text-xs text-muted-foreground mt-0.5">{campaign.type} · {campaign.status}</div>
+        </div>
+        <button
+          onClick={onClose}
+          className="h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-surface-hover text-muted-foreground"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        <div className="px-6 py-5 border-b-hairline grid grid-cols-4 gap-4">
+          <Stat label="Weekly spend" value={`£${campaign.weeklySpend}`} />
+          <Stat label="Leads" value={campaign.leads.toString()} />
+          <Stat label="Cost per lead" value={`£${campaign.costPerLead}`} />
+          <Stat label="Jobs attributed" value={campaign.jobsAttributed.toString()} />
+        </div>
+
+        <div className="px-6 py-5">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-medium">View attributed jobs</h3>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {attributed.length} {attributed.length === 1 ? "job" : "jobs"} · £{totalValue.toLocaleString()}
+            </span>
+          </div>
+
+          {attributed.length ? (
+            <div className="border-hairline rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-surface text-xs text-muted-foreground">
+                    <th className="text-left font-normal px-3 h-9">Customer</th>
+                    <th className="text-left font-normal px-3 h-9">Service</th>
+                    <th className="text-left font-normal px-3 h-9">Stage</th>
+                    <th className="text-left font-normal px-3 h-9">Source</th>
+                    <th className="text-right font-normal px-3 h-9">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {attributed.map(({ job, source }) => (
+                    <tr key={job.id} className="border-t-hairline hover:bg-surface-hover">
+                      <td className="px-3 h-10 font-medium">{job.customer}</td>
+                      <td className="px-3 h-10 text-muted-foreground">{job.service}</td>
+                      <td className="px-3 h-10">
+                        <Pill tone={job.stage === "Paid" ? "success" : job.stage === "Completed" ? "success" : "info"}>
+                          {job.stage}
+                        </Pill>
+                      </td>
+                      <td className="px-3 h-10 text-muted-foreground text-xs">{source}</td>
+                      <td className="px-3 h-10 text-right tabular-nums">£{job.value.toLocaleString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="border-hairline rounded-lg bg-card p-6 text-sm text-muted-foreground text-center">
+              No jobs attributed to this campaign yet
+            </div>
+          )}
+        </div>
+      </div>
     </>
   );
 }
