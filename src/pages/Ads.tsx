@@ -1,13 +1,34 @@
 import { useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { adsCampaigns as initialCampaigns } from "@/data/mockData";
+import { adsCampaigns as initialCampaigns, jobs, contacts } from "@/data/mockData";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { X } from "lucide-react";
 
 type Campaign = typeof initialCampaigns[number];
+
+// Map a campaign type to the contact lead-source labels that count as attributed
+const sourceMatchers: Record<Campaign["type"], string[]> = {
+  LSA: ["Local Service Ads", "Google LSA"],
+  PMax: ["Google Ads", "Performance Max"],
+};
+
+function getAttributedJobs(campaign: Campaign) {
+  const matchers = sourceMatchers[campaign.type];
+  const matchingContactIds = new Set(
+    contacts.filter((c) => matchers.includes(c.source)).map((c) => c.id)
+  );
+  return jobs
+    .filter((j) => matchingContactIds.has(j.contactId))
+    .map((j) => {
+      const contact = contacts.find((c) => c.id === j.contactId);
+      return { job: j, source: contact?.source ?? "—" };
+    });
+}
 
 export default function Ads() {
   const [campaigns, setCampaigns] = useState<Campaign[]>(initialCampaigns);
