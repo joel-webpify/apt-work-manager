@@ -162,9 +162,99 @@ export const automations = [
   { id: "au3", name: "Annual service reminder", active: false, trigger: "1 year since last job", steps: 2 },
 ];
 
-export const adsCampaigns = [
-  { id: "ad1", name: "Bristol plumbing — LSA", type: "LSA" as const, status: "Active", weeklySpend: 340, leads: 18, costPerLead: 18.9, jobsAttributed: 7 },
-  { id: "ad2", name: "Window cleaning — PMax", type: "PMax" as const, status: "Active", weeklySpend: 280, leads: 12, costPerLead: 23.3, jobsAttributed: 5 },
+export type BiddingStrategy =
+  | "Maximize conversions"
+  | "Maximize conversion value"
+  | "Target CPA"
+  | "Target ROAS";
+
+export interface PMaxSettings {
+  dailyBudget: number;
+  bidding: BiddingStrategy;
+  targetCpa?: number;
+  targetRoas?: number;
+  conversionGoals: string[];
+  locations: string[];
+  languages: string[];
+  startDate: string;
+  endDate?: string;
+  finalUrl: string;
+  finalUrlExpansion: boolean;
+  adSchedule: string;
+  audienceSignals: string[];
+  searchThemes: string[];
+  assetGroupsCount: number;
+  brandExclusions: string[];
+}
+
+export interface LSASettings {
+  weeklyBudget: number;
+  serviceAreas: string[];
+  servicesOffered: string[];
+  businessHours: string;
+  leadTypes: ("Phone call" | "Message")[];
+  bidMode: "Maximize leads" | "Set max per lead";
+  maxPerLead?: number;
+}
+
+export interface AdsCampaign {
+  id: string;
+  name: string;
+  type: "LSA" | "PMax";
+  status: "Active" | "Paused" | "Removed";
+  weeklySpend: number;
+  leads: number;
+  costPerLead: number;
+  jobsAttributed: number;
+  pmax?: PMaxSettings;
+  lsa?: LSASettings;
+}
+
+export const adsCampaigns: AdsCampaign[] = [
+  {
+    id: "ad1",
+    name: "Bristol plumbing — LSA",
+    type: "LSA",
+    status: "Active",
+    weeklySpend: 340,
+    leads: 18,
+    costPerLead: 18.9,
+    jobsAttributed: 7,
+    lsa: {
+      weeklyBudget: 400,
+      serviceAreas: ["Bristol", "Bath", "Weston-super-Mare"],
+      servicesOffered: ["Emergency plumbing", "Leak repair", "Boiler repair"],
+      businessHours: "Mon–Sat, 7:00–19:00",
+      leadTypes: ["Phone call", "Message"],
+      bidMode: "Maximize leads",
+    },
+  },
+  {
+    id: "ad2",
+    name: "Window cleaning — PMax",
+    type: "PMax",
+    status: "Active",
+    weeklySpend: 280,
+    leads: 12,
+    costPerLead: 23.3,
+    jobsAttributed: 5,
+    pmax: {
+      dailyBudget: 40,
+      bidding: "Maximize conversions",
+      targetCpa: 25,
+      conversionGoals: ["Quote request", "Phone call", "Form submission"],
+      locations: ["Bristol BS postcodes", "Bath BA postcodes"],
+      languages: ["English"],
+      startDate: "2026-01-15",
+      finalUrl: "https://example.co.uk/window-cleaning",
+      finalUrlExpansion: true,
+      adSchedule: "Mon–Fri 08:00–18:00",
+      audienceSignals: ["Past customers", "Homeowners 35–65", "Local business owners"],
+      searchThemes: ["window cleaning near me", "commercial window cleaners bristol"],
+      assetGroupsCount: 2,
+      brandExclusions: [],
+    },
+  },
 ];
 
 export const forms = [
