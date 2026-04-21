@@ -45,7 +45,7 @@ export default function Reporting() {
         {tab === "Pipeline" && <PipelineTab />}
         {tab === "Marketing" && <Marketing />}
         {tab === "Customers" && <Empty title="Customers" />}
-        {tab === "Google Ads" && <Empty title="Google Ads" />}
+        {tab === "Google Ads" && <GoogleAds />}
       </PageBody>
     </>
   );
