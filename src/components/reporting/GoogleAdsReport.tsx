@@ -402,7 +402,6 @@ function CampaignReportDrawer({
   onClose: () => void;
 }) {
   const attributed = getAttributedJobs(campaign);
-  const totalValue = attributed.reduce((sum, a) => sum + a.job.value, 0);
   const trend = trendFor(campaign);
   const maxLeads = Math.max(...trend.map((t) => t.leads), 1);
   const w = 520, h = 100, pad = 8;
@@ -411,6 +410,31 @@ function CampaignReportDrawer({
     .map((t, i) => `${pad + i * stepX},${h - pad - (t.leads / maxLeads) * (h - pad * 2)}`)
     .join(" ");
   const areaPoints = `${pad},${h - pad} ${linePoints} ${w - pad},${h - pad}`;
+
+  // Filters
+  const [stageFilter, setStageFilter] = useState<PipelineStage | "all">("all");
+  const [minValue, setMinValue] = useState<string>("");
+
+  const filteredJobs = useMemo(() => {
+    const min = minValue === "" ? 0 : Number(minValue) || 0;
+    return attributed.filter(({ job }) => {
+      if (stageFilter !== "all" && job.stage !== stageFilter) return false;
+      if (job.value < min) return false;
+      return true;
+    });
+  }, [attributed, stageFilter, minValue]);
+
+  const filteredTotal = filteredJobs.reduce((sum, a) => sum + a.job.value, 0);
+  const allTotal = attributed.reduce((sum, a) => sum + a.job.value, 0);
+  const isFiltered = stageFilter !== "all" || minValue !== "";
+
+  // Stages that actually appear in attributed jobs (for the dropdown)
+  const availableStages = stages.filter((s) => attributed.some((a) => a.job.stage === s));
+
+  const resetFilters = () => {
+    setStageFilter("all");
+    setMinValue("");
+  };
 
   return (
     <>
@@ -459,12 +483,71 @@ function CampaignReportDrawer({
 
         <div>
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium">Attributed jobs</h3>
+            <h3 className="text-sm font-medium">Jobs that came through this campaign</h3>
             <span className="text-xs text-muted-foreground tabular-nums">
-              {attributed.length} {attributed.length === 1 ? "job" : "jobs"} · £{totalValue.toLocaleString()}
+              {isFiltered ? (
+                <>
+                  {filteredJobs.length} of {attributed.length} · £{filteredTotal.toLocaleString()} of £{allTotal.toLocaleString()}
+                </>
+              ) : (
+                <>
+                  {attributed.length} {attributed.length === 1 ? "job" : "jobs"} · £{allTotal.toLocaleString()}
+                </>
+              )}
             </span>
           </div>
-          {attributed.length ? (
+
+          {/* Filters */}
+          {attributed.length > 0 && (
+            <div className="border-hairline rounded-lg bg-card p-3 mb-3 flex items-end gap-3 flex-wrap">
+              <div className="space-y-1.5 w-40">
+                <Label className="text-xs text-muted-foreground font-normal">Stage</Label>
+                <Select value={stageFilter} onValueChange={(v) => setStageFilter(v as PipelineStage | "all")}>
+                  <SelectTrigger className="h-9">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All stages</SelectItem>
+                    {availableStages.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 w-40">
+                <Label className="text-xs text-muted-foreground font-normal">Min job value (£)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  inputMode="numeric"
+                  placeholder="0"
+                  className="h-9"
+                  value={minValue}
+                  onChange={(e) => setMinValue(e.target.value)}
+                />
+              </div>
+              {isFiltered && (
+                <button
+                  onClick={resetFilters}
+                  className="h-9 px-3 text-xs text-muted-foreground hover:text-foreground border-hairline rounded-md hover:bg-surface-hover transition-colors"
+                >
+                  Clear filters
+                </button>
+              )}
+            </div>
+          )}
+
+          {attributed.length === 0 ? (
+            <div className="border-hairline rounded-lg bg-card p-6 text-sm text-muted-foreground text-center">
+              No jobs attributed to this campaign yet
+            </div>
+          ) : filteredJobs.length === 0 ? (
+            <div className="border-hairline rounded-lg bg-card p-6 text-sm text-muted-foreground text-center">
+              No jobs match the current filters
+            </div>
+          ) : (
             <div className="border-hairline rounded-lg overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
@@ -472,11 +555,12 @@ function CampaignReportDrawer({
                     <th className="text-left font-normal px-3 h-9">Customer</th>
                     <th className="text-left font-normal px-3 h-9">Service</th>
                     <th className="text-left font-normal px-3 h-9">Stage</th>
+                    <th className="text-left font-normal px-3 h-9">Source</th>
                     <th className="text-right font-normal px-3 h-9">Value</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {attributed.map(({ job }) => (
+                  {filteredJobs.map(({ job, source }) => (
                     <tr key={job.id} className="border-t-hairline">
                       <td className="px-3 h-10 font-medium">{job.customer}</td>
                       <td className="px-3 h-10 text-muted-foreground">{job.service}</td>
@@ -485,15 +569,22 @@ function CampaignReportDrawer({
                           {job.stage}
                         </Pill>
                       </td>
+                      <td className="px-3 h-10 text-muted-foreground text-xs">{source}</td>
                       <td className="px-3 h-10 text-right tabular-nums">£{job.value.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
+                <tfoot>
+                  <tr className="bg-surface border-t-hairline text-xs">
+                    <td className="px-3 h-9 text-muted-foreground" colSpan={4}>
+                      Total {isFiltered ? "(filtered)" : ""}
+                    </td>
+                    <td className="px-3 h-9 text-right tabular-nums font-medium">
+                      £{filteredTotal.toLocaleString()}
+                    </td>
+                  </tr>
+                </tfoot>
               </table>
-            </div>
-          ) : (
-            <div className="border-hairline rounded-lg bg-card p-6 text-sm text-muted-foreground text-center">
-              No jobs attributed to this campaign yet
             </div>
           )}
         </div>
