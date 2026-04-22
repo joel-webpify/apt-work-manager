@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { PageHeader, PageBody } from "@/components/layout/PageShell";
 import { GoogleAdsReport } from "@/components/reporting/GoogleAdsReport";
+import { CustomersReport } from "@/components/reporting/CustomersReport";
 
 const tabs = ["Revenue", "Pipeline", "Marketing", "Customers", "Google Ads"] as const;
 type Tab = typeof tabs[number];
@@ -44,7 +45,7 @@ export default function Reporting() {
         {tab === "Revenue" && <Revenue />}
         {tab === "Pipeline" && <PipelineTab />}
         {tab === "Marketing" && <Marketing />}
-        {tab === "Customers" && <Empty title="Customers" />}
+        {tab === "Customers" && <CustomersReport />}
         {tab === "Google Ads" && <GoogleAds />}
       </PageBody>
     </>
