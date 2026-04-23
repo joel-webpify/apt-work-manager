@@ -557,3 +557,334 @@ function Health({ label, value, ok, target, sub }: { label: string; value: strin
     </div>
   );
 }
+
+/* ---------------- insights drawer ---------------- */
+
+type RankedCampaign = {
+  id: string;
+  name: string;
+  segment: string;
+  type: "Promo" | "Reminder" | "Win-back" | "Newsletter";
+  sendDate: string;
+  sent: number;
+  delivered: number;
+  opens: number;
+  clicks: number;
+  formSubmits: number;
+  jobsBooked: number;
+  revenue: number;
+  unsubscribes: number;
+  bounces: number;
+  openRate: number;
+  clickRate: number;
+  bookRate: number;
+  revenuePerEmail: number;
+};
+
+interface Benchmarks {
+  openRate: number;
+  clickRate: number;
+  ctor: number;
+  submitRate: number;
+  bookRate: number;
+}
+
+type Verdict = "good" | "ok" | "poor";
+
+interface StageInsight {
+  key: string;
+  label: string;
+  value: string;
+  benchmark: string;
+  delta: number;
+  verdict: Verdict;
+  whatHappened: string;
+  recommendation: string;
+}
+
+function buildInsights(c: RankedCampaign, b: Benchmarks): StageInsight[] {
+  const deliverRate = pct(c.delivered, c.sent);
+  const cBounceRate = pct(c.bounces, c.sent);
+  const cOpenRate = c.openRate;
+  const cClickRate = c.clickRate;
+  const cCtor = pct(c.clicks, c.opens);
+  const cSubmitRate = pct(c.formSubmits, c.clicks);
+  const cBookRate = c.bookRate;
+  const cUnsubRate = pct(c.unsubscribes, c.delivered);
+
+  const verdict = (delta: number, goodAt = 2, poorAt = -2): Verdict =>
+    delta >= goodAt ? "good" : delta <= poorAt ? "poor" : "ok";
+
+  return [
+    {
+      key: "deliver",
+      label: "Deliverability",
+      value: fmtPct(deliverRate, 1),
+      benchmark: `${fmtPct(cBounceRate, 2)} bounce`,
+      delta: -cBounceRate,
+      verdict: cBounceRate < 1 ? "good" : cBounceRate < 2.5 ? "ok" : "poor",
+      whatHappened:
+        cBounceRate < 1
+          ? "List hygiene is strong — almost every email reached the inbox."
+          : cBounceRate < 2.5
+          ? "Bounce rate is acceptable but trending up. A few stale addresses are dragging delivery."
+          : "Bounces are above the safe threshold and risk hurting sender reputation.",
+      recommendation:
+        cBounceRate < 1
+          ? "Keep the current double-opt-in flow. No action needed."
+          : "Run a list-clean: remove addresses that have hard-bounced once, and re-confirm any that haven't engaged in 12 months.",
+    },
+    {
+      key: "open",
+      label: "Open rate",
+      value: fmtPct(cOpenRate, 1),
+      benchmark: `vs ${fmtPct(b.openRate, 1)} avg`,
+      delta: cOpenRate - b.openRate,
+      verdict: verdict(cOpenRate - b.openRate, 3, -3),
+      whatHappened:
+        cOpenRate - b.openRate >= 3
+          ? "Subject line and from-name resonated — opens well above your account average."
+          : cOpenRate - b.openRate <= -3
+          ? "Subject line under-performed. Most recipients scrolled past without opening."
+          : "Opens are roughly in line with your norm — neither a win nor a miss.",
+      recommendation:
+        cOpenRate - b.openRate >= 3
+          ? "Save this subject pattern as a template and re-test the angle on the next promo."
+          : cOpenRate - b.openRate <= -3
+          ? "A/B test a shorter subject (<45 chars) with a personal-feeling preview text. Try sending Tue 10am–2pm."
+          : "Try one variable next time — a first-name token in the subject usually lifts opens 5–10%.",
+    },
+    {
+      key: "click",
+      label: "Click-through",
+      value: fmtPct(cClickRate, 1),
+      benchmark: `CTOR ${fmtPct(cCtor, 1)}`,
+      delta: cClickRate - b.clickRate,
+      verdict: verdict(cClickRate - b.clickRate, 1, -1),
+      whatHappened:
+        cCtor >= 18
+          ? "Of those who opened, a high share clicked through — the offer and CTA are clearly aligned."
+          : cCtor >= 10
+          ? "Clicks are healthy but there's headroom. Some opens didn't find a reason to act."
+          : "Most opens didn't click. The body content isn't pulling its weight.",
+      recommendation:
+        cCtor >= 18
+          ? "Lock in the CTA placement and copy. Consider a follow-up to non-clickers with the same offer."
+          : "Move the primary CTA above the fold, use a single button (not multiple links), and lead with the customer benefit not the service name.",
+    },
+    {
+      key: "submit",
+      label: "Form submits",
+      value: `${c.formSubmits} (${fmtPct(cSubmitRate, 0)} of clicks)`,
+      benchmark: `vs ${fmtPct(b.submitRate, 0)} avg`,
+      delta: cSubmitRate - b.submitRate,
+      verdict: verdict(cSubmitRate - b.submitRate, 5, -5),
+      whatHappened:
+        cSubmitRate >= 35
+          ? "The landing page converted clickers into enquiries efficiently — message-match was strong."
+          : cSubmitRate >= 20
+          ? "Conversion is decent but a portion bounced from the landing page."
+          : "Most clickers left without filling the form — the page or form is the bottleneck.",
+      recommendation:
+        cSubmitRate >= 35
+          ? "Reuse this landing page layout for similar campaigns."
+          : "Shorten the form to name + postcode + service, ensure the headline matches the email subject, and add a trust signal (reviews / years trading) above the form.",
+    },
+    {
+      key: "book",
+      label: "Booking",
+      value: `${c.jobsBooked} jobs (${cBookRate ? fmtPct(cBookRate, 0) : "—"} of submits)`,
+      benchmark: `vs ${fmtPct(b.bookRate, 0)} avg`,
+      delta: cBookRate - b.bookRate,
+      verdict: verdict(cBookRate - b.bookRate, 5, -5),
+      whatHappened:
+        cBookRate >= 50
+          ? "Sales follow-up turned half of enquiries into jobs — a strong close rate."
+          : cBookRate >= 30
+          ? "Roughly a third of enquiries converted. Likely some leads went cold before contact."
+          : c.formSubmits === 0
+          ? "No enquiries reached the booking stage."
+          : "Most enquiries didn't convert. Quote response time or fit is the issue.",
+      recommendation:
+        cBookRate >= 50
+          ? "Document what the team did differently and replicate it in the playbook."
+          : "Aim for first contact within 1 hour of submit, and send a follow-up SMS at 24h and 72h for non-responders.",
+    },
+    {
+      key: "unsub",
+      label: "List health",
+      value: `${c.unsubscribes} unsubs (${fmtPct(cUnsubRate, 2)})`,
+      benchmark: "Target <0.5%",
+      delta: -cUnsubRate,
+      verdict: cUnsubRate < 0.3 ? "good" : cUnsubRate < 0.6 ? "ok" : "poor",
+      whatHappened:
+        cUnsubRate < 0.3
+          ? "Audience welcomed the message — minimal opt-outs."
+          : cUnsubRate < 0.6
+          ? "A handful unsubscribed, in the normal range for promo sends."
+          : "Unsubscribes are elevated — the message likely reached the wrong segment or felt too pushy.",
+      recommendation:
+        cUnsubRate < 0.3
+          ? "No action needed."
+          : "Tighten the segment (exclude anyone who's received 2+ emails in the last 14 days) and soften the offer language.",
+    },
+  ];
+}
+
+function CampaignInsightsDrawer({
+  campaign, benchmarks, onClose,
+}: { campaign: RankedCampaign | null; benchmarks: Benchmarks; onClose: () => void }) {
+  const insights = useMemo(
+    () => (campaign ? buildInsights(campaign, benchmarks) : []),
+    [campaign, benchmarks],
+  );
+
+  if (!campaign) return null;
+
+  const wins = insights.filter((i) => i.verdict === "good");
+  const issues = insights.filter((i) => i.verdict === "poor");
+
+  return (
+    <Sheet open={!!campaign} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent className="w-[560px] sm:max-w-[560px] p-0 overflow-y-auto">
+        <div className="px-6 pt-6 pb-4 border-b-hairline sticky top-0 bg-background z-10">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 mb-1.5">
+                <Pill tone="neutral">{campaign.type}</Pill>
+                <span className="text-xs text-muted-foreground">{campaign.sendDate}</span>
+              </div>
+              <h2 className="text-lg font-medium leading-tight truncate">{campaign.name}</h2>
+              <div className="text-xs text-muted-foreground mt-0.5 truncate">{campaign.segment}</div>
+            </div>
+            <button
+              onClick={onClose}
+              className="w-7 h-7 rounded-md hover:bg-surface-hover flex items-center justify-center text-muted-foreground"
+              aria-label="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-4 gap-2 mt-4">
+            <DrawerStat label="Sent" value={campaign.sent.toLocaleString()} />
+            <DrawerStat label="Opens" value={fmtPct(campaign.openRate, 1)} />
+            <DrawerStat label="Jobs" value={campaign.jobsBooked.toString()} />
+            <DrawerStat label="Revenue" value={fmtCurrency(campaign.revenue)} accent />
+          </div>
+        </div>
+
+        <div className="px-6 py-4 border-b-hairline">
+          <div className="flex items-center gap-2 mb-2">
+            <Lightbulb className="w-3.5 h-3.5 text-muted-foreground" />
+            <span className="text-sm font-medium">Summary</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <SummaryCard
+              tone="success"
+              icon={<CheckCircle2 className="w-3.5 h-3.5" />}
+              title={`${wins.length} stage${wins.length === 1 ? "" : "s"} above benchmark`}
+              detail={wins.length ? wins.map((w) => w.label).join(" · ") : "Nothing materially outperformed this run."}
+            />
+            <SummaryCard
+              tone="warning"
+              icon={<AlertTriangle className="w-3.5 h-3.5" />}
+              title={`${issues.length} stage${issues.length === 1 ? "" : "s"} need attention`}
+              detail={issues.length ? issues.map((i) => i.label).join(" · ") : "No funnel stage is materially below benchmark."}
+            />
+          </div>
+        </div>
+
+        <div className="px-6 py-4">
+          <div className="text-sm font-medium mb-3">Funnel breakdown</div>
+          <div className="space-y-3">
+            {insights.map((ins) => (
+              <InsightCard key={ins.key} insight={ins} />
+            ))}
+          </div>
+        </div>
+
+        <div className="px-6 pb-6">
+          <div className="border-hairline rounded-lg bg-surface/40 p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowRight className="w-3.5 h-3.5 text-primary" />
+              <span className="text-sm font-medium">Recommended next steps</span>
+            </div>
+            <ol className="space-y-2 text-sm">
+              {(issues.length ? issues : insights.slice(0, 3)).map((ins, i) => (
+                <li key={ins.key} className="flex gap-2.5">
+                  <span className="flex-shrink-0 w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-medium flex items-center justify-center mt-0.5">
+                    {i + 1}
+                  </span>
+                  <div>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wide mb-0.5">{ins.label}</div>
+                    <div>{ins.recommendation}</div>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function DrawerStat({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className={`rounded-md border-hairline p-2.5 ${accent ? "bg-primary/5" : "bg-surface/40"}`}>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="text-sm font-medium tabular-nums mt-0.5">{value}</div>
+    </div>
+  );
+}
+
+function SummaryCard({
+  tone, icon, title, detail,
+}: { tone: "success" | "warning"; icon: React.ReactNode; title: string; detail: string }) {
+  const color =
+    tone === "success"
+      ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))]"
+      : "bg-[hsl(var(--warning))]/10 text-[hsl(var(--warning))]";
+  return (
+    <div className="border-hairline rounded-md p-3">
+      <div className="flex items-center gap-2">
+        <span className={`w-5 h-5 rounded-md flex items-center justify-center ${color}`}>{icon}</span>
+        <span className="text-xs font-medium">{title}</span>
+      </div>
+      <div className="text-xs text-muted-foreground mt-1.5 leading-relaxed">{detail}</div>
+    </div>
+  );
+}
+
+function InsightCard({ insight }: { insight: StageInsight }) {
+  const toneClass =
+    insight.verdict === "good"
+      ? "bg-[hsl(var(--success))]/10 text-[hsl(var(--success))] border-[hsl(var(--success))]/20"
+      : insight.verdict === "poor"
+      ? "bg-[hsl(var(--destructive))]/10 text-[hsl(var(--destructive))] border-[hsl(var(--destructive))]/20"
+      : "bg-surface text-muted-foreground border-transparent";
+  const verdictLabel =
+    insight.verdict === "good" ? "Above benchmark" : insight.verdict === "poor" ? "Below benchmark" : "On benchmark";
+
+  return (
+    <div className="border-hairline rounded-md p-3.5">
+      <div className="flex items-start justify-between gap-3 mb-2">
+        <div>
+          <div className="text-sm font-medium">{insight.label}</div>
+          <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
+            {insight.value} <span className="opacity-60">· {insight.benchmark}</span>
+          </div>
+        </div>
+        <span className={`text-[10px] font-medium uppercase tracking-wide rounded px-1.5 py-0.5 border ${toneClass}`}>
+          {verdictLabel}
+        </span>
+      </div>
+      <div className="text-xs text-foreground/80 leading-relaxed mb-2">{insight.whatHappened}</div>
+      <div className="text-xs text-muted-foreground leading-relaxed flex gap-1.5">
+        <ArrowRight className="w-3 h-3 mt-0.5 flex-shrink-0 text-primary" />
+        <span>{insight.recommendation}</span>
+      </div>
+    </div>
+  );
+}
