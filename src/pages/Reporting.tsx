@@ -3,6 +3,7 @@ import { PageHeader, PageBody } from "@/components/layout/PageShell";
 import { GoogleAdsReport } from "@/components/reporting/GoogleAdsReport";
 import { CustomersReport } from "@/components/reporting/CustomersReport";
 import { EmailMarketingReport } from "@/components/reporting/EmailMarketingReport";
+import { RevenueReport } from "@/components/reporting/RevenueReport";
 
 const tabs = ["Revenue", "Pipeline", "Marketing", "Customers", "Google Ads"] as const;
 type Tab = typeof tabs[number];
