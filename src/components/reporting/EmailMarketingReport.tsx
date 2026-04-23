@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { Mail, MousePointerClick, FileText, Briefcase, TrendingUp, TrendingDown, Calendar, Send } from "lucide-react";
+import { Mail, MousePointerClick, FileText, Briefcase, TrendingUp, TrendingDown, Calendar, Send, X, CheckCircle2, AlertTriangle, Lightbulb, ArrowRight } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 
 // Email-marketing-specific synthetic dataset built from existing campaigns,
 // extended with the funnel metrics that matter most for email performance.
