@@ -289,9 +289,11 @@ export function EmailMarketingReport() {
           <div className="text-right">Revenue</div>
         </div>
         {ranked.map((c) => (
-          <div
+          <button
             key={c.id}
-            className="grid grid-cols-[2fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_0.8fr_0.9fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+            type="button"
+            onClick={() => setSelectedId(c.id)}
+            className="w-full text-left grid grid-cols-[2fr_1fr_0.7fr_0.7fr_0.7fr_0.7fr_0.8fr_0.9fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors focus:outline-none focus:bg-surface-hover"
           >
             <div className="min-w-0">
               <div className="font-medium truncate">{c.name}</div>
@@ -308,9 +310,21 @@ export function EmailMarketingReport() {
               {c.formSubmits ? fmtPct(c.bookRate, 0) : "—"}
             </div>
             <div className="text-right tabular-nums font-medium">{fmtCurrency(c.revenue)}</div>
-          </div>
+          </button>
         ))}
       </div>
+
+      <CampaignInsightsDrawer
+        campaign={selectedId ? ranked.find((c) => c.id === selectedId) ?? null : null}
+        benchmarks={{
+          openRate: overallOpenRate,
+          clickRate: overallClickRate,
+          ctor,
+          submitRate,
+          bookRate,
+        }}
+        onClose={() => setSelectedId(null)}
+      />
 
       {/* What works / what doesn't */}
       <div className="grid grid-cols-2 gap-3">
