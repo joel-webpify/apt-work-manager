@@ -44,7 +44,7 @@ export default function Reporting() {
           ))}
         </div>
 
-        {tab === "Revenue" && <Revenue />}
+        {tab === "Revenue" && <RevenueReport />}
         {tab === "Pipeline" && <PipelineTab />}
         {tab === "Marketing" && <EmailMarketingReport />}
         {tab === "Customers" && <CustomersReport />}
