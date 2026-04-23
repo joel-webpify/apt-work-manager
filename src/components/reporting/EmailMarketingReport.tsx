@@ -166,6 +166,7 @@ const subjectTests = [
 
 export function EmailMarketingReport() {
   const [activeMetric, setActiveMetric] = useState<"opens" | "clicks" | "jobs">("opens");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const overallOpenRate = pct(totals.opens, totals.delivered);
   const overallClickRate = pct(totals.clicks, totals.delivered);
