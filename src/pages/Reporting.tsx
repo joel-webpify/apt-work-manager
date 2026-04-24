@@ -51,7 +51,7 @@ export default function Reporting() {
           {tabs.map((t) => (
             <button
               key={t}
-              onClick={() => setTab(t)}
+              onClick={() => selectTab(t)}
               className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors ${
                 tab === t ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
