@@ -292,25 +292,28 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
               <SortableTh label="Stage" col="stage" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Value" col="value" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
               <SortableTh label="Days" col="daysInStage" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
-              <th className="text-left font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9">Address</th>
+              <th className="text-left font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9">Last contact</th>
               <th className="text-left font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9">Invoice</th>
+              <th className="text-right font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 w-px whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   No jobs match these filters.
                 </td>
               </tr>
             ) : (
               filtered.map((job) => {
                 const stuck = job.daysInStage >= stuckThresholds[job.stage];
+                const last = getLastContact(job);
+                const ChannelIcon = last ? channelMeta[last.type].Icon : null;
                 return (
                   <tr
                     key={job.id}
                     onClick={() => onSelect(job)}
-                    className="border-b-hairline last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="border-b-hairline last:border-0 hover:bg-surface-hover cursor-pointer transition-colors group"
                   >
                     <td className="px-3 py-3 font-medium">{job.customer}</td>
                     <td className="px-3 py-3 text-muted-foreground">{job.service}</td>
@@ -326,8 +329,36 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
                         {job.daysInStage}d
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground truncate max-w-[260px]">{job.address}</td>
+                    <td className="px-3 py-3 max-w-[280px]">
+                      {last && ChannelIcon ? (
+                        <div className="flex items-start gap-2 min-w-0">
+                          <ChannelIcon className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-foreground text-xs truncate">{last.text}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              {channelMeta[last.type].label} · {last.date}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">No contact yet</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-muted-foreground tabular-nums">{job.invoiceId ?? "—"}</td>
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <QuickAction
+                          label="Send SMS"
+                          onClick={(e) => handleQuickAction(e, job, "sms")}
+                          icon={<MessageSquare className="w-3.5 h-3.5" />}
+                        />
+                        <QuickAction
+                          label="Send email"
+                          onClick={(e) => handleQuickAction(e, job, "email")}
+                          icon={<Mail className="w-3.5 h-3.5" />}
+                        />
+                      </div>
+                    </td>
                   </tr>
                 );
               })
