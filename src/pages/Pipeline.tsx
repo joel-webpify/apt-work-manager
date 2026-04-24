@@ -175,12 +175,32 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   );
 }
 
+function getLastContact(job: Job): { type: "sms" | "email" | "note"; text: string; date: string } | null {
+  if (!job.timeline || job.timeline.length === 0) return null;
+  return job.timeline[job.timeline.length - 1];
+}
+
+const channelMeta: Record<"sms" | "email" | "note", { label: string; Icon: typeof Mail }> = {
+  sms: { label: "SMS", Icon: MessageSquare },
+  email: { label: "Email", Icon: Mail },
+  note: { label: "Note", Icon: StickyNote },
+};
+
 function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => void }) {
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<PipelineStage | "All">("All");
   const [onlyStuck, setOnlyStuck] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("daysInStage");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleQuickAction = (e: MouseEvent, job: Job, channel: "sms" | "email") => {
+    e.stopPropagation();
+    toast({
+      title: channel === "sms" ? "SMS composer opened" : "Email composer opened",
+      description: `${channel === "sms" ? "Texting" : "Emailing"} ${job.customer} about "${job.service}".`,
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
