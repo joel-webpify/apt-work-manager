@@ -370,6 +370,27 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
   );
 }
 
+function QuickAction({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: (e: MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="w-7 h-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background border-hairline transition-colors"
+    >
+      {icon}
+    </button>
+  );
+}
+
 function FilterChip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
