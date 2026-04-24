@@ -46,57 +46,12 @@ export default function Reporting() {
         </div>
 
         {tab === "Revenue" && <RevenueReport />}
-        {tab === "Pipeline" && <PipelineTab />}
+        {tab === "Pipeline" && <PipelineReport />}
         {tab === "Marketing" && <EmailMarketingReport />}
         {tab === "Customers" && <CustomersReport />}
         {tab === "Google Ads" && <GoogleAds />}
       </PageBody>
     </>
-  );
-}
-
-function PipelineTab() {
-  const funnel = [
-    { stage: "Enquiries", count: 38, color: "hsl(var(--info))" },
-    { stage: "Quotes sent", count: 24, color: "hsl(var(--info))" },
-    { stage: "Quotes accepted", count: 16, color: "hsl(var(--warning))" },
-    { stage: "Jobs booked", count: 14, color: "hsl(var(--warning))" },
-    { stage: "Jobs paid", count: 12, color: "hsl(var(--success))" },
-  ];
-  const max = funnel[0].count;
-  return (
-    <div className="space-y-4">
-      <div className="border-hairline rounded-lg bg-card p-5">
-        <div className="text-sm font-medium mb-4">Conversion funnel — last 30 days</div>
-        <div className="space-y-2.5">
-          {funnel.map((f) => (
-            <div key={f.stage} className="flex items-center gap-3">
-              <span className="text-sm w-36">{f.stage}</span>
-              <div className="flex-1 h-7 bg-surface rounded">
-                <div
-                  className="h-full rounded flex items-center px-3 text-xs font-medium text-primary-foreground"
-                  style={{ width: `${(f.count / max) * 100}%`, backgroundColor: f.color }}
-                >
-                  {f.count}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          { label: "Enquiry → quote", value: "63%" },
-          { label: "Quote → booking", value: "58%" },
-          { label: "Avg days per stage", value: "3.2" },
-        ].map((s) => (
-          <div key={s.label} className="border-hairline rounded-lg bg-card p-4">
-            <div className="text-xs text-muted-foreground">{s.label}</div>
-            <div className="text-2xl font-medium tabular-nums mt-1.5 tracking-tight">{s.value}</div>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
 
