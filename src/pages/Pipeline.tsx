@@ -1,6 +1,8 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useMemo, useState, type DragEvent, type MouseEvent } from "react";
+import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote } from "lucide-react";
 import { jobs as initialJobs, stages, stageColors, type Job, type PipelineStage } from "@/data/mockData";
 
 type View = "board" | "list";
