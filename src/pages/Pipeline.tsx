@@ -75,6 +75,12 @@ export default function Pipeline() {
         description={view === "board" ? "Drag and track jobs through every stage" : "Detailed view of every job across all stages"}
         actions={
           <>
+            <Link
+              to="/reporting?tab=pipeline"
+              className="h-8 px-2.5 rounded-md text-sm font-medium inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+            >
+              <BarChart3 className="w-3.5 h-3.5" /> Analytics
+            </Link>
             <ViewToggle view={view} onChange={setView} />
             <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
