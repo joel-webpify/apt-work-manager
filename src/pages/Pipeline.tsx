@@ -1,6 +1,8 @@
-import { useMemo, useState, type DragEvent } from "react";
+import { useMemo, useState, type DragEvent, type MouseEvent } from "react";
+import { Link } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote } from "lucide-react";
 import { jobs as initialJobs, stages, stageColors, type Job, type PipelineStage } from "@/data/mockData";
 
 type View = "board" | "list";
@@ -73,6 +75,12 @@ export default function Pipeline() {
         description={view === "board" ? "Drag and track jobs through every stage" : "Detailed view of every job across all stages"}
         actions={
           <>
+            <Link
+              to="/reporting?tab=pipeline"
+              className="h-8 px-2.5 rounded-md text-sm font-medium inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+            >
+              <BarChart3 className="w-3.5 h-3.5" /> Analytics
+            </Link>
             <ViewToggle view={view} onChange={setView} />
             <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
@@ -167,12 +175,32 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   );
 }
 
+function getLastContact(job: Job): { type: "sms" | "email" | "note"; text: string; date: string } | null {
+  if (!job.timeline || job.timeline.length === 0) return null;
+  return job.timeline[job.timeline.length - 1];
+}
+
+const channelMeta: Record<"sms" | "email" | "note", { label: string; Icon: typeof Mail }> = {
+  sms: { label: "SMS", Icon: MessageSquare },
+  email: { label: "Email", Icon: Mail },
+  note: { label: "Note", Icon: StickyNote },
+};
+
 function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => void }) {
+  const { toast } = useToast();
   const [query, setQuery] = useState("");
   const [stageFilter, setStageFilter] = useState<PipelineStage | "All">("All");
   const [onlyStuck, setOnlyStuck] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>("daysInStage");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  const handleQuickAction = (e: MouseEvent, job: Job, channel: "sms" | "email") => {
+    e.stopPropagation();
+    toast({
+      title: channel === "sms" ? "SMS composer opened" : "Email composer opened",
+      description: `${channel === "sms" ? "Texting" : "Emailing"} ${job.customer} about "${job.service}".`,
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -264,25 +292,28 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
               <SortableTh label="Stage" col="stage" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} />
               <SortableTh label="Value" col="value" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
               <SortableTh label="Days" col="daysInStage" sortKey={sortKey} sortDir={sortDir} onClick={toggleSort} align="right" />
-              <th className="text-left font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9">Address</th>
+              <th className="text-left font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9">Last contact</th>
               <th className="text-left font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9">Invoice</th>
+              <th className="text-right font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 w-px whitespace-nowrap">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">
+                <td colSpan={8} className="px-4 py-12 text-center text-sm text-muted-foreground">
                   No jobs match these filters.
                 </td>
               </tr>
             ) : (
               filtered.map((job) => {
                 const stuck = job.daysInStage >= stuckThresholds[job.stage];
+                const last = getLastContact(job);
+                const ChannelIcon = last ? channelMeta[last.type].Icon : null;
                 return (
                   <tr
                     key={job.id}
                     onClick={() => onSelect(job)}
-                    className="border-b-hairline last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="border-b-hairline last:border-0 hover:bg-surface-hover cursor-pointer transition-colors group"
                   >
                     <td className="px-3 py-3 font-medium">{job.customer}</td>
                     <td className="px-3 py-3 text-muted-foreground">{job.service}</td>
@@ -298,8 +329,36 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
                         {job.daysInStage}d
                       </span>
                     </td>
-                    <td className="px-3 py-3 text-muted-foreground truncate max-w-[260px]">{job.address}</td>
+                    <td className="px-3 py-3 max-w-[280px]">
+                      {last && ChannelIcon ? (
+                        <div className="flex items-start gap-2 min-w-0">
+                          <ChannelIcon className="w-3.5 h-3.5 mt-0.5 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0 flex-1">
+                            <div className="text-foreground text-xs truncate">{last.text}</div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5">
+                              {channelMeta[last.type].label} · {last.date}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">No contact yet</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-muted-foreground tabular-nums">{job.invoiceId ?? "—"}</td>
+                    <td className="px-3 py-3 text-right whitespace-nowrap">
+                      <div className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <QuickAction
+                          label="Send SMS"
+                          onClick={(e) => handleQuickAction(e, job, "sms")}
+                          icon={<MessageSquare className="w-3.5 h-3.5" />}
+                        />
+                        <QuickAction
+                          label="Send email"
+                          onClick={(e) => handleQuickAction(e, job, "email")}
+                          icon={<Mail className="w-3.5 h-3.5" />}
+                        />
+                      </div>
+                    </td>
                   </tr>
                 );
               })
@@ -308,6 +367,27 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
         </table>
       </div>
     </div>
+  );
+}
+
+function QuickAction({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick: (e: MouseEvent) => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className="w-7 h-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background border-hairline transition-colors"
+    >
+      {icon}
+    </button>
   );
 }
 
