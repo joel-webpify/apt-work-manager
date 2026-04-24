@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader, PageBody } from "@/components/layout/PageShell";
 import { GoogleAdsReport } from "@/components/reporting/GoogleAdsReport";
 import { CustomersReport } from "@/components/reporting/CustomersReport";
@@ -10,8 +11,23 @@ const tabs = ["Revenue", "Pipeline", "Marketing", "Customers", "Google Ads"] as 
 type Tab = typeof tabs[number];
 
 export default function Reporting() {
-  const [tab, setTab] = useState<Tab>("Revenue");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = (tabs.find((t) => t.toLowerCase() === (searchParams.get("tab") ?? "").toLowerCase()) ?? "Revenue") as Tab;
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [digest, setDigest] = useState(true);
+
+  useEffect(() => {
+    const urlTab = searchParams.get("tab");
+    if (urlTab && urlTab.toLowerCase() !== tab.toLowerCase()) {
+      const next = tabs.find((t) => t.toLowerCase() === urlTab.toLowerCase());
+      if (next) setTab(next);
+    }
+  }, [searchParams, tab]);
+
+  const selectTab = (t: Tab) => {
+    setTab(t);
+    setSearchParams({ tab: t.toLowerCase() }, { replace: true });
+  };
 
   return (
     <>
