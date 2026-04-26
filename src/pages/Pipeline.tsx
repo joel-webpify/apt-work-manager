@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent, type MouseEvent } from "react";
+import { useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
