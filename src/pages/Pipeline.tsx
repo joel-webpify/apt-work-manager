@@ -330,11 +330,14 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
   const [sortKey, setSortKey] = useState<SortKey>("daysInStage");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
-  const handleQuickAction = (e: MouseEvent, job: Job, channel: "sms" | "email") => {
-    e.stopPropagation();
+  const handleTemplateSend = (job: Job, channel: Channel, template: MessageTemplate) => {
+    const built = template.build(job);
     toast({
-      title: channel === "sms" ? "SMS composer opened" : "Email composer opened",
-      description: `${channel === "sms" ? "Texting" : "Emailing"} ${job.customer} about "${job.service}".`,
+      title: `${channel === "sms" ? "SMS" : "Email"} drafted: ${template.label}`,
+      description:
+        channel === "email" && built.subject
+          ? `To ${job.customer} — "${built.subject}"`
+          : `To ${job.customer} — ${built.body.slice(0, 80)}${built.body.length > 80 ? "…" : ""}`,
     });
   };
 
