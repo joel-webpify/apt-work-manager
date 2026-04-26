@@ -485,16 +485,20 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
                     </td>
                     <td className="px-3 py-3 text-muted-foreground tabular-nums">{job.invoiceId ?? "—"}</td>
                     <td className="px-3 py-3 text-right whitespace-nowrap">
-                      <div className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <QuickAction
-                          label="Send SMS"
-                          onClick={(e) => handleQuickAction(e, job, "sms")}
+                      <div className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                        <TemplateMenu
+                          channel="sms"
+                          job={job}
                           icon={<MessageSquare className="w-3.5 h-3.5" />}
+                          label="Send SMS"
+                          onSend={handleTemplateSend}
                         />
-                        <QuickAction
-                          label="Send email"
-                          onClick={(e) => handleQuickAction(e, job, "email")}
+                        <TemplateMenu
+                          channel="email"
+                          job={job}
                           icon={<Mail className="w-3.5 h-3.5" />}
+                          label="Send email"
+                          onSend={handleTemplateSend}
                         />
                       </div>
                     </td>
