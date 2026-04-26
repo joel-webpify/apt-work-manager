@@ -4,6 +4,142 @@ import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
 import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote } from "lucide-react";
 import { jobs as initialJobs, stages, stageColors, type Job, type PipelineStage } from "@/data/mockData";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+type Channel = "sms" | "email";
+interface MessageTemplate {
+  id: string;
+  label: string;
+  description: string;
+  stages?: PipelineStage[];
+  build: (job: Job) => { subject?: string; body: string };
+}
+
+const smsTemplates: MessageTemplate[] = [
+  {
+    id: "quote-followup",
+    label: "Quote follow-up",
+    description: "Nudge after a quote was sent",
+    stages: ["Quote sent"],
+    build: (j) => ({
+      body: `Hi ${j.customer.split(" ")[0]}, just checking in on the quote we sent for ${j.service} (£${j.value}). Happy to answer any questions — shall we get it booked in?`,
+    }),
+  },
+  {
+    id: "booking-confirm",
+    label: "Booking confirmation",
+    description: "Confirm date and arrival window",
+    stages: ["Job booked"],
+    build: (j) => ({
+      body: `Hi ${j.customer.split(" ")[0]}, confirming your ${j.service} booking. We'll arrive within a 30-min window and call ahead. Reply STOP to opt out.`,
+    }),
+  },
+  {
+    id: "on-the-way",
+    label: "On the way",
+    description: "Let them know you're heading over",
+    stages: ["Job booked", "In progress"],
+    build: (j) => ({
+      body: `Hi ${j.customer.split(" ")[0]}, we're on our way for the ${j.service} job. ETA approx 20 minutes.`,
+    }),
+  },
+  {
+    id: "payment-reminder",
+    label: "Payment reminder",
+    description: "Friendly nudge on an unpaid invoice",
+    stages: ["Invoiced"],
+    build: (j) => ({
+      body: `Hi ${j.customer.split(" ")[0]}, a quick reminder that invoice ${j.invoiceId ?? "(pending)"} for £${j.value} is due. Let us know if you need bank details again.`,
+    }),
+  },
+  {
+    id: "review-request",
+    label: "Review request",
+    description: "Ask for a Google review after payment",
+    stages: ["Paid", "Completed"],
+    build: (j) => ({
+      body: `Hi ${j.customer.split(" ")[0]}, thanks for choosing us for your ${j.service}! If you have 30 seconds, a Google review would mean the world: [link]`,
+    }),
+  },
+];
+
+const emailTemplates: MessageTemplate[] = [
+  {
+    id: "quote-followup",
+    label: "Quote follow-up",
+    description: "Detailed nudge with quote recap",
+    stages: ["Quote sent"],
+    build: (j) => ({
+      subject: `Following up on your ${j.service} quote`,
+      body: `Hi ${j.customer.split(" ")[0]},\n\nJust circling back on the quote we sent for ${j.service} at £${j.value}. Let me know if anything in the scope needs adjusting, or if you'd like to lock in a date.\n\nThanks,\nThe team`,
+    }),
+  },
+  {
+    id: "booking-confirm",
+    label: "Booking confirmation",
+    description: "Confirm scheduled work in writing",
+    stages: ["Job booked"],
+    build: (j) => ({
+      subject: `Booking confirmed — ${j.service}`,
+      body: `Hi ${j.customer.split(" ")[0]},\n\nConfirming your booking for ${j.service} at ${j.address}. We'll be in touch the day before with an arrival window.\n\nThanks,\nThe team`,
+    }),
+  },
+  {
+    id: "job-complete",
+    label: "Job complete summary",
+    description: "Recap of work done",
+    stages: ["Completed", "In progress"],
+    build: (j) => ({
+      subject: `${j.service} — work completed`,
+      body: `Hi ${j.customer.split(" ")[0]},\n\nThe ${j.service} work is now complete. Your invoice will follow shortly. Please don't hesitate to reach out with any questions.\n\nThanks,\nThe team`,
+    }),
+  },
+  {
+    id: "invoice-send",
+    label: "Send invoice",
+    description: "Attach and deliver the invoice",
+    stages: ["Completed", "Invoiced"],
+    build: (j) => ({
+      subject: `Invoice ${j.invoiceId ?? ""} for ${j.service}`.trim(),
+      body: `Hi ${j.customer.split(" ")[0]},\n\nPlease find attached invoice ${j.invoiceId ?? "(pending)"} for £${j.value}, due within 14 days. Bank details are on the invoice.\n\nThanks,\nThe team`,
+    }),
+  },
+  {
+    id: "payment-reminder",
+    label: "Payment reminder",
+    description: "Polite chase on an unpaid invoice",
+    stages: ["Invoiced"],
+    build: (j) => ({
+      subject: `Reminder: invoice ${j.invoiceId ?? ""} due`.trim(),
+      body: `Hi ${j.customer.split(" ")[0]},\n\nA gentle reminder that invoice ${j.invoiceId ?? "(pending)"} for £${j.value} is now due. Please let us know once payment is on its way, or if you need anything resent.\n\nThanks,\nThe team`,
+    }),
+  },
+  {
+    id: "review-request",
+    label: "Review request",
+    description: "Ask for a review with link",
+    stages: ["Paid"],
+    build: (j) => ({
+      subject: "How did we do?",
+      body: `Hi ${j.customer.split(" ")[0]},\n\nThanks again for your custom on the ${j.service} job. If you have a moment, we'd really appreciate a quick Google review: [link]\n\nThanks,\nThe team`,
+    }),
+  },
+];
+
+function sortTemplatesForJob(templates: MessageTemplate[], job: Job): MessageTemplate[] {
+  return [...templates].sort((a, b) => {
+    const aMatch = a.stages?.includes(job.stage) ? 0 : 1;
+    const bMatch = b.stages?.includes(job.stage) ? 0 : 1;
+    return aMatch - bMatch;
+  });
+}
 
 type View = "board" | "list";
 type SortKey = "customer" | "service" | "stage" | "value" | "daysInStage";
