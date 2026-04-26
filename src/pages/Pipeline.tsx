@@ -513,24 +513,69 @@ function JobsListView({ jobs, onSelect }: { jobs: Job[]; onSelect: (j: Job) => v
   );
 }
 
-function QuickAction({
-  label,
+function TemplateMenu({
+  channel,
+  job,
   icon,
-  onClick,
+  label,
+  onSend,
 }: {
-  label: string;
+  channel: Channel;
+  job: Job;
   icon: React.ReactNode;
-  onClick: (e: MouseEvent) => void;
+  label: string;
+  onSend: (job: Job, channel: Channel, template: MessageTemplate) => void;
 }) {
+  const templates = channel === "sms" ? smsTemplates : emailTemplates;
+  const ordered = sortTemplatesForJob(templates, job);
+  const suggested = ordered.filter((t) => t.stages?.includes(job.stage));
+  const others = ordered.filter((t) => !t.stages?.includes(job.stage));
+
   return (
-    <button
-      onClick={onClick}
-      title={label}
-      aria-label={label}
-      className="w-7 h-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background border-hairline transition-colors"
-    >
-      {icon}
-    </button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          onClick={(e) => e.stopPropagation()}
+          title={label}
+          aria-label={label}
+          className="w-7 h-7 rounded-md inline-flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-background border-hairline transition-colors"
+        >
+          {icon}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-72"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">
+          {channel === "sms" ? "SMS templates" : "Email templates"}
+        </DropdownMenuLabel>
+        {suggested.length > 0 && (
+          <>
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium pt-0">
+              Suggested for {job.stage}
+            </DropdownMenuLabel>
+            {suggested.map((t) => (
+              <TemplateItem key={t.id} template={t} onSelect={() => onSend(job, channel, t)} />
+            ))}
+            {others.length > 0 && <DropdownMenuSeparator />}
+          </>
+        )}
+        {others.map((t) => (
+          <TemplateItem key={t.id} template={t} onSelect={() => onSend(job, channel, t)} />
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function TemplateItem({ template, onSelect }: { template: MessageTemplate; onSelect: () => void }) {
+  return (
+    <DropdownMenuItem onClick={onSelect} className="flex flex-col items-start gap-0.5 py-2 cursor-pointer">
+      <div className="text-sm font-medium">{template.label}</div>
+      <div className="text-xs text-muted-foreground">{template.description}</div>
+    </DropdownMenuItem>
   );
 }
 
