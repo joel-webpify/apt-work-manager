@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -16,6 +16,15 @@ import {
   X,
   Sparkles,
   TrendingUp,
+  Filter,
+  Trash2,
+  Bold,
+  Italic,
+  Link as LinkIcon,
+  Heading as HeadingIcon,
+  List as ListIcon,
+  Braces,
+  Save,
 } from "lucide-react";
 import { Btn, Pill } from "@/components/layout/PageShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
@@ -121,8 +130,18 @@ interface Template {
   segment: string;
   subject: string;
   preview: string;
+  body: string;
   icon: typeof Sparkles;
 }
+
+const defaultBody = `Hi {{first_name}},
+
+Thanks for choosing us for your {{service_type}} work. We wanted to share a quick update with you.
+
+Reply to this email or call us on 0117 000 0000 if you have any questions.
+
+Best,
+The team`;
 
 const templates: Template[] = [
   {
@@ -132,6 +151,7 @@ const templates: Template[] = [
     segment: "All customers",
     subject: "",
     preview: "",
+    body: "",
     icon: Mail,
   },
   {
@@ -141,6 +161,7 @@ const templates: Template[] = [
     segment: "Residential — Bristol BS",
     subject: "Limited spring offer — save 15% this month",
     preview: "Book a service this April and save 15% on labour…",
+    body: `Hi {{first_name}},\n\nSpring is here — and we're offering **15% off** {{service_type}} bookings made before the end of April.\n\nWe've still got a few slots left for your area ({{postcode}}). Reply to lock one in.\n\nBest,\n{{company_name}}`,
     icon: Sparkles,
   },
   {
@@ -150,6 +171,7 @@ const templates: Template[] = [
     segment: "Lapsed — 12+ months",
     subject: "We miss you — here's 10% off your next job",
     preview: "It's been a while. Treat your home with a fresh service…",
+    body: `Hi {{first_name}},\n\nIt's been a while since your last {{service_type}} with us. As a thank you for being a previous customer, here's **10% off** your next booking.\n\nJust reply and we'll get you back in the diary.\n\nBest,\n{{company_name}}`,
     icon: TrendingUp,
   },
   {
@@ -157,8 +179,9 @@ const templates: Template[] = [
     name: "Service reminder",
     description: "Annual maintenance prompt for past customers.",
     segment: "Customers — last 24 months",
-    subject: "Time for your annual service",
+    subject: "Time for your annual {{service_type}}",
     preview: "Stay on top of maintenance with a quick yearly check…",
+    body: `Hi {{first_name}},\n\nJust a reminder — it's been close to a year since your last {{service_type}}. Annual checks keep everything running smoothly and catch small issues early.\n\nShall we book you in?\n\nBest,\n{{company_name}}`,
     icon: Calendar,
   },
   {
@@ -166,9 +189,105 @@ const templates: Template[] = [
     name: "Review request",
     description: "Ask happy customers for a Google review.",
     segment: "Recent customers (last 30 days)",
-    subject: "How did we do? Leave a quick review",
+    subject: "How did we do, {{first_name}}?",
     preview: "Your feedback helps other locals find us…",
+    body: `Hi {{first_name}},\n\nThanks again for booking your {{service_type}} with us. If you had a good experience, would you mind leaving a short Google review? It genuinely helps other people in {{postcode}} find us.\n\n[Leave a review](https://g.page/review)\n\nThanks,\n{{company_name}}`,
     icon: CheckCircle2,
+  },
+];
+
+// Reusable merge variables available across campaigns
+const mergeVariables: { key: string; label: string; example: string }[] = [
+  { key: "first_name", label: "First name", example: "Sarah" },
+  { key: "last_name", label: "Last name", example: "Whitcombe" },
+  { key: "service_type", label: "Service type", example: "window cleaning" },
+  { key: "postcode", label: "Postcode", example: "BS8 4QE" },
+  { key: "last_job_date", label: "Last job date", example: "12 Apr 2026" },
+  { key: "company_name", label: "Company name", example: "Bristol Trades Co." },
+];
+
+// Audience targeting
+type RuleField = "lifecycle" | "type" | "postcode" | "last_job_days" | "total_spend" | "source";
+type RuleOp = "is" | "is_not" | "contains" | "gt" | "lt" | "gte" | "lte";
+
+interface AudienceRule {
+  id: string;
+  field: RuleField;
+  op: RuleOp;
+  value: string;
+}
+
+const ruleFieldConfig: Record<RuleField, { label: string; ops: RuleOp[]; kind: "text" | "number" | "select"; options?: string[] }> = {
+  lifecycle: { label: "Lifecycle", ops: ["is", "is_not"], kind: "select", options: ["Lead", "Customer", "Lapsed"] },
+  type: { label: "Contact type", ops: ["is", "is_not"], kind: "select", options: ["Residential", "Commercial"] },
+  postcode: { label: "Postcode", ops: ["contains", "is"], kind: "text" },
+  last_job_days: { label: "Days since last job", ops: ["gt", "lt", "gte", "lte"], kind: "number" },
+  total_spend: { label: "Total spend (£)", ops: ["gt", "lt", "gte", "lte"], kind: "number" },
+  source: { label: "Source", ops: ["is", "is_not"], kind: "select", options: ["Google Ads", "Facebook", "Referral", "Website form", "Local Service Ads"] },
+};
+
+const opLabels: Record<RuleOp, string> = {
+  is: "is",
+  is_not: "is not",
+  contains: "contains",
+  gt: ">",
+  lt: "<",
+  gte: "≥",
+  lte: "≤",
+};
+
+interface SavedAudience {
+  id: string;
+  name: string;
+  match: "all" | "any";
+  rules: AudienceRule[];
+  estimate: number;
+}
+
+const initialSavedAudiences: SavedAudience[] = [
+  {
+    id: "aud1",
+    name: "Residential — Bristol BS",
+    match: "all",
+    rules: [
+      { id: "r1", field: "type", op: "is", value: "Residential" },
+      { id: "r2", field: "postcode", op: "contains", value: "BS" },
+    ],
+    estimate: 412,
+  },
+  {
+    id: "aud2",
+    name: "Past quote, no booking",
+    match: "all",
+    rules: [{ id: "r1", field: "lifecycle", op: "is", value: "Lead" }],
+    estimate: 86,
+  },
+  {
+    id: "aud3",
+    name: "Lapsed — 12+ months",
+    match: "all",
+    rules: [{ id: "r1", field: "last_job_days", op: "gt", value: "365" }],
+    estimate: 134,
+  },
+  {
+    id: "aud4",
+    name: "Customers — last 24 months",
+    match: "all",
+    rules: [
+      { id: "r1", field: "lifecycle", op: "is", value: "Customer" },
+      { id: "r2", field: "last_job_days", op: "lte", value: "730" },
+    ],
+    estimate: 268,
+  },
+  {
+    id: "aud5",
+    name: "Recent customers (last 30 days)",
+    match: "all",
+    rules: [
+      { id: "r1", field: "lifecycle", op: "is", value: "Customer" },
+      { id: "r2", field: "last_job_days", op: "lte", value: "30" },
+    ],
+    estimate: 47,
   },
 ];
 
@@ -526,35 +645,75 @@ function CampaignBuilder({
 }) {
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
-  const [segment, setSegment] = useState("");
   const [subject, setSubject] = useState("");
   const [preview, setPreview] = useState("");
+  const [body, setBody] = useState("");
   const [sendDate, setSendDate] = useState("");
   const [scheduleNow, setScheduleNow] = useState<"now" | "later" | "draft">("later");
+
+  // Audience state
+  const [savedAudiences, setSavedAudiences] = useState<SavedAudience[]>(initialSavedAudiences);
+  const [audienceMode, setAudienceMode] = useState<"saved" | "custom">("saved");
+  const [selectedAudienceId, setSelectedAudienceId] = useState<string>("");
+  const [match, setMatch] = useState<"all" | "any">("all");
+  const [rules, setRules] = useState<AudienceRule[]>([
+    { id: "r1", field: "lifecycle", op: "is", value: "Customer" },
+  ]);
+  const [audienceNameDraft, setAudienceNameDraft] = useState("");
+
+  const subjectRef = useRef<HTMLInputElement>(null);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [activeField, setActiveField] = useState<"subject" | "body">("body");
 
   // Sync template on open
   useMemo(() => {
     if (template) {
       setStep(1);
       setName(template.name === "Blank campaign" ? "" : template.name);
-      setSegment(template.segment);
       setSubject(template.subject);
       setPreview(template.preview);
+      setBody(template.body || defaultBody);
       setSendDate("");
       setScheduleNow("later");
+      setAudienceMode("saved");
+      const matchAud = savedAudiences.find((a) => a.name === template.segment);
+      setSelectedAudienceId(matchAud?.id ?? savedAudiences[0]?.id ?? "");
+      setMatch("all");
+      setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
+      setAudienceNameDraft("");
     }
   }, [template]);
 
   if (!template) return null;
 
-  const canNext1 = name.trim().length > 0 && segment.trim().length > 0;
-  const canNext2 = subject.trim().length > 0;
+  // Estimate for custom audience — deterministic pseudo calc
+  const customEstimate = useMemo(() => {
+    if (rules.length === 0) return 0;
+    const base = match === "all" ? 420 : 680;
+    const factor = rules.reduce((acc, r) => {
+      const hash = (r.field + r.op + r.value).length;
+      return acc * (match === "all" ? 0.55 + (hash % 10) / 40 : 0.85);
+    }, 1);
+    return Math.max(12, Math.floor(base * factor));
+  }, [rules, match]);
+
+  const selectedAudience = savedAudiences.find((a) => a.id === selectedAudienceId);
+  const activeSegmentName =
+    audienceMode === "saved"
+      ? selectedAudience?.name ?? ""
+      : audienceNameDraft.trim() || `Custom — ${rules.length} rule${rules.length === 1 ? "" : "s"}`;
+  const activeEstimate = audienceMode === "saved" ? selectedAudience?.estimate ?? 0 : customEstimate;
+
+  const canNext1 =
+    name.trim().length > 0 &&
+    ((audienceMode === "saved" && !!selectedAudience) || (audienceMode === "custom" && rules.length > 0));
+  const canNext2 = subject.trim().length > 0 && body.trim().length > 0;
   const canSubmit = scheduleNow === "draft" || scheduleNow === "now" || (scheduleNow === "later" && sendDate);
 
   const handleSubmit = () => {
     onSubmit({
       name,
-      segment,
+      segment: activeSegmentName,
       subject,
       preview,
       sendDate: scheduleNow === "now" ? "Just now" : scheduleNow === "later" ? sendDate : "—",
@@ -562,19 +721,125 @@ function CampaignBuilder({
     });
   };
 
-  const segments = [
-    "All customers",
-    "Residential — Bristol BS",
-    "Commercial",
-    "Past quote, no booking",
-    "Lapsed — 12+ months",
-    "Customers — last 24 months",
-    "Recent customers (last 30 days)",
-  ];
+  const updateRule = (id: string, patch: Partial<AudienceRule>) => {
+    setRules((rs) => rs.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+  };
+
+  const addRule = () => {
+    setRules((rs) => [...rs, { id: `r${Date.now()}`, field: "lifecycle", op: "is", value: "Customer" }]);
+  };
+
+  const removeRule = (id: string) => {
+    setRules((rs) => rs.filter((r) => r.id !== id));
+  };
+
+  const saveAudience = () => {
+    const trimmed = audienceNameDraft.trim();
+    if (!trimmed) return;
+    const newAud: SavedAudience = {
+      id: `aud${Date.now()}`,
+      name: trimmed,
+      match,
+      rules,
+      estimate: customEstimate,
+    };
+    setSavedAudiences((a) => [newAud, ...a]);
+    setAudienceMode("saved");
+    setSelectedAudienceId(newAud.id);
+    setAudienceNameDraft("");
+  };
+
+  // Insert merge variable at caret into active field
+  const insertVariable = (key: string) => {
+    const token = `{{${key}}}`;
+    if (activeField === "subject") {
+      const el = subjectRef.current;
+      if (!el) {
+        setSubject((s) => s + token);
+        return;
+      }
+      const start = el.selectionStart ?? subject.length;
+      const end = el.selectionEnd ?? subject.length;
+      const next = subject.slice(0, start) + token + subject.slice(end);
+      setSubject(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + token.length, start + token.length);
+      });
+    } else {
+      const el = bodyRef.current;
+      if (!el) {
+        setBody((b) => b + token);
+        return;
+      }
+      const start = el.selectionStart ?? body.length;
+      const end = el.selectionEnd ?? body.length;
+      const next = body.slice(0, start) + token + body.slice(end);
+      setBody(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        el.setSelectionRange(start + token.length, start + token.length);
+      });
+    }
+  };
+
+  // Wrap selection in body with given before/after tokens (e.g. **, _)
+  const wrapSelection = (before: string, after: string = before) => {
+    const el = bodyRef.current;
+    if (!el) return;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    const selected = body.slice(start, end) || "text";
+    const next = body.slice(0, start) + before + selected + after + body.slice(end);
+    setBody(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + before.length, start + before.length + selected.length);
+    });
+  };
+
+  const insertAtCursor = (text: string) => {
+    const el = bodyRef.current;
+    if (!el) {
+      setBody((b) => b + text);
+      return;
+    }
+    const start = el.selectionStart ?? body.length;
+    const end = el.selectionEnd ?? body.length;
+    setBody(body.slice(0, start) + text + body.slice(end));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(start + text.length, start + text.length);
+    });
+  };
+
+  // Preview rendering: substitute variables with examples and render minimal markdown
+  const renderPreview = (text: string) => {
+    let out = text;
+    mergeVariables.forEach((v) => {
+      out = out.split(`{{${v.key}}}`).join(v.example);
+    });
+    return out;
+  };
+
+  const bodyPreviewHtml = useMemo(() => {
+    const rendered = renderPreview(body);
+    // Minimal markdown: **bold**, *italic*, [label](url), newlines
+    const escaped = rendered
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const withMd = escaped
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" class="text-primary underline">$1</a>')
+      .replace(/\n/g, "<br/>");
+    return withMd;
+  }, [body]);
 
   return (
     <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
@@ -599,7 +864,7 @@ function CampaignBuilder({
         </div>
 
         {step === 1 && (
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Field label="Campaign name">
               <input
                 value={name}
@@ -608,38 +873,205 @@ function CampaignBuilder({
                 className="h-9 w-full px-3 text-sm rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </Field>
-            <Field label="Audience segment">
-              <select
-                value={segment}
-                onChange={(e) => setSegment(e.target.value)}
-                className="h-9 w-full px-2.5 text-sm rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
-              >
-                <option value="">Select segment…</option>
-                {segments.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
+
+            {/* Mode tabs */}
+            <div className="flex items-center gap-1 border-hairline rounded-md p-0.5 w-fit">
+              {(["saved", "custom"] as const).map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setAudienceMode(m)}
+                  className={`h-7 px-3 rounded text-xs font-medium transition-colors ${
+                    audienceMode === m ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {m === "saved" ? "Saved audiences" : "Build new"}
+                </button>
+              ))}
+            </div>
+
+            {audienceMode === "saved" ? (
+              <div className="space-y-2">
+                {savedAudiences.map((a) => (
+                  <label
+                    key={a.id}
+                    className={`flex items-start gap-3 p-3 border-hairline rounded-md cursor-pointer transition-colors ${
+                      selectedAudienceId === a.id ? "border-primary bg-primary/5" : "hover:bg-surface-hover"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="audience"
+                      checked={selectedAudienceId === a.id}
+                      onChange={() => setSelectedAudienceId(a.id)}
+                      className="mt-0.5"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-sm font-medium">{a.name}</div>
+                        <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                          <Users className="w-3 h-3" /> {a.estimate.toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">
+                        Match {a.match === "all" ? "all" : "any"} of{" "}
+                        {a.rules
+                          .map((r) => `${ruleFieldConfig[r.field].label} ${opLabels[r.op]} ${r.value}`)
+                          .join(a.match === "all" ? " AND " : " OR ")}
+                      </div>
+                    </div>
+                  </label>
                 ))}
-              </select>
-              {segment && (
-                <div className="text-xs text-muted-foreground mt-1.5 inline-flex items-center gap-1">
-                  <Users className="w-3 h-3" /> ~{Math.floor(Math.random() * 300 + 80)} contacts
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-xs text-muted-foreground">Match</span>
+                  <div className="flex items-center gap-1 border-hairline rounded-md p-0.5">
+                    {(["all", "any"] as const).map((m) => (
+                      <button
+                        key={m}
+                        onClick={() => setMatch(m)}
+                        className={`h-6 px-2 rounded text-xs font-medium transition-colors ${
+                          match === m ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground"
+                        }`}
+                      >
+                        {m === "all" ? "All (AND)" : "Any (OR)"}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex-1" />
+                  <span className="text-xs text-muted-foreground inline-flex items-center gap-1">
+                    <Users className="w-3 h-3" /> ~{customEstimate.toLocaleString()} contacts
+                  </span>
                 </div>
-              )}
-            </Field>
+
+                <div className="space-y-2">
+                  {rules.map((r) => {
+                    const cfg = ruleFieldConfig[r.field];
+                    return (
+                      <div key={r.id} className="flex items-center gap-2">
+                        <select
+                          value={r.field}
+                          onChange={(e) => {
+                            const nextField = e.target.value as RuleField;
+                            const nextCfg = ruleFieldConfig[nextField];
+                            updateRule(r.id, {
+                              field: nextField,
+                              op: nextCfg.ops[0],
+                              value: nextCfg.kind === "select" ? nextCfg.options![0] : "",
+                            });
+                          }}
+                          className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          {(Object.keys(ruleFieldConfig) as RuleField[]).map((f) => (
+                            <option key={f} value={f}>
+                              {ruleFieldConfig[f].label}
+                            </option>
+                          ))}
+                        </select>
+                        <select
+                          value={r.op}
+                          onChange={(e) => updateRule(r.id, { op: e.target.value as RuleOp })}
+                          className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          {cfg.ops.map((op) => (
+                            <option key={op} value={op}>
+                              {opLabels[op]}
+                            </option>
+                          ))}
+                        </select>
+                        {cfg.kind === "select" ? (
+                          <select
+                            value={r.value}
+                            onChange={(e) => updateRule(r.id, { value: e.target.value })}
+                            className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring flex-1"
+                          >
+                            {cfg.options!.map((o) => (
+                              <option key={o} value={o}>
+                                {o}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <input
+                            type={cfg.kind === "number" ? "number" : "text"}
+                            value={r.value}
+                            onChange={(e) => updateRule(r.id, { value: e.target.value })}
+                            placeholder={cfg.kind === "number" ? "0" : "value"}
+                            className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring flex-1"
+                          />
+                        )}
+                        <button
+                          onClick={() => removeRule(r.id)}
+                          disabled={rules.length === 1}
+                          className="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-surface-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                          aria-label="Remove rule"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <Btn variant="ghost" onClick={addRule}>
+                  <Plus className="w-3.5 h-3.5" /> Add rule
+                </Btn>
+
+                <div className="flex items-center gap-2 pt-2 border-t-hairline">
+                  <input
+                    value={audienceNameDraft}
+                    onChange={(e) => setAudienceNameDraft(e.target.value)}
+                    placeholder="Name this audience to save it…"
+                    className="h-8 flex-1 px-3 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  <Btn variant="secondary" onClick={saveAudience} disabled={!audienceNameDraft.trim()}>
+                    <Save className="w-3.5 h-3.5" /> Save audience
+                  </Btn>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {step === 2 && (
           <div className="space-y-3">
+            {/* Variable chips */}
+            <div className="border-hairline rounded-md p-2.5 bg-surface/50">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Braces className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  Insert variable into{" "}
+                  <span className="font-medium text-foreground">{activeField === "subject" ? "subject" : "body"}</span>
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {mergeVariables.map((v) => (
+                  <button
+                    key={v.key}
+                    onClick={() => insertVariable(v.key)}
+                    className="h-6 px-2 text-xs rounded-md border-hairline bg-background hover:bg-surface-hover hover:border-primary/40 transition-colors inline-flex items-center gap-1"
+                    title={`Example: ${v.example}`}
+                  >
+                    <span className="font-mono text-muted-foreground">{`{{${v.key}}}`}</span>
+                    <span>{v.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Field label="Subject line">
               <input
+                ref={subjectRef}
                 value={subject}
+                onFocus={() => setActiveField("subject")}
                 onChange={(e) => setSubject(e.target.value)}
                 placeholder="What will land in their inbox?"
-                className="h-9 w-full px-3 text-sm rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+                className="h-9 w-full px-3 text-sm rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring font-mono"
               />
             </Field>
+
             <Field label="Preview text">
               <input
                 value={preview}
@@ -648,16 +1080,81 @@ function CampaignBuilder({
                 className="h-9 w-full px-3 text-sm rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </Field>
-            <div className="border-hairline rounded-md p-3 bg-surface/50">
-              <div className="text-xs text-muted-foreground mb-1">Inbox preview</div>
-              <div className="text-sm font-medium truncate">{subject || "Subject line"}</div>
-              <div className="text-xs text-muted-foreground truncate">{preview || "Preview text"}</div>
+
+            <Field label="Body">
+              <div className="border-hairline rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring">
+                {/* Toolbar */}
+                <div className="flex items-center gap-0.5 px-1.5 py-1 border-b-hairline bg-surface/50">
+                  <ToolbarBtn onClick={() => wrapSelection("**")} title="Bold">
+                    <Bold className="w-3.5 h-3.5" />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => wrapSelection("*")} title="Italic">
+                    <Italic className="w-3.5 h-3.5" />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => insertAtCursor("\n## Heading\n")} title="Heading">
+                    <HeadingIcon className="w-3.5 h-3.5" />
+                  </ToolbarBtn>
+                  <ToolbarBtn onClick={() => insertAtCursor("\n- Item\n- Item\n")} title="List">
+                    <ListIcon className="w-3.5 h-3.5" />
+                  </ToolbarBtn>
+                  <ToolbarBtn
+                    onClick={() => {
+                      const url = window.prompt("Link URL", "https://");
+                      if (!url) return;
+                      wrapSelection("[", `](${url})`);
+                    }}
+                    title="Link"
+                  >
+                    <LinkIcon className="w-3.5 h-3.5" />
+                  </ToolbarBtn>
+                  <div className="w-px h-4 bg-border mx-1" />
+                  <span className="text-xs text-muted-foreground px-1">
+                    Markdown + {"{{variables}}"}
+                  </span>
+                </div>
+                <textarea
+                  ref={bodyRef}
+                  value={body}
+                  onFocus={() => setActiveField("body")}
+                  onChange={(e) => setBody(e.target.value)}
+                  placeholder="Write your email. Use **bold**, *italic*, [links](url) and {{first_name}} style variables."
+                  className="w-full min-h-[200px] px-3 py-2 text-sm bg-background focus:outline-none font-mono resize-y"
+                />
+              </div>
+            </Field>
+
+            {/* Inbox preview */}
+            <div className="border-hairline rounded-md overflow-hidden">
+              <div className="px-3 py-2 border-b-hairline bg-surface/50 flex items-center gap-2">
+                <Mail className="w-3.5 h-3.5 text-muted-foreground" />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Inbox preview
+                </span>
+                <span className="text-xs text-muted-foreground ml-auto">with example values</span>
+              </div>
+              <div className="px-3 py-3 bg-background">
+                <div className="text-sm font-medium">{renderPreview(subject) || "Subject line"}</div>
+                {preview && (
+                  <div className="text-xs text-muted-foreground mt-0.5">{renderPreview(preview)}</div>
+                )}
+                <div
+                  className="text-sm mt-3 leading-relaxed text-foreground"
+                  dangerouslySetInnerHTML={{ __html: bodyPreviewHtml || "Body preview…" }}
+                />
+              </div>
             </div>
           </div>
         )}
 
         {step === 3 && (
           <div className="space-y-3">
+            <div className="border-hairline rounded-md p-3 bg-surface/50 flex items-center gap-3">
+              <Users className="w-4 h-4 text-muted-foreground" />
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium truncate">{activeSegmentName}</div>
+                <div className="text-xs text-muted-foreground">~{activeEstimate.toLocaleString()} recipients</div>
+              </div>
+            </div>
             <div className="space-y-2">
               {[
                 { id: "now", label: "Send now", desc: "Deliver immediately to all recipients" },
@@ -718,6 +1215,19 @@ function CampaignBuilder({
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ToolbarBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={title}
+      className="h-7 w-7 inline-flex items-center justify-center rounded text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors"
+    >
+      {children}
+    </button>
   );
 }
 
