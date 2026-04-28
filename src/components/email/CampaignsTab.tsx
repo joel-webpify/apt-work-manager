@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -16,6 +16,15 @@ import {
   X,
   Sparkles,
   TrendingUp,
+  Filter,
+  Trash2,
+  Bold,
+  Italic,
+  Link as LinkIcon,
+  Heading as HeadingIcon,
+  List as ListIcon,
+  Braces,
+  Save,
 } from "lucide-react";
 import { Btn, Pill } from "@/components/layout/PageShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
