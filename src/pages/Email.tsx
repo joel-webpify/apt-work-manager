@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Plus, Zap } from "lucide-react";
-import { campaigns, automations } from "@/data/mockData";
+import { automations } from "@/data/mockData";
+import { CampaignsTab } from "@/components/email/CampaignsTab";
 
 export default function Email() {
   const [tab, setTab] = useState<"campaigns" | "automations">("campaigns");
@@ -11,7 +12,13 @@ export default function Email() {
       <PageHeader
         title="Email marketing"
         description="Send campaigns and run automated journeys"
-        actions={<Btn variant="primary"><Plus className="w-3.5 h-3.5" /> {tab === "campaigns" ? "New campaign" : "New automation"}</Btn>}
+        actions={
+          tab === "automations" ? (
+            <Btn variant="primary">
+              <Plus className="w-3.5 h-3.5" /> New automation
+            </Btn>
+          ) : null
+        }
       />
       <PageBody>
         <div className="flex border-b-hairline mb-4 -mt-2">
@@ -29,26 +36,7 @@ export default function Email() {
         </div>
 
         {tab === "campaigns" ? (
-          <div className="border-hairline rounded-lg bg-card overflow-hidden">
-            <div className="grid grid-cols-[2fr_1.5fr_1fr_1fr_0.8fr_0.8fr_0.6fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
-              <div>Campaign</div><div>Segment</div><div>Status</div><div>Send date</div><div className="text-right">Open</div><div className="text-right">Click</div><div className="text-right">Jobs</div>
-            </div>
-            {campaigns.map((c) => (
-              <div key={c.id} className="grid grid-cols-[2fr_1.5fr_1fr_1fr_0.8fr_0.8fr_0.6fr] px-4 h-10 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors">
-                <div className="font-medium truncate">{c.name}</div>
-                <div className="text-muted-foreground truncate">{c.segment}</div>
-                <div>
-                  <Pill tone={c.status === "Sent" ? "success" : c.status === "Scheduled" ? "warning" : "neutral"}>
-                    {c.status}
-                  </Pill>
-                </div>
-                <div className="text-muted-foreground tabular-nums">{c.sendDate}</div>
-                <div className="text-right tabular-nums">{c.openRate ? `${c.openRate}%` : "—"}</div>
-                <div className="text-right tabular-nums">{c.clickRate ? `${c.clickRate}%` : "—"}</div>
-                <div className="text-right tabular-nums font-medium">{c.jobs || "—"}</div>
-              </div>
-            ))}
-          </div>
+          <CampaignsTab />
         ) : (
           <div className="space-y-2">
             {automations.map((a) => (
