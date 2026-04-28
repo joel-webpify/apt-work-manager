@@ -676,7 +676,7 @@ function CampaignBuilder({
       setSendDate("");
       setScheduleNow("later");
       setAudienceMode("saved");
-      const match = savedAudiences.find((a) => a.name === template.segment);
+      const matchAud = savedAudiences.find((a) => a.name === template.segment);
       setSelectedAudienceId(match?.id ?? savedAudiences[0]?.id ?? "");
       setMatch("all");
       setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
