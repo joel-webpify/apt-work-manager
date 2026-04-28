@@ -953,7 +953,9 @@ function CampaignBuilder({
 
                 <div className="space-y-2">
                   {rules.map((r) => {
-                    const cfg = ruleFieldConfig[r.field];
+                    const cfg = ruleFieldConfig[r.field] ?? ruleFieldConfig.lifecycle;
+                    const ops = cfg.ops ?? [];
+                    const selectOptions = cfg.options ?? [];
                     return (
                       <div key={r.id} className="flex items-center gap-2">
                         <select
@@ -961,10 +963,11 @@ function CampaignBuilder({
                           onChange={(e) => {
                             const nextField = e.target.value as RuleField;
                             const nextCfg = ruleFieldConfig[nextField];
+                            if (!nextCfg) return;
                             updateRule(r.id, {
                               field: nextField,
                               op: nextCfg.ops[0],
-                              value: nextCfg.kind === "select" ? nextCfg.options![0] : "",
+                              value: nextCfg.kind === "select" ? (nextCfg.options?.[0] ?? "") : "",
                             });
                           }}
                           className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
@@ -980,9 +983,9 @@ function CampaignBuilder({
                           onChange={(e) => updateRule(r.id, { op: e.target.value as RuleOp })}
                           className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                          {cfg.ops.map((op) => (
+                          {ops.map((op) => (
                             <option key={op} value={op}>
-                              {opLabels[op]}
+                              {opLabels[op] ?? op}
                             </option>
                           ))}
                         </select>
@@ -992,7 +995,7 @@ function CampaignBuilder({
                             onChange={(e) => updateRule(r.id, { value: e.target.value })}
                             className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring flex-1"
                           >
-                            {cfg.options!.map((o) => (
+                            {selectOptions.map((o) => (
                               <option key={o} value={o}>
                                 {o}
                               </option>
