@@ -410,7 +410,7 @@ export function CampaignsTab() {
         <Btn variant="secondary" onClick={() => setTemplateOpen(true)}>
           <Sparkles className="w-3.5 h-3.5" /> Templates
         </Btn>
-        <Btn variant="primary" onClick={() => setBuilderTemplate(templates[0])}>
+        <Btn variant="primary" onClick={() => setBuilderTemplate(templates[0] ?? null)}>
           <Plus className="w-3.5 h-3.5" /> New campaign
         </Btn>
       </div>
