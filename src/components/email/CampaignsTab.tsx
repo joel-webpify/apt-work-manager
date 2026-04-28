@@ -130,8 +130,18 @@ interface Template {
   segment: string;
   subject: string;
   preview: string;
+  body: string;
   icon: typeof Sparkles;
 }
+
+const defaultBody = `Hi {{first_name}},
+
+Thanks for choosing us for your {{service_type}} work. We wanted to share a quick update with you.
+
+Reply to this email or call us on 0117 000 0000 if you have any questions.
+
+Best,
+The team`;
 
 const templates: Template[] = [
   {
@@ -141,6 +151,7 @@ const templates: Template[] = [
     segment: "All customers",
     subject: "",
     preview: "",
+    body: "",
     icon: Mail,
   },
   {
@@ -150,6 +161,7 @@ const templates: Template[] = [
     segment: "Residential — Bristol BS",
     subject: "Limited spring offer — save 15% this month",
     preview: "Book a service this April and save 15% on labour…",
+    body: `Hi {{first_name}},\n\nSpring is here — and we're offering **15% off** {{service_type}} bookings made before the end of April.\n\nWe've still got a few slots left for your area ({{postcode}}). Reply to lock one in.\n\nBest,\n{{company_name}}`,
     icon: Sparkles,
   },
   {
@@ -159,6 +171,7 @@ const templates: Template[] = [
     segment: "Lapsed — 12+ months",
     subject: "We miss you — here's 10% off your next job",
     preview: "It's been a while. Treat your home with a fresh service…",
+    body: `Hi {{first_name}},\n\nIt's been a while since your last {{service_type}} with us. As a thank you for being a previous customer, here's **10% off** your next booking.\n\nJust reply and we'll get you back in the diary.\n\nBest,\n{{company_name}}`,
     icon: TrendingUp,
   },
   {
@@ -166,8 +179,9 @@ const templates: Template[] = [
     name: "Service reminder",
     description: "Annual maintenance prompt for past customers.",
     segment: "Customers — last 24 months",
-    subject: "Time for your annual service",
+    subject: "Time for your annual {{service_type}}",
     preview: "Stay on top of maintenance with a quick yearly check…",
+    body: `Hi {{first_name}},\n\nJust a reminder — it's been close to a year since your last {{service_type}}. Annual checks keep everything running smoothly and catch small issues early.\n\nShall we book you in?\n\nBest,\n{{company_name}}`,
     icon: Calendar,
   },
   {
@@ -175,9 +189,105 @@ const templates: Template[] = [
     name: "Review request",
     description: "Ask happy customers for a Google review.",
     segment: "Recent customers (last 30 days)",
-    subject: "How did we do? Leave a quick review",
+    subject: "How did we do, {{first_name}}?",
     preview: "Your feedback helps other locals find us…",
+    body: `Hi {{first_name}},\n\nThanks again for booking your {{service_type}} with us. If you had a good experience, would you mind leaving a short Google review? It genuinely helps other people in {{postcode}} find us.\n\n[Leave a review](https://g.page/review)\n\nThanks,\n{{company_name}}`,
     icon: CheckCircle2,
+  },
+];
+
+// Reusable merge variables available across campaigns
+const mergeVariables: { key: string; label: string; example: string }[] = [
+  { key: "first_name", label: "First name", example: "Sarah" },
+  { key: "last_name", label: "Last name", example: "Whitcombe" },
+  { key: "service_type", label: "Service type", example: "window cleaning" },
+  { key: "postcode", label: "Postcode", example: "BS8 4QE" },
+  { key: "last_job_date", label: "Last job date", example: "12 Apr 2026" },
+  { key: "company_name", label: "Company name", example: "Bristol Trades Co." },
+];
+
+// Audience targeting
+type RuleField = "lifecycle" | "type" | "postcode" | "last_job_days" | "total_spend" | "source";
+type RuleOp = "is" | "is_not" | "contains" | "gt" | "lt" | "gte" | "lte";
+
+interface AudienceRule {
+  id: string;
+  field: RuleField;
+  op: RuleOp;
+  value: string;
+}
+
+const ruleFieldConfig: Record<RuleField, { label: string; ops: RuleOp[]; kind: "text" | "number" | "select"; options?: string[] }> = {
+  lifecycle: { label: "Lifecycle", ops: ["is", "is_not"], kind: "select", options: ["Lead", "Customer", "Lapsed"] },
+  type: { label: "Contact type", ops: ["is", "is_not"], kind: "select", options: ["Residential", "Commercial"] },
+  postcode: { label: "Postcode", ops: ["contains", "is"], kind: "text" },
+  last_job_days: { label: "Days since last job", ops: ["gt", "lt", "gte", "lte"], kind: "number" },
+  total_spend: { label: "Total spend (£)", ops: ["gt", "lt", "gte", "lte"], kind: "number" },
+  source: { label: "Source", ops: ["is", "is_not"], kind: "select", options: ["Google Ads", "Facebook", "Referral", "Website form", "Local Service Ads"] },
+};
+
+const opLabels: Record<RuleOp, string> = {
+  is: "is",
+  is_not: "is not",
+  contains: "contains",
+  gt: ">",
+  lt: "<",
+  gte: "≥",
+  lte: "≤",
+};
+
+interface SavedAudience {
+  id: string;
+  name: string;
+  match: "all" | "any";
+  rules: AudienceRule[];
+  estimate: number;
+}
+
+const initialSavedAudiences: SavedAudience[] = [
+  {
+    id: "aud1",
+    name: "Residential — Bristol BS",
+    match: "all",
+    rules: [
+      { id: "r1", field: "type", op: "is", value: "Residential" },
+      { id: "r2", field: "postcode", op: "contains", value: "BS" },
+    ],
+    estimate: 412,
+  },
+  {
+    id: "aud2",
+    name: "Past quote, no booking",
+    match: "all",
+    rules: [{ id: "r1", field: "lifecycle", op: "is", value: "Lead" }],
+    estimate: 86,
+  },
+  {
+    id: "aud3",
+    name: "Lapsed — 12+ months",
+    match: "all",
+    rules: [{ id: "r1", field: "last_job_days", op: "gt", value: "365" }],
+    estimate: 134,
+  },
+  {
+    id: "aud4",
+    name: "Customers — last 24 months",
+    match: "all",
+    rules: [
+      { id: "r1", field: "lifecycle", op: "is", value: "Customer" },
+      { id: "r2", field: "last_job_days", op: "lte", value: "730" },
+    ],
+    estimate: 268,
+  },
+  {
+    id: "aud5",
+    name: "Recent customers (last 30 days)",
+    match: "all",
+    rules: [
+      { id: "r1", field: "lifecycle", op: "is", value: "Customer" },
+      { id: "r2", field: "last_job_days", op: "lte", value: "30" },
+    ],
+    estimate: 47,
   },
 ];
 
