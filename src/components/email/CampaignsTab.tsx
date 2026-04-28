@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -666,7 +666,7 @@ function CampaignBuilder({
   const [activeField, setActiveField] = useState<"subject" | "body">("body");
 
   // Sync template on open
-  useMemo(() => {
+  useEffect(() => {
     if (template) {
       setStep(1);
       setName(template.name === "Blank campaign" ? "" : template.name);
@@ -682,9 +682,8 @@ function CampaignBuilder({
       setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
       setAudienceNameDraft("");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
-
-  if (!template) return null;
 
   // Estimate for custom audience — deterministic pseudo calc
   const customEstimate = useMemo(() => {
