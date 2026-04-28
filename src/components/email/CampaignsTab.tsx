@@ -410,7 +410,7 @@ export function CampaignsTab() {
         <Btn variant="secondary" onClick={() => setTemplateOpen(true)}>
           <Sparkles className="w-3.5 h-3.5" /> Templates
         </Btn>
-        <Btn variant="primary" onClick={() => setBuilderTemplate(templates[0])}>
+        <Btn variant="primary" onClick={() => setBuilderTemplate(templates[0] ?? null)}>
           <Plus className="w-3.5 h-3.5" /> New campaign
         </Btn>
       </div>
@@ -665,23 +665,25 @@ function CampaignBuilder({
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [activeField, setActiveField] = useState<"subject" | "body">("body");
 
-  // Sync template on open
+  // Sync template on open — defensive against partial/missing template data
   useEffect(() => {
-    if (template) {
-      setStep(1);
-      setName(template.name === "Blank campaign" ? "" : template.name);
-      setSubject(template.subject);
-      setPreview(template.preview);
-      setBody(template.body || defaultBody);
-      setSendDate("");
-      setScheduleNow("later");
-      setAudienceMode("saved");
-      const matchAud = savedAudiences.find((a) => a.name === template.segment);
-      setSelectedAudienceId(matchAud?.id ?? savedAudiences[0]?.id ?? "");
-      setMatch("all");
-      setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
-      setAudienceNameDraft("");
-    }
+    if (!template) return;
+    const safeName = template.name ?? "";
+    setStep(1);
+    setName(safeName === "Blank campaign" ? "" : safeName);
+    setSubject(template.subject ?? "");
+    setPreview(template.preview ?? "");
+    setBody(template.body && template.body.length > 0 ? template.body : defaultBody);
+    setSendDate("");
+    setScheduleNow("later");
+    setAudienceMode("saved");
+    const matchAud = template.segment
+      ? savedAudiences.find((a) => a.name === template.segment)
+      : undefined;
+    setSelectedAudienceId(matchAud?.id ?? savedAudiences[0]?.id ?? "");
+    setMatch("all");
+    setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
+    setAudienceNameDraft("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
 
@@ -913,8 +915,12 @@ function CampaignBuilder({
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         Match {a.match === "all" ? "all" : "any"} of{" "}
-                        {a.rules
-                          .map((r) => `${ruleFieldConfig[r.field].label} ${opLabels[r.op]} ${r.value}`)
+                        {(a.rules ?? [])
+                          .map((r) => {
+                            const fieldLabel = ruleFieldConfig[r.field]?.label ?? r.field;
+                            const opLabel = opLabels[r.op] ?? r.op;
+                            return `${fieldLabel} ${opLabel} ${r.value ?? ""}`;
+                          })
                           .join(a.match === "all" ? " AND " : " OR ")}
                       </div>
                     </div>
@@ -947,7 +953,9 @@ function CampaignBuilder({
 
                 <div className="space-y-2">
                   {rules.map((r) => {
-                    const cfg = ruleFieldConfig[r.field];
+                    const cfg = ruleFieldConfig[r.field] ?? ruleFieldConfig.lifecycle;
+                    const ops = cfg.ops ?? [];
+                    const selectOptions = cfg.options ?? [];
                     return (
                       <div key={r.id} className="flex items-center gap-2">
                         <select
@@ -955,10 +963,11 @@ function CampaignBuilder({
                           onChange={(e) => {
                             const nextField = e.target.value as RuleField;
                             const nextCfg = ruleFieldConfig[nextField];
+                            if (!nextCfg) return;
                             updateRule(r.id, {
                               field: nextField,
                               op: nextCfg.ops[0],
-                              value: nextCfg.kind === "select" ? nextCfg.options![0] : "",
+                              value: nextCfg.kind === "select" ? (nextCfg.options?.[0] ?? "") : "",
                             });
                           }}
                           className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
@@ -974,9 +983,9 @@ function CampaignBuilder({
                           onChange={(e) => updateRule(r.id, { op: e.target.value as RuleOp })}
                           className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                          {cfg.ops.map((op) => (
+                          {ops.map((op) => (
                             <option key={op} value={op}>
-                              {opLabels[op]}
+                              {opLabels[op] ?? op}
                             </option>
                           ))}
                         </select>
@@ -986,7 +995,7 @@ function CampaignBuilder({
                             onChange={(e) => updateRule(r.id, { value: e.target.value })}
                             className="h-8 px-2 text-xs rounded-md border-hairline bg-background focus:outline-none focus:ring-2 focus:ring-ring flex-1"
                           >
-                            {cfg.options!.map((o) => (
+                            {selectOptions.map((o) => (
                               <option key={o} value={o}>
                                 {o}
                               </option>
@@ -1150,8 +1159,8 @@ function CampaignBuilder({
             <div className="border-hairline rounded-md p-3 bg-surface/50 flex items-center gap-3">
               <Users className="w-4 h-4 text-muted-foreground" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{activeSegmentName}</div>
-                <div className="text-xs text-muted-foreground">~{activeEstimate.toLocaleString()} recipients</div>
+                <div className="text-sm font-medium truncate">{activeSegmentName || "Untitled audience"}</div>
+                <div className="text-xs text-muted-foreground">~{(activeEstimate ?? 0).toLocaleString()} recipients</div>
               </div>
             </div>
             <div className="space-y-2">
