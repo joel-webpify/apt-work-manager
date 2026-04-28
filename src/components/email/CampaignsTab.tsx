@@ -665,23 +665,25 @@ function CampaignBuilder({
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const [activeField, setActiveField] = useState<"subject" | "body">("body");
 
-  // Sync template on open
+  // Sync template on open — defensive against partial/missing template data
   useEffect(() => {
-    if (template) {
-      setStep(1);
-      setName(template.name === "Blank campaign" ? "" : template.name);
-      setSubject(template.subject);
-      setPreview(template.preview);
-      setBody(template.body || defaultBody);
-      setSendDate("");
-      setScheduleNow("later");
-      setAudienceMode("saved");
-      const matchAud = savedAudiences.find((a) => a.name === template.segment);
-      setSelectedAudienceId(matchAud?.id ?? savedAudiences[0]?.id ?? "");
-      setMatch("all");
-      setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
-      setAudienceNameDraft("");
-    }
+    if (!template) return;
+    const safeName = template.name ?? "";
+    setStep(1);
+    setName(safeName === "Blank campaign" ? "" : safeName);
+    setSubject(template.subject ?? "");
+    setPreview(template.preview ?? "");
+    setBody(template.body && template.body.length > 0 ? template.body : defaultBody);
+    setSendDate("");
+    setScheduleNow("later");
+    setAudienceMode("saved");
+    const matchAud = template.segment
+      ? savedAudiences.find((a) => a.name === template.segment)
+      : undefined;
+    setSelectedAudienceId(matchAud?.id ?? savedAudiences[0]?.id ?? "");
+    setMatch("all");
+    setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
+    setAudienceNameDraft("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
 
