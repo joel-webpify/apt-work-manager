@@ -915,8 +915,12 @@ function CampaignBuilder({
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">
                         Match {a.match === "all" ? "all" : "any"} of{" "}
-                        {a.rules
-                          .map((r) => `${ruleFieldConfig[r.field].label} ${opLabels[r.op]} ${r.value}`)
+                        {(a.rules ?? [])
+                          .map((r) => {
+                            const fieldLabel = ruleFieldConfig[r.field]?.label ?? r.field;
+                            const opLabel = opLabels[r.op] ?? r.op;
+                            return `${fieldLabel} ${opLabel} ${r.value ?? ""}`;
+                          })
                           .join(a.match === "all" ? " AND " : " OR ")}
                       </div>
                     </div>
