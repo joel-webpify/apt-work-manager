@@ -1159,8 +1159,8 @@ function CampaignBuilder({
             <div className="border-hairline rounded-md p-3 bg-surface/50 flex items-center gap-3">
               <Users className="w-4 h-4 text-muted-foreground" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium truncate">{activeSegmentName}</div>
-                <div className="text-xs text-muted-foreground">~{activeEstimate.toLocaleString()} recipients</div>
+                <div className="text-sm font-medium truncate">{activeSegmentName || "Untitled audience"}</div>
+                <div className="text-xs text-muted-foreground">~{(activeEstimate ?? 0).toLocaleString()} recipients</div>
               </div>
             </div>
             <div className="space-y-2">
