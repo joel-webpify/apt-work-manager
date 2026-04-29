@@ -40,6 +40,29 @@ function getAttributedJobs(campaign: AdsCampaign) {
     });
 }
 
+function createBlankAssetGroup(name = "New asset group"): AssetGroup {
+  return {
+    id: `ag${Date.now()}${Math.floor(Math.random() * 1000)}`,
+    name,
+    status: "Enabled",
+    finalUrl: "",
+    headlines: ["", "", ""],
+    longHeadlines: [""],
+    descriptions: ["", ""],
+    businessName: "",
+    callToAction: "",
+    marketingImages: [],
+    squareImages: [],
+    portraitImages: [],
+    logos: [],
+    landscapeLogos: [],
+    videos: [],
+    audienceSignal: "",
+    callouts: [],
+    sitelinks: [],
+  };
+}
+
 function defaultPMax(weeklySpend: number): PMaxSettings {
   return {
     dailyBudget: Math.max(1, Math.round(weeklySpend / 7)),
