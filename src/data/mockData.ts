@@ -168,6 +168,36 @@ export type BiddingStrategy =
   | "Target CPA"
   | "Target ROAS";
 
+export interface AssetGroupSitelink {
+  text: string;
+  url: string;
+}
+
+export interface AssetGroup {
+  id: string;
+  name: string;
+  status: "Enabled" | "Paused" | "Removed";
+  finalUrl: string;
+  finalMobileUrl?: string;
+  // Text assets — Google Ads PMax limits
+  headlines: string[]; // 3–15, max 30 chars
+  longHeadlines: string[]; // 1–5, max 90 chars
+  descriptions: string[]; // 2–5, max 90 chars (1 short ≤60)
+  businessName: string;
+  callToAction?: string;
+  // Media assets — referenced by URL/path
+  marketingImages: string[]; // 1.91:1, 1+
+  squareImages: string[]; // 1:1, 1+
+  portraitImages?: string[]; // 4:5, optional
+  logos: string[]; // 1:1, 1+
+  landscapeLogos?: string[]; // 4:1, optional
+  videos?: string[]; // YouTube URLs
+  // Audience & extensions per asset group
+  audienceSignal?: string;
+  callouts: string[];
+  sitelinks: AssetGroupSitelink[];
+}
+
 export interface PMaxSettings {
   dailyBudget: number;
   bidding: BiddingStrategy;
@@ -183,7 +213,7 @@ export interface PMaxSettings {
   adSchedule: string;
   audienceSignals: string[];
   searchThemes: string[];
-  assetGroupsCount: number;
+  assetGroups: AssetGroup[];
   brandExclusions: string[];
 }
 
