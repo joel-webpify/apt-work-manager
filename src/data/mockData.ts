@@ -168,6 +168,36 @@ export type BiddingStrategy =
   | "Target CPA"
   | "Target ROAS";
 
+export interface AssetGroupSitelink {
+  text: string;
+  url: string;
+}
+
+export interface AssetGroup {
+  id: string;
+  name: string;
+  status: "Enabled" | "Paused" | "Removed";
+  finalUrl: string;
+  finalMobileUrl?: string;
+  // Text assets — Google Ads PMax limits
+  headlines: string[]; // 3–15, max 30 chars
+  longHeadlines: string[]; // 1–5, max 90 chars
+  descriptions: string[]; // 2–5, max 90 chars (1 short ≤60)
+  businessName: string;
+  callToAction?: string;
+  // Media assets — referenced by URL/path
+  marketingImages: string[]; // 1.91:1, 1+
+  squareImages: string[]; // 1:1, 1+
+  portraitImages?: string[]; // 4:5, optional
+  logos: string[]; // 1:1, 1+
+  landscapeLogos?: string[]; // 4:1, optional
+  videos?: string[]; // YouTube URLs
+  // Audience & extensions per asset group
+  audienceSignal?: string;
+  callouts: string[];
+  sitelinks: AssetGroupSitelink[];
+}
+
 export interface PMaxSettings {
   dailyBudget: number;
   bidding: BiddingStrategy;
@@ -183,7 +213,7 @@ export interface PMaxSettings {
   adSchedule: string;
   audienceSignals: string[];
   searchThemes: string[];
-  assetGroupsCount: number;
+  assetGroups: AssetGroup[];
   brandExclusions: string[];
 }
 
@@ -251,7 +281,64 @@ export const adsCampaigns: AdsCampaign[] = [
       adSchedule: "Mon–Fri 08:00–18:00",
       audienceSignals: ["Past customers", "Homeowners 35–65", "Local business owners"],
       searchThemes: ["window cleaning near me", "commercial window cleaners bristol"],
-      assetGroupsCount: 2,
+      assetGroups: [
+        {
+          id: "ag1",
+          name: "Bristol residential",
+          status: "Enabled",
+          finalUrl: "https://example.co.uk/window-cleaning/bristol",
+          headlines: [
+            "Bristol Window Cleaners",
+            "5★ Local Window Cleaning",
+            "Free Quote in 24 Hours",
+            "Streak-Free Guaranteed",
+            "Reliable Monthly Service",
+          ],
+          longHeadlines: [
+            "Trusted Bristol window cleaners — book online in under a minute",
+            "Sparkling windows, every visit — fully insured local team",
+          ],
+          descriptions: [
+            "Friendly local team. Pure water poles. Fully insured.",
+            "Get a free no-obligation quote today — most jobs booked within 48 hours.",
+            "Residential & commercial. Monthly, bi-monthly or one-off cleans.",
+          ],
+          businessName: "Tidy Trades Window Cleaning",
+          callToAction: "Get quote",
+          marketingImages: ["/placeholder.svg", "/placeholder.svg"],
+          squareImages: ["/placeholder.svg"],
+          logos: ["/placeholder.svg"],
+          audienceSignal: "Homeowners 35–65 in BS postcodes",
+          callouts: ["Fully insured", "5★ Google reviews", "Same-week booking"],
+          sitelinks: [
+            { text: "Get a quote", url: "https://example.co.uk/quote" },
+            { text: "Our services", url: "https://example.co.uk/services" },
+          ],
+        },
+        {
+          id: "ag2",
+          name: "Bath commercial",
+          status: "Paused",
+          finalUrl: "https://example.co.uk/window-cleaning/commercial",
+          headlines: [
+            "Commercial Window Cleaning",
+            "Bath & Bristol Contracts",
+            "Out-of-Hours Available",
+          ],
+          longHeadlines: ["Reliable commercial window cleaning contracts across Bath & Bristol"],
+          descriptions: [
+            "Scheduled contracts for offices, shops and schools.",
+            "Method statements & RAMS provided. Fully insured to £5m.",
+          ],
+          businessName: "Tidy Trades Commercial",
+          callToAction: "Request callback",
+          marketingImages: ["/placeholder.svg"],
+          squareImages: ["/placeholder.svg"],
+          logos: ["/placeholder.svg"],
+          callouts: ["Method statements", "£5m insurance"],
+          sitelinks: [{ text: "Commercial", url: "https://example.co.uk/commercial" }],
+        },
+      ],
       brandExclusions: [],
     },
   },
