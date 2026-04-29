@@ -8,6 +8,7 @@ import {
   type PMaxSettings,
   type LSASettings,
   type BiddingStrategy,
+  type AssetGroup,
 } from "@/data/mockData";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
