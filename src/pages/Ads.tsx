@@ -526,15 +526,53 @@ function PMaxSettingsForm({
         </Field>
       </SettingsGroup>
 
-      <SettingsGroup title="Asset groups & exclusions">
-        <Field label="Number of asset groups">
-          <Input
-            type="number"
-            min="1"
-            value={s.assetGroupsCount}
-            onChange={(e) => update("assetGroupsCount", Number(e.target.value))}
-          />
-        </Field>
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Asset groups</h4>
+          <Btn
+            onClick={() => {
+              const next = [...s.assetGroups, createBlankAssetGroup(`Asset group ${s.assetGroups.length + 1}`)];
+              update("assetGroups", next);
+            }}
+          >
+            <Plus className="h-3.5 w-3.5 mr-1" /> Add asset group
+          </Btn>
+        </div>
+        <div className="space-y-3">
+          {s.assetGroups.length === 0 && (
+            <div className="border-hairline rounded-lg bg-card p-6 text-sm text-muted-foreground text-center">
+              No asset groups yet. Add one to start serving ads.
+            </div>
+          )}
+          {s.assetGroups.map((ag, idx) => (
+            <AssetGroupEditor
+              key={ag.id}
+              group={ag}
+              defaultOpen={idx === 0}
+              onChange={(next) => {
+                const arr = s.assetGroups.map((g) => (g.id === ag.id ? next : g));
+                update("assetGroups", arr);
+              }}
+              onDuplicate={() => {
+                const copy: AssetGroup = {
+                  ...ag,
+                  id: `ag${Date.now()}${Math.floor(Math.random() * 1000)}`,
+                  name: `${ag.name} (copy)`,
+                };
+                update("assetGroups", [...s.assetGroups, copy]);
+              }}
+              onDelete={() => {
+                update(
+                  "assetGroups",
+                  s.assetGroups.filter((g) => g.id !== ag.id),
+                );
+              }}
+            />
+          ))}
+        </div>
+      </div>
+
+      <SettingsGroup title="Brand exclusions">
         <Field label="Brand exclusions (comma separated)" full>
           <Input
             value={s.brandExclusions.join(", ")}
