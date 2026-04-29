@@ -18,7 +18,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { X } from "lucide-react";
+import { X, Plus, Trash2, Image as ImageIcon, ChevronDown, ChevronRight } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 
 const sourceMatchers: Record<AdsCampaign["type"], string[]> = {
   LSA: ["Local Service Ads", "Google LSA"],
