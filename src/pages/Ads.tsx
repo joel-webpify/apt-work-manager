@@ -53,7 +53,7 @@ function defaultPMax(weeklySpend: number): PMaxSettings {
     adSchedule: "All days, all hours",
     audienceSignals: [],
     searchThemes: [],
-    assetGroupsCount: 1,
+    assetGroups: [createBlankAssetGroup("Asset group 1")],
     brandExclusions: [],
   };
 }
