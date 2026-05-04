@@ -43,20 +43,150 @@ export interface Contact {
   notes?: string;
 }
 
+export type Trade =
+  | "Plumbing"
+  | "Electrical"
+  | "Window cleaning"
+  | "Landscaping"
+  | "General";
+
+export interface Employee {
+  id: string;
+  name: string;
+  initials: string;
+  role: string;
+  color: string; // hsl token reference
+  trades: Trade[];
+  postcodes: string[]; // service area prefixes e.g. "BS", "BA"
+  workingDays: number[]; // 0=Sun..6=Sat
+  workStart: string; // "08:00"
+  workEnd: string; // "17:00"
+  daysOff: string[]; // ISO dates "2026-04-22"
+  capacityHoursPerDay: number;
+  phone: string;
+}
+
+export interface JobAssignment {
+  employeeId: string;
+  /** ISO date "2026-04-22" */
+  date: string;
+  /** "08:30" */
+  start: string;
+  /** hours */
+  duration: number;
+}
+
 export interface Job {
   id: string;
   contactId: string;
   customer: string;
   service: string;
+  trade?: Trade;
   value: number;
   stage: PipelineStage;
   daysInStage: number;
   address: string;
+  postcode?: string;
   notes: string;
   quoteValue: number;
   invoiceId?: string;
+  estimatedHours?: number;
+  assignments?: JobAssignment[];
   timeline: { type: "sms" | "email" | "note"; text: string; date: string }[];
 }
+
+export const employees: Employee[] = [
+  {
+    id: "e1",
+    name: "Daniel Pearce",
+    initials: "DP",
+    role: "Lead plumber",
+    color: "199 89% 48%",
+    trades: ["Plumbing", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5, 6],
+    workStart: "07:30",
+    workEnd: "17:30",
+    daysOff: [],
+    capacityHoursPerDay: 9,
+    phone: "07700 900201",
+  },
+  {
+    id: "e2",
+    name: "Aisha Khan",
+    initials: "AK",
+    role: "Electrician",
+    color: "262 83% 58%",
+    trades: ["Electrical"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5],
+    workStart: "08:00",
+    workEnd: "17:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900202",
+  },
+  {
+    id: "e3",
+    name: "Marcus Reed",
+    initials: "MR",
+    role: "Window cleaner",
+    color: "142 71% 45%",
+    trades: ["Window cleaning"],
+    postcodes: ["BS"],
+    workingDays: [1, 2, 3, 4, 5, 6],
+    workStart: "07:00",
+    workEnd: "16:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900203",
+  },
+  {
+    id: "e4",
+    name: "Liam O'Connor",
+    initials: "LO",
+    role: "Window cleaner",
+    color: "32 95% 55%",
+    trades: ["Window cleaning", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5],
+    workStart: "07:00",
+    workEnd: "16:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900204",
+  },
+  {
+    id: "e5",
+    name: "Priya Shah",
+    initials: "PS",
+    role: "Landscaper",
+    color: "340 82% 55%",
+    trades: ["Landscaping", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [2, 3, 4, 5, 6],
+    workStart: "08:00",
+    workEnd: "17:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900205",
+  },
+  {
+    id: "e6",
+    name: "Tom Bradley",
+    initials: "TB",
+    role: "Apprentice",
+    color: "172 66% 45%",
+    trades: ["Plumbing", "Electrical", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5],
+    workStart: "08:00",
+    workEnd: "17:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900206",
+  },
+];
 
 export const contacts: Contact[] = [
   {
