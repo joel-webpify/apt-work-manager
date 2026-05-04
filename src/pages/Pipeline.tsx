@@ -348,6 +348,7 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
         }`}
       >
         <CalendarDays className="w-3.5 h-3.5" /> Schedule
+      </button>
     </div>
   );
 }
