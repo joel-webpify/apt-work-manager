@@ -341,6 +341,13 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
       >
         <List className="w-3.5 h-3.5" /> List
       </button>
+      <button
+        onClick={() => onChange("schedule")}
+        className={`h-7 px-2.5 rounded-[5px] text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+          view === "schedule" ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <CalendarDays className="w-3.5 h-3.5" /> Schedule
     </div>
   );
 }
