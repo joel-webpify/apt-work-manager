@@ -2,8 +2,9 @@ import { useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote } from "lucide-react";
-import { jobs as initialJobs, stages, stageColors, type Job, type PipelineStage } from "@/data/mockData";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users } from "lucide-react";
+import { jobs as initialJobs, stages, stageColors, employees, type Job, type PipelineStage } from "@/data/mockData";
+import ScheduleView from "@/components/pipeline/ScheduleView";
 import {
   DropdownMenu,
   DropdownMenuContent,
