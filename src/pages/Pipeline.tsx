@@ -142,7 +142,7 @@ function sortTemplatesForJob(templates: MessageTemplate[], job: Job): MessageTem
   });
 }
 
-type View = "board" | "list";
+type View = "board" | "list" | "schedule";
 type SortKey = "customer" | "service" | "stage" | "value" | "daysInStage";
 type SortDir = "asc" | "desc";
 
