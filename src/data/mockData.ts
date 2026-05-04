@@ -43,20 +43,150 @@ export interface Contact {
   notes?: string;
 }
 
+export type Trade =
+  | "Plumbing"
+  | "Electrical"
+  | "Window cleaning"
+  | "Landscaping"
+  | "General";
+
+export interface Employee {
+  id: string;
+  name: string;
+  initials: string;
+  role: string;
+  color: string; // hsl token reference
+  trades: Trade[];
+  postcodes: string[]; // service area prefixes e.g. "BS", "BA"
+  workingDays: number[]; // 0=Sun..6=Sat
+  workStart: string; // "08:00"
+  workEnd: string; // "17:00"
+  daysOff: string[]; // ISO dates "2026-04-22"
+  capacityHoursPerDay: number;
+  phone: string;
+}
+
+export interface JobAssignment {
+  employeeId: string;
+  /** ISO date "2026-04-22" */
+  date: string;
+  /** "08:30" */
+  start: string;
+  /** hours */
+  duration: number;
+}
+
 export interface Job {
   id: string;
   contactId: string;
   customer: string;
   service: string;
+  trade?: Trade;
   value: number;
   stage: PipelineStage;
   daysInStage: number;
   address: string;
+  postcode?: string;
   notes: string;
   quoteValue: number;
   invoiceId?: string;
+  estimatedHours?: number;
+  assignments?: JobAssignment[];
   timeline: { type: "sms" | "email" | "note"; text: string; date: string }[];
 }
+
+export const employees: Employee[] = [
+  {
+    id: "e1",
+    name: "Daniel Pearce",
+    initials: "DP",
+    role: "Lead plumber",
+    color: "199 89% 48%",
+    trades: ["Plumbing", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5, 6],
+    workStart: "07:30",
+    workEnd: "17:30",
+    daysOff: [],
+    capacityHoursPerDay: 9,
+    phone: "07700 900201",
+  },
+  {
+    id: "e2",
+    name: "Aisha Khan",
+    initials: "AK",
+    role: "Electrician",
+    color: "262 83% 58%",
+    trades: ["Electrical"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5],
+    workStart: "08:00",
+    workEnd: "17:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900202",
+  },
+  {
+    id: "e3",
+    name: "Marcus Reed",
+    initials: "MR",
+    role: "Window cleaner",
+    color: "142 71% 45%",
+    trades: ["Window cleaning"],
+    postcodes: ["BS"],
+    workingDays: [1, 2, 3, 4, 5, 6],
+    workStart: "07:00",
+    workEnd: "16:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900203",
+  },
+  {
+    id: "e4",
+    name: "Liam O'Connor",
+    initials: "LO",
+    role: "Window cleaner",
+    color: "32 95% 55%",
+    trades: ["Window cleaning", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5],
+    workStart: "07:00",
+    workEnd: "16:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900204",
+  },
+  {
+    id: "e5",
+    name: "Priya Shah",
+    initials: "PS",
+    role: "Landscaper",
+    color: "340 82% 55%",
+    trades: ["Landscaping", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [2, 3, 4, 5, 6],
+    workStart: "08:00",
+    workEnd: "17:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900205",
+  },
+  {
+    id: "e6",
+    name: "Tom Bradley",
+    initials: "TB",
+    role: "Apprentice",
+    color: "172 66% 45%",
+    trades: ["Plumbing", "Electrical", "General"],
+    postcodes: ["BS", "BA"],
+    workingDays: [1, 2, 3, 4, 5],
+    workStart: "08:00",
+    workEnd: "17:00",
+    daysOff: [],
+    capacityHoursPerDay: 8,
+    phone: "07700 900206",
+  },
+];
 
 export const contacts: Contact[] = [
   {
@@ -135,19 +265,40 @@ export const contacts: Contact[] = [
   },
 ];
 
+// Week of Mon 2026-05-04 used for sample assignments
 export const jobs: Job[] = [
-  { id: "j1", contactId: "c3", customer: "James Okafor", service: "Plumbing — leak repair", value: 180, stage: "New enquiry", daysInStage: 1, address: "14 Elm Grove, Bristol BS9 2DE", notes: "Slow leak under kitchen sink.", quoteValue: 180, timeline: [{ type: "email", text: "Enquiry received via website form", date: "19 Apr" }] },
-  { id: "j2", contactId: "c6", customer: "Riverside Cafe Ltd", service: "Window cleaning — monthly", value: 240, stage: "New enquiry", daysInStage: 2, address: "8 Welsh Back, Bristol BS1 6XN", notes: "Large frontage, 12 panels.", quoteValue: 240, timeline: [] },
-  { id: "j3", contactId: "c1", customer: "Sarah Whitcombe", service: "Artificial grass install", value: 2850, stage: "Quote sent", daysInStage: 3, address: "22 Whiteladies Rd, Bristol BS8 4QE", notes: "45 sqm rear garden. Wants premium grade.", quoteValue: 2850, timeline: [{ type: "email", text: "Quote sent", date: "16 Apr" }] },
-  { id: "j4", contactId: "c5", customer: "Dawn Hartley", service: "Electrical — consumer unit", value: 620, stage: "Quote sent", daysInStage: 5, address: "3 Lyncombe Hill, Bath BA2 6QH", notes: "Replace old fuse box.", quoteValue: 620, timeline: [{ type: "sms", text: "Quote follow-up sent", date: "17 Apr" }] },
-  { id: "j5", contactId: "c4", customer: "Highfield Primary School", service: "Window cleaning — termly", value: 480, stage: "Job booked", daysInStage: 1, address: "Highfield Rd, Bristol BS4 3HP", notes: "Half term week. Access via reception.", quoteValue: 480, timeline: [] },
-  { id: "j6", contactId: "c2", customer: "Marlow & Pierce Solicitors", service: "Window cleaning — quarterly", value: 320, stage: "Job booked", daysInStage: 2, address: "44 Queen Sq, Bristol BS1 5UH", notes: "", quoteValue: 320, timeline: [] },
-  { id: "j7", contactId: "c1", customer: "Sarah Whitcombe", service: "Plumbing — bathroom tap", value: 145, stage: "In progress", daysInStage: 1, address: "22 Whiteladies Rd, Bristol BS8 4QE", notes: "On site now.", quoteValue: 145, timeline: [] },
-  { id: "j8", contactId: "c4", customer: "Highfield Primary School", service: "Electrical — PAT testing", value: 380, stage: "In progress", daysInStage: 1, address: "Highfield Rd, Bristol BS4 3HP", notes: "32 items.", quoteValue: 380, timeline: [] },
-  { id: "j9", contactId: "c2", customer: "Marlow & Pierce Solicitors", service: "Window cleaning — quarterly", value: 320, stage: "Completed", daysInStage: 2, address: "44 Queen Sq, Bristol BS1 5UH", notes: "Job done. Awaiting invoice.", quoteValue: 320, timeline: [] },
-  { id: "j10", contactId: "c1", customer: "Sarah Whitcombe", service: "Window cleaning — bi-monthly", value: 65, stage: "Invoiced", daysInStage: 4, address: "22 Whiteladies Rd, Bristol BS8 4QE", notes: "", quoteValue: 65, invoiceId: "INV-1042", timeline: [{ type: "email", text: "Invoice INV-1042 sent", date: "15 Apr" }] },
-  { id: "j11", contactId: "c4", customer: "Highfield Primary School", service: "Plumbing — drainage", value: 1090, stage: "Invoiced", daysInStage: 8, address: "Highfield Rd, Bristol BS4 3HP", notes: "30-day terms.", quoteValue: 1090, invoiceId: "INV-1041", timeline: [] },
-  { id: "j12", contactId: "c2", customer: "Marlow & Pierce Solicitors", service: "Artificial grass — courtyard", value: 1840, stage: "Paid", daysInStage: 3, address: "44 Queen Sq, Bristol BS1 5UH", notes: "Paid by bank transfer.", quoteValue: 1840, invoiceId: "INV-1038", timeline: [{ type: "email", text: "Payment received", date: "16 Apr" }] },
+  { id: "j1", contactId: "c3", customer: "James Okafor", service: "Plumbing — leak repair", trade: "Plumbing", value: 180, stage: "New enquiry", daysInStage: 1, address: "14 Elm Grove, Bristol BS9 2DE", postcode: "BS9", notes: "Slow leak under kitchen sink.", quoteValue: 180, estimatedHours: 2, assignments: [], timeline: [{ type: "email", text: "Enquiry received via website form", date: "19 Apr" }] },
+  { id: "j2", contactId: "c6", customer: "Riverside Cafe Ltd", service: "Window cleaning — monthly", trade: "Window cleaning", value: 240, stage: "New enquiry", daysInStage: 2, address: "8 Welsh Back, Bristol BS1 6XN", postcode: "BS1", notes: "Large frontage, 12 panels.", quoteValue: 240, estimatedHours: 3, assignments: [], timeline: [] },
+  { id: "j3", contactId: "c1", customer: "Sarah Whitcombe", service: "Artificial grass install", trade: "Landscaping", value: 2850, stage: "Quote sent", daysInStage: 3, address: "22 Whiteladies Rd, Bristol BS8 4QE", postcode: "BS8", notes: "45 sqm rear garden. Wants premium grade.", quoteValue: 2850, estimatedHours: 16, assignments: [], timeline: [{ type: "email", text: "Quote sent", date: "16 Apr" }] },
+  { id: "j4", contactId: "c5", customer: "Dawn Hartley", service: "Electrical — consumer unit", trade: "Electrical", value: 620, stage: "Quote sent", daysInStage: 5, address: "3 Lyncombe Hill, Bath BA2 6QH", postcode: "BA2", notes: "Replace old fuse box.", quoteValue: 620, estimatedHours: 5, assignments: [], timeline: [{ type: "sms", text: "Quote follow-up sent", date: "17 Apr" }] },
+  { id: "j5", contactId: "c4", customer: "Highfield Primary School", service: "Window cleaning — termly", trade: "Window cleaning", value: 480, stage: "Job booked", daysInStage: 1, address: "Highfield Rd, Bristol BS4 3HP", postcode: "BS4", notes: "Half term week. Access via reception.", quoteValue: 480, estimatedHours: 5, assignments: [
+    { employeeId: "e3", date: "2026-05-05", start: "08:00", duration: 5 },
+    { employeeId: "e4", date: "2026-05-05", start: "08:00", duration: 5 },
+  ], timeline: [] },
+  { id: "j6", contactId: "c2", customer: "Marlow & Pierce Solicitors", service: "Window cleaning — quarterly", trade: "Window cleaning", value: 320, stage: "Job booked", daysInStage: 2, address: "44 Queen Sq, Bristol BS1 5UH", postcode: "BS1", notes: "", quoteValue: 320, estimatedHours: 4, assignments: [
+    { employeeId: "e3", date: "2026-05-06", start: "08:00", duration: 4 },
+  ], timeline: [] },
+  { id: "j7", contactId: "c1", customer: "Sarah Whitcombe", service: "Plumbing — bathroom tap", trade: "Plumbing", value: 145, stage: "In progress", daysInStage: 1, address: "22 Whiteladies Rd, Bristol BS8 4QE", postcode: "BS8", notes: "On site now.", quoteValue: 145, estimatedHours: 2, assignments: [
+    { employeeId: "e1", date: "2026-05-04", start: "09:00", duration: 2 },
+  ], timeline: [] },
+  { id: "j8", contactId: "c4", customer: "Highfield Primary School", service: "Electrical — PAT testing", trade: "Electrical", value: 380, stage: "In progress", daysInStage: 1, address: "Highfield Rd, Bristol BS4 3HP", postcode: "BS4", notes: "32 items.", quoteValue: 380, estimatedHours: 4, assignments: [
+    { employeeId: "e2", date: "2026-05-04", start: "08:30", duration: 4 },
+    { employeeId: "e6", date: "2026-05-04", start: "08:30", duration: 4 },
+  ], timeline: [] },
+  { id: "j9", contactId: "c2", customer: "Marlow & Pierce Solicitors", service: "Window cleaning — quarterly", trade: "Window cleaning", value: 320, stage: "Completed", daysInStage: 2, address: "44 Queen Sq, Bristol BS1 5UH", postcode: "BS1", notes: "Job done. Awaiting invoice.", quoteValue: 320, estimatedHours: 4, assignments: [], timeline: [] },
+  { id: "j10", contactId: "c1", customer: "Sarah Whitcombe", service: "Window cleaning — bi-monthly", trade: "Window cleaning", value: 65, stage: "Invoiced", daysInStage: 4, address: "22 Whiteladies Rd, Bristol BS8 4QE", postcode: "BS8", notes: "", quoteValue: 65, estimatedHours: 1, invoiceId: "INV-1042", assignments: [], timeline: [{ type: "email", text: "Invoice INV-1042 sent", date: "15 Apr" }] },
+  { id: "j11", contactId: "c4", customer: "Highfield Primary School", service: "Plumbing — drainage", trade: "Plumbing", value: 1090, stage: "Invoiced", daysInStage: 8, address: "Highfield Rd, Bristol BS4 3HP", postcode: "BS4", notes: "30-day terms.", quoteValue: 1090, estimatedHours: 6, invoiceId: "INV-1041", assignments: [], timeline: [] },
+  { id: "j12", contactId: "c2", customer: "Marlow & Pierce Solicitors", service: "Artificial grass — courtyard", trade: "Landscaping", value: 1840, stage: "Paid", daysInStage: 3, address: "44 Queen Sq, Bristol BS1 5UH", postcode: "BS1", notes: "Paid by bank transfer.", quoteValue: 1840, estimatedHours: 12, invoiceId: "INV-1038", assignments: [], timeline: [{ type: "email", text: "Payment received", date: "16 Apr" }] },
+  { id: "j13", contactId: "c1", customer: "Sarah Whitcombe", service: "Plumbing — radiator swap", trade: "Plumbing", value: 320, stage: "Job booked", daysInStage: 0, address: "22 Whiteladies Rd, Bristol BS8 4QE", postcode: "BS8", notes: "Bring 2 new TRVs.", quoteValue: 320, estimatedHours: 3, assignments: [
+    { employeeId: "e1", date: "2026-05-06", start: "09:00", duration: 3 },
+    { employeeId: "e6", date: "2026-05-06", start: "09:00", duration: 3 },
+  ], timeline: [] },
+  { id: "j14", contactId: "c5", customer: "Dawn Hartley", service: "Garden tidy & turf top-up", trade: "Landscaping", value: 540, stage: "Job booked", daysInStage: 0, address: "3 Lyncombe Hill, Bath BA2 6QH", postcode: "BA2", notes: "", quoteValue: 540, estimatedHours: 6, assignments: [
+    { employeeId: "e5", date: "2026-05-07", start: "08:30", duration: 6 },
+  ], timeline: [] },
+  { id: "j15", contactId: "c4", customer: "Highfield Primary School", service: "Window clean — staff block", trade: "Window cleaning", value: 180, stage: "Job booked", daysInStage: 0, address: "Highfield Rd, Bristol BS4 3HP", postcode: "BS4", notes: "After 15:30 only.", quoteValue: 180, estimatedHours: 2, assignments: [
+    { employeeId: "e4", date: "2026-05-08", start: "15:30", duration: 2 },
+  ], timeline: [] },
 ];
 
 export const campaigns = [

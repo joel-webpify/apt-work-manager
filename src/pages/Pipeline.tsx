@@ -2,8 +2,9 @@ import { useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote } from "lucide-react";
-import { jobs as initialJobs, stages, stageColors, type Job, type PipelineStage } from "@/data/mockData";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users } from "lucide-react";
+import { jobs as initialJobs, stages, stageColors, employees, type Job, type PipelineStage } from "@/data/mockData";
+import ScheduleView from "@/components/pipeline/ScheduleView";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -141,7 +142,7 @@ function sortTemplatesForJob(templates: MessageTemplate[], job: Job): MessageTem
   });
 }
 
-type View = "board" | "list";
+type View = "board" | "list" | "schedule";
 type SortKey = "customer" | "service" | "stage" | "value" | "daysInStage";
 type SortDir = "asc" | "desc";
 
@@ -208,7 +209,7 @@ export default function Pipeline() {
     <>
       <PageHeader
         title="Jobs & pipeline"
-        description={view === "board" ? "Drag and track jobs through every stage" : "Detailed view of every job across all stages"}
+        description={view === "board" ? "Drag and track jobs through every stage" : view === "list" ? "Detailed view of every job across all stages" : "Schedule your team across the week — drag jobs onto employees"}
         actions={
           <>
             <Link
@@ -223,7 +224,7 @@ export default function Pipeline() {
         }
       />
 
-      {view === "board" ? (
+      {view === "board" && (
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
           <div className="flex gap-3 px-8 py-6 h-full min-w-max">
             {stages.map((stage) => {
@@ -271,6 +272,31 @@ export default function Pipeline() {
                           <span className="text-sm font-medium tabular-nums">£{job.value}</span>
                           <span className="text-xs text-muted-foreground">{job.daysInStage}d</span>
                         </div>
+                        {job.assignments && job.assignments.length > 0 && (
+                          <div className="flex items-center gap-1 mt-2 pt-2 border-t-hairline">
+                            <Users className="w-3 h-3 text-muted-foreground" />
+                            <div className="flex -space-x-1">
+                              {job.assignments.slice(0, 3).map((a, i) => {
+                                const emp = employees.find((e) => e.id === a.employeeId);
+                                if (!emp) return null;
+                                return (
+                                  <span
+                                    key={i}
+                                    title={emp.name}
+                                    className="w-4 h-4 rounded-full inline-flex items-center justify-center text-[8px] font-medium text-white border border-card"
+                                    style={{ backgroundColor: `hsl(${emp.color})` }}
+                                  >
+                                    {emp.initials}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                            <span className="text-[10px] text-muted-foreground tabular-nums ml-auto inline-flex items-center gap-0.5">
+                              <Clock className="w-2.5 h-2.5" />
+                              {job.assignments[0].date.slice(5)}
+                            </span>
+                          </div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -279,8 +305,16 @@ export default function Pipeline() {
             })}
           </div>
         </div>
-      ) : (
-        <JobsListView jobs={jobList} onSelect={setSelected} />
+      )}
+      {view === "list" && <JobsListView jobs={jobList} onSelect={setSelected} />}
+      {view === "schedule" && (
+        <ScheduleView
+          jobs={jobList}
+          onUpdateJob={(jobId, updater) =>
+            setJobList((prev) => prev.map((j) => (j.id === jobId ? updater(j) : j)))
+          }
+          onSelectJob={setSelected}
+        />
       )}
 
       {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
@@ -306,6 +340,14 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
         }`}
       >
         <List className="w-3.5 h-3.5" /> List
+      </button>
+      <button
+        onClick={() => onChange("schedule")}
+        className={`h-7 px-2.5 rounded-[5px] text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+          view === "schedule" ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"
+        }`}
+      >
+        <CalendarDays className="w-3.5 h-3.5" /> Schedule
       </button>
     </div>
   );
