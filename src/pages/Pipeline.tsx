@@ -209,7 +209,7 @@ export default function Pipeline() {
     <>
       <PageHeader
         title="Jobs & pipeline"
-        description={view === "board" ? "Drag and track jobs through every stage" : "Detailed view of every job across all stages"}
+        description={view === "board" ? "Drag and track jobs through every stage" : view === "list" ? "Detailed view of every job across all stages" : "Schedule your team across the week — drag jobs onto employees"}
         actions={
           <>
             <Link
