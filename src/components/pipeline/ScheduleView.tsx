@@ -498,6 +498,7 @@ function ScheduledChip({
   onRemove,
   onDragStart,
   onDragEnd,
+  onEdit,
 }: {
   row: AssignmentRow;
   color: string;
@@ -506,41 +507,157 @@ function ScheduledChip({
   onRemove: () => void;
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
+  onEdit: (patch: { start?: string; duration?: number }) => void;
 }) {
   const start = row.assignment.start;
-  const endMins = timeToMinutes(start) + row.assignment.duration * 60;
+  const duration = row.assignment.duration;
+  const endMins = timeToMinutes(start) + duration * 60;
+
+  const [editing, setEditing] = useState(false);
+  const [draftStart, setDraftStart] = useState(start);
+  const [draftDuration, setDraftDuration] = useState(String(duration));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Resize-by-drag state
+  const resizeState = useRef<{ startY: number; startDuration: number } | null>(null);
+
+  const beginEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDraftStart(start);
+    setDraftDuration(String(duration));
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const commitEdit = () => {
+    const dur = parseFloat(draftDuration);
+    const patch: { start?: string; duration?: number } = {};
+    if (draftStart && draftStart !== start) patch.start = draftStart;
+    if (!Number.isNaN(dur) && dur > 0 && dur !== duration) patch.duration = dur;
+    setEditing(false);
+    if (patch.start || patch.duration) onEdit(patch);
+  };
+
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeState.current = { startY: e.clientY, startDuration: duration };
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeState.current) return;
+      const deltaY = ev.clientY - resizeState.current.startY;
+      // 16px per 30 minutes
+      const stepHours = Math.round((deltaY / 16) * 2) / 4; // 0.25h increments
+      const next = Math.max(0.25, resizeState.current.startDuration + stepHours);
+      // visual hint via title; commit on mouseup
+      (ev.target as HTMLElement)?.setAttribute?.("data-next", String(next));
+    };
+    const onUp = (ev: MouseEvent) => {
+      if (!resizeState.current) return;
+      const deltaY = ev.clientY - resizeState.current.startY;
+      const stepHours = Math.round((deltaY / 16) * 2) / 4;
+      const next = Math.max(0.25, Math.round((resizeState.current.startDuration + stepHours) * 4) / 4);
+      resizeState.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      if (next !== duration) onEdit({ duration: next });
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  if (editing) {
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-md border-hairline bg-background px-1.5 py-1 space-y-1"
+        style={{ borderLeft: `2px solid hsl(${color})` }}
+      >
+        <div className="flex items-center gap-1">
+          <input
+            ref={inputRef}
+            type="time"
+            value={draftStart}
+            onChange={(e) => setDraftStart(e.target.value)}
+            className="flex-1 min-w-0 h-6 px-1 text-[10px] tabular-nums rounded border-hairline bg-background"
+          />
+          <input
+            type="number"
+            min={0.25}
+            step={0.25}
+            value={draftDuration}
+            onChange={(e) => setDraftDuration(e.target.value)}
+            className="w-12 h-6 px-1 text-[10px] tabular-nums rounded border-hairline bg-background"
+            title="Hours"
+          />
+          <button
+            onClick={commitEdit}
+            className="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-surface-hover text-foreground"
+            aria-label="Save"
+          >
+            <Check className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            className="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-surface-hover text-muted-foreground"
+            aria-label="Cancel"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+        <div className="text-[10px] text-muted-foreground truncate">{row.job.customer}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
+      onDoubleClick={beginEdit}
       className={`group relative cursor-grab active:cursor-grabbing rounded-md border-hairline bg-background px-1.5 py-1 hover:bg-surface-hover transition-colors ${
         conflict ? "ring-1 ring-[hsl(var(--destructive))]" : ""
       }`}
       style={{ borderLeft: `2px solid hsl(${color})` }}
-      title={`${row.job.customer} · ${start}–${minutesToTime(endMins)}`}
+      title={`${row.job.customer} · ${start}–${minutesToTime(endMins)} (${duration}h) · double-click to edit`}
     >
       <div className="flex items-center justify-between gap-1">
         <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
-          {start}
+          {start}–{minutesToTime(endMins)}
         </span>
-        {conflict && (
-          <AlertTriangle className="w-3 h-3 text-[hsl(var(--destructive))] shrink-0" />
-        )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-          aria-label="Remove assignment"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          {conflict && (
+            <AlertTriangle className="w-3 h-3 text-[hsl(var(--destructive))] shrink-0" />
+          )}
+          <button
+            onClick={beginEdit}
+            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+            aria-label="Edit time"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+            aria-label="Remove assignment"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
       </div>
       <div className="text-[11px] font-medium leading-tight truncate">{row.job.customer}</div>
       <div className="text-[10px] text-muted-foreground leading-tight truncate">{row.job.service}</div>
+      {/* Resize handle */}
+      <div
+        onMouseDown={onResizeMouseDown}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute left-0 right-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-foreground/10 hover:bg-foreground/20 rounded-b-md"
+        title="Drag to resize duration"
+      />
     </div>
   );
 }
