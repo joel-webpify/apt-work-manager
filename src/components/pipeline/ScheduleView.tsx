@@ -176,6 +176,40 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
     }));
   };
 
+  const updateAssignment = (
+    jobId: string,
+    original: JobAssignment,
+    patch: Partial<Pick<JobAssignment, "start" | "duration" | "date" | "employeeId">>,
+  ) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const employee = employees.find((e) => e.id === (patch.employeeId ?? original.employeeId));
+    if (!employee) return;
+    const nextStart = patch.start ?? original.start;
+    const nextDuration = patch.duration ?? original.duration;
+    const nextDate = patch.date ?? original.date;
+    const dragLike: DragPayload = {
+      jobId,
+      fromEmployeeId: original.employeeId,
+      fromDate: original.date,
+      fromStart: original.start,
+    };
+    const warn = validateAssignment(job, employee, nextDate, nextStart, nextDuration, jobs, dragLike);
+    if (warn.blocking) {
+      toast({ title: "Can't update", description: warn.blocking });
+      return;
+    }
+    if (warn.warning) toast({ title: "Heads up", description: warn.warning });
+    onUpdateJob(jobId, (curr) => ({
+      ...curr,
+      assignments: (curr.assignments ?? []).map((x) =>
+        x.employeeId === original.employeeId && x.date === original.date && x.start === original.start
+          ? { ...x, ...patch }
+          : x,
+      ),
+    }));
+  };
+
   const goToday = useCallback(() => setWeekStart(startOfWeek(new Date(2026, 4, 4))), []);
   const todayISO = fmtISO(new Date(2026, 4, 4));
 
