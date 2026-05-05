@@ -5,6 +5,7 @@ import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell"
 import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users } from "lucide-react";
 import { jobs as initialJobs, stages, stageColors, employees, type Job, type PipelineStage } from "@/data/mockData";
 import ScheduleView from "@/components/pipeline/ScheduleView";
+import NewJobDialog from "@/components/pipeline/NewJobDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -172,6 +173,7 @@ export default function Pipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
   const [view, setView] = useState<View>("board");
+  const [newJobOpen, setNewJobOpen] = useState(false);
 
   const handleDragStart = (e: DragEvent<HTMLButtonElement>, jobId: string) => {
     setDraggingId(jobId);
@@ -219,7 +221,7 @@ export default function Pipeline() {
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
             </Link>
             <ViewToggle view={view} onChange={setView} />
-            <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New job</Btn>
+            <Btn variant="primary" onClick={() => setNewJobOpen(true)}><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
         }
       />
@@ -318,6 +320,11 @@ export default function Pipeline() {
       )}
 
       {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
+      <NewJobDialog
+        open={newJobOpen}
+        onOpenChange={setNewJobOpen}
+        onCreate={(job) => setJobList((prev) => [job, ...prev])}
+      />
     </>
   );
 }
