@@ -428,6 +428,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
                             })
                           }
                           onDragEnd={onJobDragEnd}
+                          onEdit={(patch) => updateAssignment(row.job.id, row.assignment, patch)}
                         />
                       ))}
                     </div>
