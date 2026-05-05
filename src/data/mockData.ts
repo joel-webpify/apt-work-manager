@@ -495,6 +495,110 @@ export const adsCampaigns: AdsCampaign[] = [
   },
 ];
 
+export type ProductUnit = "each" | "hour" | "day" | "sqm" | "m" | "visit";
+
+export interface Product {
+  id: string;
+  name: string;
+  description?: string;
+  trade: Trade;
+  unit: ProductUnit;
+  price: number; // unit price excl. VAT
+  taxRate: number; // % e.g. 20
+  sku?: string;
+  active: boolean;
+}
+
+export const products: Product[] = [
+  {
+    id: "p1",
+    name: "Window cleaning — standard visit",
+    description: "Exterior pure-water clean, up to 12 panels.",
+    trade: "Window cleaning",
+    unit: "visit",
+    price: 35,
+    taxRate: 20,
+    sku: "WC-STD",
+    active: true,
+  },
+  {
+    id: "p2",
+    name: "Window cleaning — commercial frontage",
+    description: "Per panel, ground floor commercial.",
+    trade: "Window cleaning",
+    unit: "each",
+    price: 4.5,
+    taxRate: 20,
+    sku: "WC-COM",
+    active: true,
+  },
+  {
+    id: "p3",
+    name: "Plumbing labour",
+    description: "Standard hourly labour, parts billed separately.",
+    trade: "Plumbing",
+    unit: "hour",
+    price: 65,
+    taxRate: 20,
+    sku: "PL-LAB",
+    active: true,
+  },
+  {
+    id: "p4",
+    name: "Emergency callout",
+    description: "Out-of-hours callout, first hour included.",
+    trade: "Plumbing",
+    unit: "each",
+    price: 120,
+    taxRate: 20,
+    sku: "PL-EMG",
+    active: true,
+  },
+  {
+    id: "p5",
+    name: "Electrical labour",
+    trade: "Electrical",
+    unit: "hour",
+    price: 70,
+    taxRate: 20,
+    sku: "EL-LAB",
+    active: true,
+  },
+  {
+    id: "p6",
+    name: "Consumer unit replacement",
+    description: "Supply & install 10-way RCBO unit.",
+    trade: "Electrical",
+    unit: "each",
+    price: 520,
+    taxRate: 20,
+    sku: "EL-CU10",
+    active: true,
+  },
+  {
+    id: "p7",
+    name: "Artificial grass — premium",
+    description: "Supply & install per sqm, includes prep.",
+    trade: "Landscaping",
+    unit: "sqm",
+    price: 58,
+    taxRate: 20,
+    sku: "LS-AGP",
+    active: true,
+  },
+  {
+    id: "p8",
+    name: "Garden tidy",
+    description: "Per labour day, two operatives.",
+    trade: "Landscaping",
+    unit: "day",
+    price: 280,
+    taxRate: 20,
+    sku: "LS-TDY",
+    active: true,
+  },
+];
+
 export const forms = [
   { id: "f1", name: "Window cleaning quote", trade: "Window cleaning", submissions: 38, conversionRate: 31.6 },
   { id: "f2", name: "Artificial grass enquiry", trade: "Landscaping", submissions: 22, conversionRate: 45.5 },
