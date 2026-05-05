@@ -221,7 +221,7 @@ export default function Pipeline() {
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
             </Link>
             <ViewToggle view={view} onChange={setView} />
-            <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New job</Btn>
+            <Btn variant="primary" onClick={() => setNewJobOpen(true)}><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
         }
       />
