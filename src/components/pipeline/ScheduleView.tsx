@@ -276,9 +276,20 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
           ))}
         </div>
 
-        <div className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5" />
-          {visibleEmployees.length} staff · {unscheduled.length} unscheduled
+        <div className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            {visibleEmployees.length} staff · {unscheduled.length} unscheduled
+          </span>
+          <button
+            onClick={() => setFullscreen((v) => !v)}
+            className="h-8 px-2 inline-flex items-center gap-1.5 rounded-md border-hairline hover:bg-surface-hover text-foreground"
+            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+          >
+            {fullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="text-xs font-medium">{fullscreen ? "Exit" : "Fullscreen"}</span>
+          </button>
         </div>
       </div>
 
