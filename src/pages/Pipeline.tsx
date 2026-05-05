@@ -173,6 +173,7 @@ export default function Pipeline() {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
   const [view, setView] = useState<View>("board");
+  const [newJobOpen, setNewJobOpen] = useState(false);
 
   const handleDragStart = (e: DragEvent<HTMLButtonElement>, jobId: string) => {
     setDraggingId(jobId);
