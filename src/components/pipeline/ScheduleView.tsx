@@ -230,7 +230,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   };
 
   return (
-    <div className="flex-1 overflow-auto px-8 py-6">
+    <div className={fullscreen ? "fixed inset-0 z-50 bg-background overflow-auto px-8 py-6 animate-fade-in" : "flex-1 overflow-auto px-8 py-6"}>
       {/* Header / controls */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="inline-flex items-center gap-1 border-hairline rounded-md bg-background h-8 px-1">
