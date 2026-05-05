@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback, type DragEvent } from "react";
-import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { useMemo, useState, useCallback, useEffect, useRef, type DragEvent } from "react";
+import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Plus, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { employees, type Employee, type Job, type JobAssignment, type Trade } from "@/data/mockData";
 import { Btn, StatusDot } from "@/components/layout/PageShell";
