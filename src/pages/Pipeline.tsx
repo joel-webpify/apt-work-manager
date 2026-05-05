@@ -320,6 +320,11 @@ export default function Pipeline() {
       )}
 
       {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
+      <NewJobDialog
+        open={newJobOpen}
+        onOpenChange={setNewJobOpen}
+        onCreate={(job) => setJobList((prev) => [job, ...prev])}
+      />
     </>
   );
 }
