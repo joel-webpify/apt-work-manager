@@ -1,5 +1,5 @@
-import { useMemo, useState, useCallback, type DragEvent } from "react";
-import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { useMemo, useState, useCallback, useEffect, useRef, type DragEvent } from "react";
+import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Plus, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { employees, type Employee, type Job, type JobAssignment, type Trade } from "@/data/mockData";
 import { Btn, StatusDot } from "@/components/layout/PageShell";
@@ -67,6 +67,16 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const [drag, setDrag] = useState<DragPayload | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [employeeDrawer, setEmployeeDrawer] = useState<Employee | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
@@ -166,6 +176,40 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
     }));
   };
 
+  const updateAssignment = (
+    jobId: string,
+    original: JobAssignment,
+    patch: Partial<Pick<JobAssignment, "start" | "duration" | "date" | "employeeId">>,
+  ) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const employee = employees.find((e) => e.id === (patch.employeeId ?? original.employeeId));
+    if (!employee) return;
+    const nextStart = patch.start ?? original.start;
+    const nextDuration = patch.duration ?? original.duration;
+    const nextDate = patch.date ?? original.date;
+    const dragLike: DragPayload = {
+      jobId,
+      fromEmployeeId: original.employeeId,
+      fromDate: original.date,
+      fromStart: original.start,
+    };
+    const warn = validateAssignment(job, employee, nextDate, nextStart, nextDuration, jobs, dragLike);
+    if (warn.blocking) {
+      toast({ title: "Can't update", description: warn.blocking });
+      return;
+    }
+    if (warn.warning) toast({ title: "Heads up", description: warn.warning });
+    onUpdateJob(jobId, (curr) => ({
+      ...curr,
+      assignments: (curr.assignments ?? []).map((x) =>
+        x.employeeId === original.employeeId && x.date === original.date && x.start === original.start
+          ? { ...x, ...patch }
+          : x,
+      ),
+    }));
+  };
+
   const goToday = useCallback(() => setWeekStart(startOfWeek(new Date(2026, 4, 4))), []);
   const todayISO = fmtISO(new Date(2026, 4, 4));
 
@@ -186,7 +230,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   };
 
   return (
-    <div className="flex-1 overflow-auto px-8 py-6">
+    <div className={fullscreen ? "fixed inset-0 z-50 bg-background overflow-auto px-8 py-6 animate-fade-in" : "flex-1 overflow-auto px-8 py-6"}>
       {/* Header / controls */}
       <div className="flex flex-wrap items-center gap-2 mb-4">
         <div className="inline-flex items-center gap-1 border-hairline rounded-md bg-background h-8 px-1">
@@ -232,9 +276,20 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
           ))}
         </div>
 
-        <div className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-1.5">
-          <Users className="w-3.5 h-3.5" />
-          {visibleEmployees.length} staff · {unscheduled.length} unscheduled
+        <div className="ml-auto text-xs text-muted-foreground inline-flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5">
+            <Users className="w-3.5 h-3.5" />
+            {visibleEmployees.length} staff · {unscheduled.length} unscheduled
+          </span>
+          <button
+            onClick={() => setFullscreen((v) => !v)}
+            className="h-8 px-2 inline-flex items-center gap-1.5 rounded-md border-hairline hover:bg-surface-hover text-foreground"
+            aria-label={fullscreen ? "Exit fullscreen" : "Fullscreen"}
+            title={fullscreen ? "Exit fullscreen (Esc)" : "Fullscreen"}
+          >
+            {fullscreen ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+            <span className="text-xs font-medium">{fullscreen ? "Exit" : "Fullscreen"}</span>
+          </button>
         </div>
       </div>
 
@@ -373,6 +428,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
                             })
                           }
                           onDragEnd={onJobDragEnd}
+                          onEdit={(patch) => updateAssignment(row.job.id, row.assignment, patch)}
                         />
                       ))}
                     </div>
@@ -442,6 +498,7 @@ function ScheduledChip({
   onRemove,
   onDragStart,
   onDragEnd,
+  onEdit,
 }: {
   row: AssignmentRow;
   color: string;
@@ -450,41 +507,157 @@ function ScheduledChip({
   onRemove: () => void;
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
+  onEdit: (patch: { start?: string; duration?: number }) => void;
 }) {
   const start = row.assignment.start;
-  const endMins = timeToMinutes(start) + row.assignment.duration * 60;
+  const duration = row.assignment.duration;
+  const endMins = timeToMinutes(start) + duration * 60;
+
+  const [editing, setEditing] = useState(false);
+  const [draftStart, setDraftStart] = useState(start);
+  const [draftDuration, setDraftDuration] = useState(String(duration));
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  // Resize-by-drag state
+  const resizeState = useRef<{ startY: number; startDuration: number } | null>(null);
+
+  const beginEdit = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDraftStart(start);
+    setDraftDuration(String(duration));
+    setEditing(true);
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const commitEdit = () => {
+    const dur = parseFloat(draftDuration);
+    const patch: { start?: string; duration?: number } = {};
+    if (draftStart && draftStart !== start) patch.start = draftStart;
+    if (!Number.isNaN(dur) && dur > 0 && dur !== duration) patch.duration = dur;
+    setEditing(false);
+    if (patch.start || patch.duration) onEdit(patch);
+  };
+
+  const onResizeMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    resizeState.current = { startY: e.clientY, startDuration: duration };
+    const onMove = (ev: MouseEvent) => {
+      if (!resizeState.current) return;
+      const deltaY = ev.clientY - resizeState.current.startY;
+      // 16px per 30 minutes
+      const stepHours = Math.round((deltaY / 16) * 2) / 4; // 0.25h increments
+      const next = Math.max(0.25, resizeState.current.startDuration + stepHours);
+      // visual hint via title; commit on mouseup
+      (ev.target as HTMLElement)?.setAttribute?.("data-next", String(next));
+    };
+    const onUp = (ev: MouseEvent) => {
+      if (!resizeState.current) return;
+      const deltaY = ev.clientY - resizeState.current.startY;
+      const stepHours = Math.round((deltaY / 16) * 2) / 4;
+      const next = Math.max(0.25, Math.round((resizeState.current.startDuration + stepHours) * 4) / 4);
+      resizeState.current = null;
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup", onUp);
+      if (next !== duration) onEdit({ duration: next });
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+  };
+
+  if (editing) {
+    return (
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="rounded-md border-hairline bg-background px-1.5 py-1 space-y-1"
+        style={{ borderLeft: `2px solid hsl(${color})` }}
+      >
+        <div className="flex items-center gap-1">
+          <input
+            ref={inputRef}
+            type="time"
+            value={draftStart}
+            onChange={(e) => setDraftStart(e.target.value)}
+            className="flex-1 min-w-0 h-6 px-1 text-[10px] tabular-nums rounded border-hairline bg-background"
+          />
+          <input
+            type="number"
+            min={0.25}
+            step={0.25}
+            value={draftDuration}
+            onChange={(e) => setDraftDuration(e.target.value)}
+            className="w-12 h-6 px-1 text-[10px] tabular-nums rounded border-hairline bg-background"
+            title="Hours"
+          />
+          <button
+            onClick={commitEdit}
+            className="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-surface-hover text-foreground"
+            aria-label="Save"
+          >
+            <Check className="w-3 h-3" />
+          </button>
+          <button
+            onClick={() => setEditing(false)}
+            className="w-5 h-5 inline-flex items-center justify-center rounded hover:bg-surface-hover text-muted-foreground"
+            aria-label="Cancel"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+        <div className="text-[10px] text-muted-foreground truncate">{row.job.customer}</div>
+      </div>
+    );
+  }
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onClick}
+      onDoubleClick={beginEdit}
       className={`group relative cursor-grab active:cursor-grabbing rounded-md border-hairline bg-background px-1.5 py-1 hover:bg-surface-hover transition-colors ${
         conflict ? "ring-1 ring-[hsl(var(--destructive))]" : ""
       }`}
       style={{ borderLeft: `2px solid hsl(${color})` }}
-      title={`${row.job.customer} · ${start}–${minutesToTime(endMins)}`}
+      title={`${row.job.customer} · ${start}–${minutesToTime(endMins)} (${duration}h) · double-click to edit`}
     >
       <div className="flex items-center justify-between gap-1">
         <span className="text-[10px] font-medium tabular-nums text-muted-foreground">
-          {start}
+          {start}–{minutesToTime(endMins)}
         </span>
-        {conflict && (
-          <AlertTriangle className="w-3 h-3 text-[hsl(var(--destructive))] shrink-0" />
-        )}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-          aria-label="Remove assignment"
-        >
-          <X className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          {conflict && (
+            <AlertTriangle className="w-3 h-3 text-[hsl(var(--destructive))] shrink-0" />
+          )}
+          <button
+            onClick={beginEdit}
+            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+            aria-label="Edit time"
+          >
+            <Pencil className="w-3 h-3" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+            aria-label="Remove assignment"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </div>
       </div>
       <div className="text-[11px] font-medium leading-tight truncate">{row.job.customer}</div>
       <div className="text-[10px] text-muted-foreground leading-tight truncate">{row.job.service}</div>
+      {/* Resize handle */}
+      <div
+        onMouseDown={onResizeMouseDown}
+        onClick={(e) => e.stopPropagation()}
+        className="absolute left-0 right-0 bottom-0 h-1.5 cursor-ns-resize opacity-0 group-hover:opacity-100 bg-foreground/10 hover:bg-foreground/20 rounded-b-md"
+        title="Drag to resize duration"
+      />
     </div>
   );
 }
