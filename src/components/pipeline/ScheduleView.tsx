@@ -67,6 +67,16 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const [drag, setDrag] = useState<DragPayload | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [employeeDrawer, setEmployeeDrawer] = useState<Employee | null>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
 
