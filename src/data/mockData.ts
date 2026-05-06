@@ -599,6 +599,218 @@ export const products: Product[] = [
   },
 ];
 
+export type QuoteStatus = "Draft" | "Sent" | "Accepted" | "Declined" | "Expired";
+export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue" | "Void";
+
+export interface QuoteLineItem {
+  id: string;
+  productId?: string;
+  name: string;
+  description?: string;
+  qty: number;
+  unit: ProductUnit;
+  unitPrice: number;
+  taxRate: number;
+  discount?: number; // %
+}
+
+export interface Quote {
+  id: string; // e.g. Q-2041
+  number: string;
+  contactId?: string;
+  customer: string;
+  jobId?: string;
+  status: QuoteStatus;
+  issueDate: string; // ISO
+  validUntil: string; // ISO
+  items: QuoteLineItem[];
+  notes?: string;
+  terms?: string;
+}
+
+export interface Invoice {
+  id: string; // e.g. INV-1042
+  number: string;
+  quoteId?: string;
+  jobId?: string;
+  contactId?: string;
+  customer: string;
+  status: InvoiceStatus;
+  issueDate: string;
+  dueDate: string;
+  paidDate?: string;
+  items: QuoteLineItem[];
+  notes?: string;
+}
+
+export const quoteStatusTones: Record<QuoteStatus, "neutral" | "info" | "warning" | "success" | "danger"> = {
+  Draft: "neutral",
+  Sent: "info",
+  Accepted: "success",
+  Declined: "danger",
+  Expired: "warning",
+};
+
+export const invoiceStatusTones: Record<InvoiceStatus, "neutral" | "info" | "warning" | "success" | "danger"> = {
+  Draft: "neutral",
+  Sent: "info",
+  Paid: "success",
+  Overdue: "danger",
+  Void: "neutral",
+};
+
+export const quotes: Quote[] = [
+  {
+    id: "Q-2043",
+    number: "Q-2043",
+    contactId: "c1",
+    customer: "Sarah Whitcombe",
+    jobId: "j3",
+    status: "Sent",
+    issueDate: "2026-04-16",
+    validUntil: "2026-05-16",
+    items: [
+      { id: "li1", productId: "p7", name: "Artificial grass — premium", qty: 45, unit: "sqm", unitPrice: 58, taxRate: 20 },
+      { id: "li2", productId: "p8", name: "Garden tidy", qty: 1, unit: "day", unitPrice: 280, taxRate: 20 },
+    ],
+    notes: "Premium grade selected. 12-year guarantee included.",
+    terms: "50% deposit on acceptance. Balance on completion.",
+  },
+  {
+    id: "Q-2042",
+    number: "Q-2042",
+    contactId: "c5",
+    customer: "Dawn Hartley",
+    jobId: "j4",
+    status: "Sent",
+    issueDate: "2026-04-14",
+    validUntil: "2026-05-14",
+    items: [
+      { id: "li3", productId: "p6", name: "Consumer unit replacement", qty: 1, unit: "each", unitPrice: 520, taxRate: 20 },
+      { id: "li4", productId: "p5", name: "Electrical labour", qty: 2, unit: "hour", unitPrice: 70, taxRate: 20 },
+    ],
+  },
+  {
+    id: "Q-2041",
+    number: "Q-2041",
+    contactId: "c4",
+    customer: "Highfield Primary School",
+    status: "Accepted",
+    issueDate: "2026-04-08",
+    validUntil: "2026-05-08",
+    items: [
+      { id: "li5", productId: "p1", name: "Window cleaning — standard visit", qty: 12, unit: "visit", unitPrice: 35, taxRate: 20 },
+    ],
+    notes: "Termly contract, 12 visits per year.",
+  },
+  {
+    id: "Q-2040",
+    number: "Q-2040",
+    contactId: "c6",
+    customer: "Riverside Cafe Ltd",
+    status: "Draft",
+    issueDate: "2026-04-19",
+    validUntil: "2026-05-19",
+    items: [
+      { id: "li6", productId: "p2", name: "Window cleaning — commercial frontage", qty: 12, unit: "each", unitPrice: 4.5, taxRate: 20 },
+    ],
+  },
+  {
+    id: "Q-2039",
+    number: "Q-2039",
+    contactId: "c5",
+    customer: "Dawn Hartley",
+    status: "Declined",
+    issueDate: "2026-03-28",
+    validUntil: "2026-04-28",
+    items: [
+      { id: "li7", productId: "p3", name: "Plumbing labour", qty: 4, unit: "hour", unitPrice: 65, taxRate: 20 },
+    ],
+  },
+];
+
+export const invoices: Invoice[] = [
+  {
+    id: "INV-1042",
+    number: "INV-1042",
+    jobId: "j10",
+    contactId: "c1",
+    customer: "Sarah Whitcombe",
+    status: "Sent",
+    issueDate: "2026-04-15",
+    dueDate: "2026-05-15",
+    items: [
+      { id: "il1", productId: "p1", name: "Window cleaning — standard visit", qty: 1, unit: "visit", unitPrice: 65, taxRate: 0 },
+    ],
+  },
+  {
+    id: "INV-1041",
+    number: "INV-1041",
+    jobId: "j11",
+    contactId: "c4",
+    customer: "Highfield Primary School",
+    status: "Overdue",
+    issueDate: "2026-03-20",
+    dueDate: "2026-04-19",
+    items: [
+      { id: "il2", productId: "p3", name: "Plumbing labour", qty: 6, unit: "hour", unitPrice: 65, taxRate: 20 },
+      { id: "il3", name: "Drainage parts", qty: 1, unit: "each", unitPrice: 700, taxRate: 20 },
+    ],
+  },
+  {
+    id: "INV-1040",
+    number: "INV-1040",
+    contactId: "c2",
+    customer: "Marlow & Pierce Solicitors",
+    status: "Paid",
+    issueDate: "2026-04-02",
+    dueDate: "2026-05-02",
+    paidDate: "2026-04-12",
+    items: [
+      { id: "il4", productId: "p1", name: "Window cleaning — standard visit", qty: 1, unit: "visit", unitPrice: 320, taxRate: 20 },
+    ],
+  },
+  {
+    id: "INV-1039",
+    number: "INV-1039",
+    contactId: "c4",
+    customer: "Highfield Primary School",
+    status: "Paid",
+    issueDate: "2026-03-15",
+    dueDate: "2026-04-14",
+    paidDate: "2026-04-10",
+    items: [
+      { id: "il5", productId: "p1", name: "Window cleaning — standard visit", qty: 1, unit: "visit", unitPrice: 480, taxRate: 20 },
+    ],
+  },
+  {
+    id: "INV-1038",
+    number: "INV-1038",
+    jobId: "j12",
+    contactId: "c2",
+    customer: "Marlow & Pierce Solicitors",
+    status: "Paid",
+    issueDate: "2026-04-01",
+    dueDate: "2026-05-01",
+    paidDate: "2026-04-16",
+    items: [
+      { id: "il6", productId: "p7", name: "Artificial grass — courtyard", qty: 1, unit: "each", unitPrice: 1840, taxRate: 0 },
+    ],
+  },
+  {
+    id: "INV-1037",
+    number: "INV-1037",
+    contactId: "c3",
+    customer: "James Okafor",
+    status: "Draft",
+    issueDate: "2026-04-19",
+    dueDate: "2026-05-19",
+    items: [
+      { id: "il7", productId: "p3", name: "Plumbing labour", qty: 2, unit: "hour", unitPrice: 65, taxRate: 20 },
+    ],
+  },
+];
+
 export const forms = [
   { id: "f1", name: "Window cleaning quote", trade: "Window cleaning", submissions: 38, conversionRate: 31.6 },
   { id: "f2", name: "Artificial grass enquiry", trade: "Landscaping", submissions: 22, conversionRate: 45.5 },

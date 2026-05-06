@@ -13,6 +13,7 @@ import Ads from "./pages/Ads";
 import Reporting from "./pages/Reporting";
 import Tracking from "./pages/Tracking";
 import Settings from "./pages/Settings";
+import Quotes from "./pages/Quotes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
             <Route path="/pipeline" element={<Pipeline />} />
             <Route path="/contacts" element={<Contacts />} />
             <Route path="/forms" element={<Forms />} />
+            <Route path="/quotes" element={<Quotes />} />
             <Route path="/email" element={<Email />} />
             <Route path="/ads" element={<Ads />} />
             <Route path="/reporting" element={<Reporting />} />
