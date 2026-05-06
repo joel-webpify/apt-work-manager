@@ -8,6 +8,7 @@ import {
   Megaphone,
   BarChart3,
   Activity,
+  Settings,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ const items = [
   { to: "/ads", label: "Google Ads", icon: Megaphone },
   { to: "/reporting", label: "Reporting & analytics", icon: BarChart3 },
   { to: "/tracking", label: "Tracking", icon: Activity },
+  { to: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
