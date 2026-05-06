@@ -12,6 +12,7 @@ import Email from "./pages/Email";
 import Ads from "./pages/Ads";
 import Reporting from "./pages/Reporting";
 import Tracking from "./pages/Tracking";
+import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
