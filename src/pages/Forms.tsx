@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Plus, FileText, ArrowRight, Pencil } from "lucide-react";
+import { Plus, FileText, ArrowRight, Pencil, Code2 } from "lucide-react";
 import { forms as seedForms, formSubmissions } from "@/data/mockData";
 import { FormBuilderDialog, BuilderForm } from "@/components/forms/FormBuilderDialog";
+import { EmbedDialog } from "@/components/forms/EmbedDialog";
 
 type ListedForm = BuilderForm & { submissions: number; conversionRate: number };
 
@@ -19,6 +20,7 @@ export default function Forms() {
   const [forms, setForms] = useState<ListedForm[]>(initialForms);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<BuilderForm | undefined>();
+  const [embedFor, setEmbedFor] = useState<ListedForm | null>(null);
 
   const handleSave = (form: BuilderForm) => {
     setForms((prev) => {
@@ -57,6 +59,13 @@ export default function Forms() {
                 <div className="flex items-center gap-1.5">
                   <Pill tone="success">Live</Pill>
                   <button
+                    onClick={() => setEmbedFor(f)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface"
+                    title="Get embed code"
+                  >
+                    <Code2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                  <button
                     onClick={() => { setEditing(f); setOpen(true); }}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface"
                     title="Edit form"
@@ -77,6 +86,12 @@ export default function Forms() {
                   <div className="text-base font-medium tabular-nums mt-0.5">{f.conversionRate}%</div>
                 </div>
               </div>
+              <button
+                onClick={() => setEmbedFor(f)}
+                className="mt-3 w-full flex items-center justify-center gap-1.5 h-8 rounded-md border-hairline text-xs font-medium hover:bg-surface-hover transition-colors"
+              >
+                <Code2 className="w-3 h-3" /> Embed snippet
+              </button>
             </div>
           ))}
         </div>
@@ -116,6 +131,15 @@ export default function Forms() {
         initial={editing}
         onSave={handleSave}
       />
+
+      {embedFor && (
+        <EmbedDialog
+          open={!!embedFor}
+          onOpenChange={(o) => !o && setEmbedFor(null)}
+          formId={embedFor.id}
+          formName={embedFor.name}
+        />
+      )}
     </>
   );
 }
