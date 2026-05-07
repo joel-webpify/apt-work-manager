@@ -3,9 +3,9 @@ import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Plus, FileText, ArrowRight, Pencil, Code2 } from "lucide-react";
 import { forms as seedForms, formSubmissions } from "@/data/mockData";
 import { FormBuilderDialog, BuilderForm } from "@/components/forms/FormBuilderDialog";
-import { EmbedDialog } from "@/components/forms/EmbedDialog";
+import { EmbedDialog, TrackingConfig, defaultTracking } from "@/components/forms/EmbedDialog";
 
-type ListedForm = BuilderForm & { submissions: number; conversionRate: number };
+type ListedForm = BuilderForm & { submissions: number; conversionRate: number; tracking: TrackingConfig };
 
 const initialForms: ListedForm[] = seedForms.map((f) => ({
   id: f.id,
@@ -14,6 +14,7 @@ const initialForms: ListedForm[] = seedForms.map((f) => ({
   fields: [],
   submissions: f.submissions,
   conversionRate: f.conversionRate,
+  tracking: defaultTracking,
 }));
 
 export default function Forms() {
