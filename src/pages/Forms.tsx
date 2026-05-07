@@ -139,6 +139,11 @@ export default function Forms() {
           onOpenChange={(o) => !o && setEmbedFor(null)}
           formId={embedFor.id}
           formName={embedFor.name}
+          tracking={embedFor.tracking}
+          onTrackingChange={(cfg) => {
+            setForms((prev) => prev.map((f) => (f.id === embedFor.id ? { ...f, tracking: cfg } : f)));
+            setEmbedFor((prev) => (prev ? { ...prev, tracking: cfg } : prev));
+          }}
         />
       )}
     </>
