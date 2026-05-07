@@ -3,9 +3,9 @@ import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Plus, FileText, ArrowRight, Pencil, Code2 } from "lucide-react";
 import { forms as seedForms, formSubmissions } from "@/data/mockData";
 import { FormBuilderDialog, BuilderForm } from "@/components/forms/FormBuilderDialog";
-import { EmbedDialog } from "@/components/forms/EmbedDialog";
+import { EmbedDialog, TrackingConfig, defaultTracking } from "@/components/forms/EmbedDialog";
 
-type ListedForm = BuilderForm & { submissions: number; conversionRate: number };
+type ListedForm = BuilderForm & { submissions: number; conversionRate: number; tracking: TrackingConfig };
 
 const initialForms: ListedForm[] = seedForms.map((f) => ({
   id: f.id,
@@ -14,6 +14,7 @@ const initialForms: ListedForm[] = seedForms.map((f) => ({
   fields: [],
   submissions: f.submissions,
   conversionRate: f.conversionRate,
+  tracking: defaultTracking,
 }));
 
 export default function Forms() {
@@ -30,7 +31,7 @@ export default function Forms() {
         next[idx] = { ...next[idx], ...form };
         return next;
       }
-      return [{ ...form, submissions: 0, conversionRate: 0 }, ...prev];
+      return [{ ...form, submissions: 0, conversionRate: 0, tracking: defaultTracking }, ...prev];
     });
   };
 
@@ -138,6 +139,11 @@ export default function Forms() {
           onOpenChange={(o) => !o && setEmbedFor(null)}
           formId={embedFor.id}
           formName={embedFor.name}
+          tracking={embedFor.tracking}
+          onTrackingChange={(cfg) => {
+            setForms((prev) => prev.map((f) => (f.id === embedFor.id ? { ...f, tracking: cfg } : f)));
+            setEmbedFor((prev) => (prev ? { ...prev, tracking: cfg } : prev));
+          }}
         />
       )}
     </>
