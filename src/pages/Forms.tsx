@@ -31,7 +31,7 @@ export default function Forms() {
         next[idx] = { ...next[idx], ...form };
         return next;
       }
-      return [{ ...form, submissions: 0, conversionRate: 0 }, ...prev];
+      return [{ ...form, submissions: 0, conversionRate: 0, tracking: defaultTracking }, ...prev];
     });
   };
 
