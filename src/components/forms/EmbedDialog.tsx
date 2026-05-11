@@ -88,6 +88,11 @@ export function EmbedDialog({ open, onOpenChange, formId, formName, tracking, on
   data-utm-capture="${cfg.utmCapture}"
   data-referrer="${cfg.referrerCapture}"
   data-device-geo="${cfg.deviceGeo}"
+  data-spam="${cfg.spamProtection}"${
+    cfg.spamProtection.startsWith("recaptcha") && cfg.recaptchaSiteKey
+      ? `\n  data-recaptcha-site-key="${cfg.recaptchaSiteKey}"`
+      : ""
+  }
   data-events="${events}"></script>`,
       iframe: `<iframe
   src="${url}?track=${cfg.enabled ? 1 : 0}&utm=${cfg.utmCapture ? 1 : 0}&events=${events}"
