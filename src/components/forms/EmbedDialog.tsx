@@ -2,13 +2,17 @@ import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Btn } from "@/components/layout/PageShell";
 import { Switch } from "@/components/ui/switch";
-import { Check, Copy, Code2, Link2, BarChart3, Settings2 } from "lucide-react";
+import { Check, Copy, Code2, Link2, BarChart3, Settings2, ShieldCheck } from "lucide-react";
+
+export type SpamProtection = "off" | "honeypot" | "recaptcha_v2" | "recaptcha_v3";
 
 export interface TrackingConfig {
   enabled: boolean;
   utmCapture: boolean;
   referrerCapture: boolean;
   deviceGeo: boolean;
+  spamProtection: SpamProtection;
+  recaptchaSiteKey?: string;
   events: {
     pageView: boolean;
     formView: boolean;
