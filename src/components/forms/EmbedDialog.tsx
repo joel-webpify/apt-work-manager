@@ -28,6 +28,8 @@ export const defaultTracking: TrackingConfig = {
   utmCapture: true,
   referrerCapture: true,
   deviceGeo: true,
+  spamProtection: "honeypot",
+  recaptchaSiteKey: "",
   events: {
     pageView: true,
     formView: true,
