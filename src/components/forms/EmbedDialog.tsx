@@ -289,6 +289,16 @@ export function EmbedDialog({ open, onOpenChange, formId, formName, tracking, on
                 </div>
                 <div>UTM capture: {cfg.utmCapture ? "On" : "Off"} · Referrer: {cfg.referrerCapture ? "On" : "Off"} · Device/Geo: {cfg.deviceGeo ? "On" : "Off"}</div>
                 <div>Events: {enabledEvents.length ? enabledEvents.join(", ") : "none"}</div>
+                <div>
+                  Spam protection:{" "}
+                  {cfg.spamProtection === "off"
+                    ? "Off"
+                    : cfg.spamProtection === "honeypot"
+                      ? "Honeypot"
+                      : cfg.spamProtection === "recaptcha_v2"
+                        ? `reCAPTCHA v2${cfg.recaptchaSiteKey ? "" : " (site key missing)"}`
+                        : `reCAPTCHA v3${cfg.recaptchaSiteKey ? "" : " (site key missing)"}`}
+                </div>
               </div>
             </div>
           </>
