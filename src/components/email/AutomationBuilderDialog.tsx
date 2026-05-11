@@ -19,6 +19,8 @@ import {
   GitBranch,
   Zap,
   ArrowDown as FlowArrow,
+  Check,
+  X,
 } from "lucide-react";
 
 export type TriggerType =
@@ -55,6 +57,9 @@ export interface AutomationStep {
   taskAssignee?: string;
   // branch
   branchLabel?: string;
+  branchCondition?: Condition;
+  ifSteps?: AutomationStep[];
+  elseSteps?: AutomationStep[];
 }
 
 export interface BuilderAutomation {
@@ -86,6 +91,13 @@ const stepMeta: Record<StepType, { label: string; icon: typeof Mail; tone: strin
   branch: { label: "Branch (if/else)", icon: GitBranch, tone: "text-pink-500" },
 };
 
+const newCondition = (): Condition => ({
+  id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+  field: "contact.tag",
+  op: "equals",
+  value: "",
+});
+
 const newStep = (type: StepType): AutomationStep => {
   const id = `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
   switch (type) {
@@ -98,16 +110,327 @@ const newStep = (type: StepType): AutomationStep => {
     case "create_task":
       return { id, type, taskTitle: "Follow up", taskAssignee: "owner" };
     case "branch":
-      return { id, type, branchLabel: "Has opened previous email" };
+      return {
+        id,
+        type,
+        branchLabel: "Has opened previous email",
+        branchCondition: newCondition(),
+        ifSteps: [],
+        elseSteps: [],
+      };
   }
 };
 
-const newCondition = (): Condition => ({
-  id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-  field: "contact.tag",
-  op: "equals",
-  value: "",
-});
+// ───────── Recursive step list editor ─────────
+function StepListEditor({
+  steps,
+  onChange,
+  depth = 0,
+}: {
+  steps: AutomationStep[];
+  onChange: (next: AutomationStep[]) => void;
+  depth?: number;
+}) {
+  const update = (id: string, patch: Partial<AutomationStep>) =>
+    onChange(steps.map((s) => (s.id === id ? { ...s, ...patch } : s)));
+  const remove = (id: string) => onChange(steps.filter((s) => s.id !== id));
+  const move = (id: string, dir: -1 | 1) => {
+    const i = steps.findIndex((s) => s.id === id);
+    const j = i + dir;
+    if (i < 0 || j < 0 || j >= steps.length) return;
+    const next = [...steps];
+    [next[i], next[j]] = [next[j], next[i]];
+    onChange(next);
+  };
+  const add = (t: StepType) => onChange([...steps, newStep(t)]);
+
+  return (
+    <div className="space-y-2">
+      <div className="divide-y divide-border border-hairline rounded-lg">
+        {steps.map((s, idx) => {
+          const Icon = stepMeta[s.type].icon;
+          return (
+            <div key={s.id} className="p-3 space-y-2">
+              <div className="flex items-center gap-2">
+                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                <Icon className={`w-3.5 h-3.5 ${stepMeta[s.type].tone}`} />
+                <span className="text-xs font-medium flex-1">{stepMeta[s.type].label}</span>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(s.id, -1)} disabled={idx === 0}>
+                  <ArrowUp className="w-3.5 h-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => move(s.id, 1)} disabled={idx === steps.length - 1}>
+                  <ArrowDown className="w-3.5 h-3.5" />
+                </Button>
+                <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => remove(s.id)}>
+                  <Trash2 className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              <div className="pl-6 space-y-2">
+                {s.type === "send_email" && (
+                  <>
+                    <Input
+                      value={s.emailSubject ?? ""}
+                      onChange={(e) => update(s.id, { emailSubject: e.target.value })}
+                      className="h-8 text-xs"
+                      placeholder="Email subject"
+                    />
+                    <Select value={s.emailTemplate ?? "default"} onValueChange={(v) => update(s.id, { emailTemplate: v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="default">Default template</SelectItem>
+                        <SelectItem value="review_request">Review request</SelectItem>
+                        <SelectItem value="winback">Win-back offer</SelectItem>
+                        <SelectItem value="reminder">Reminder</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+                {s.type === "wait" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={s.waitAmount ?? 1}
+                      onChange={(e) => update(s.id, { waitAmount: Number(e.target.value) })}
+                      className="h-8 text-xs w-20"
+                    />
+                    <Select value={s.waitUnit ?? "days"} onValueChange={(v) => update(s.id, { waitUnit: v as AutomationStep["waitUnit"] })}>
+                      <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="minutes">minutes</SelectItem>
+                        <SelectItem value="hours">hours</SelectItem>
+                        <SelectItem value="days">days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {s.type === "tag_contact" && (
+                  <Input value={s.tag ?? ""} onChange={(e) => update(s.id, { tag: e.target.value })} className="h-8 text-xs" placeholder="Tag name e.g. nurtured" />
+                )}
+                {s.type === "create_task" && (
+                  <>
+                    <Input value={s.taskTitle ?? ""} onChange={(e) => update(s.id, { taskTitle: e.target.value })} className="h-8 text-xs" placeholder="Task title" />
+                    <Select value={s.taskAssignee ?? "owner"} onValueChange={(v) => update(s.id, { taskAssignee: v })}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="owner">Contact owner</SelectItem>
+                        <SelectItem value="admin">Admin</SelectItem>
+                        <SelectItem value="sales">Sales team</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </>
+                )}
+                {s.type === "branch" && (
+                  <div className="space-y-3">
+                    <Input
+                      value={s.branchLabel ?? ""}
+                      onChange={(e) => update(s.id, { branchLabel: e.target.value })}
+                      className="h-8 text-xs"
+                      placeholder="Branch label e.g. Has opened previous email"
+                    />
+                    {/* Condition */}
+                    <div className="rounded-md bg-surface/40 p-2 space-y-2">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">If condition</div>
+                      <div className="flex items-center gap-2">
+                        <Select
+                          value={s.branchCondition?.field ?? "contact.tag"}
+                          onValueChange={(v) =>
+                            update(s.id, {
+                              branchCondition: { ...(s.branchCondition ?? newCondition()), field: v },
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="contact.tag">Contact tag</SelectItem>
+                            <SelectItem value="contact.trade">Contact trade</SelectItem>
+                            <SelectItem value="job.value">Job value (£)</SelectItem>
+                            <SelectItem value="job.stage">Job stage</SelectItem>
+                            <SelectItem value="email.opened">Email opened</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Select
+                          value={s.branchCondition?.op ?? "equals"}
+                          onValueChange={(v) =>
+                            update(s.id, {
+                              branchCondition: { ...(s.branchCondition ?? newCondition()), op: v as Condition["op"] },
+                            })
+                          }
+                        >
+                          <SelectTrigger className="h-8 text-xs w-[110px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="equals">equals</SelectItem>
+                            <SelectItem value="not_equals">not equals</SelectItem>
+                            <SelectItem value="contains">contains</SelectItem>
+                            <SelectItem value="greater_than">&gt;</SelectItem>
+                            <SelectItem value="less_than">&lt;</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Input
+                          value={s.branchCondition?.value ?? ""}
+                          onChange={(e) =>
+                            update(s.id, {
+                              branchCondition: { ...(s.branchCondition ?? newCondition()), value: e.target.value },
+                            })
+                          }
+                          className="h-8 text-xs flex-1"
+                          placeholder="Value"
+                        />
+                      </div>
+                    </div>
+
+                    {/* IF branch */}
+                    <div className="rounded-md border-l-2 border-emerald-500/60 pl-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                        <Check className="w-3 h-3" /> If true
+                      </div>
+                      {(s.ifSteps?.length ?? 0) === 0 && (
+                        <div className="text-[11px] text-muted-foreground italic">No steps — falls through.</div>
+                      )}
+                      {(s.ifSteps?.length ?? 0) > 0 && (
+                        <StepListEditor
+                          steps={s.ifSteps ?? []}
+                          onChange={(next) => update(s.id, { ifSteps: next })}
+                          depth={depth + 1}
+                        />
+                      )}
+                      <AddStepMenu compact onAdd={(t) => update(s.id, { ifSteps: [...(s.ifSteps ?? []), newStep(t)] })} />
+                    </div>
+
+                    {/* ELSE branch */}
+                    <div className="rounded-md border-l-2 border-rose-500/60 pl-3 space-y-2">
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-rose-600 dark:text-rose-400">
+                        <X className="w-3 h-3" /> If false
+                      </div>
+                      {(s.elseSteps?.length ?? 0) === 0 && (
+                        <div className="text-[11px] text-muted-foreground italic">No steps — falls through.</div>
+                      )}
+                      {(s.elseSteps?.length ?? 0) > 0 && (
+                        <StepListEditor
+                          steps={s.elseSteps ?? []}
+                          onChange={(next) => update(s.id, { elseSteps: next })}
+                          depth={depth + 1}
+                        />
+                      )}
+                      <AddStepMenu compact onAdd={(t) => update(s.id, { elseSteps: [...(s.elseSteps ?? []), newStep(t)] })} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        {steps.length === 0 && (
+          <div className="p-6 text-center text-sm text-muted-foreground">No steps yet — add one below.</div>
+        )}
+      </div>
+      <AddStepMenu onAdd={add} allowBranch={depth === 0} />
+    </div>
+  );
+}
+
+function AddStepMenu({
+  onAdd,
+  compact = false,
+  allowBranch = true,
+}: {
+  onAdd: (t: StepType) => void;
+  compact?: boolean;
+  allowBranch?: boolean;
+}) {
+  const types = (Object.keys(stepMeta) as StepType[]).filter((t) => allowBranch || t !== "branch");
+  return (
+    <Select onValueChange={(v) => onAdd(v as StepType)}>
+      <SelectTrigger className={compact ? "h-7 text-xs w-[150px]" : "h-8 text-xs w-[170px]"}>
+        <Plus className="w-3 h-3 mr-1" /><SelectValue placeholder="Add step" />
+      </SelectTrigger>
+      <SelectContent>
+        {types.map((t) => {
+          const Icon = stepMeta[t].icon;
+          return (
+            <SelectItem key={t} value={t}>
+              <span className="inline-flex items-center gap-2"><Icon className={`w-3.5 h-3.5 ${stepMeta[t].tone}`} />{stepMeta[t].label}</span>
+            </SelectItem>
+          );
+        })}
+      </SelectContent>
+    </Select>
+  );
+}
+
+// ───────── Recursive flow preview ─────────
+function FlowSteps({ steps }: { steps: AutomationStep[] }) {
+  return (
+    <>
+      {steps.map((s) => {
+        const Icon = stepMeta[s.type].icon;
+        let summary = "";
+        if (s.type === "send_email") summary = s.emailSubject || "Untitled email";
+        else if (s.type === "wait") summary = `${s.waitAmount} ${s.waitUnit}`;
+        else if (s.type === "tag_contact") summary = s.tag ? `Add "${s.tag}"` : "(no tag)";
+        else if (s.type === "create_task") summary = s.taskTitle || "Untitled task";
+        else if (s.type === "branch") {
+          const c = s.branchCondition;
+          summary = s.branchLabel || (c ? `${c.field} ${c.op.replace("_", " ")} ${c.value || "…"}` : "(no condition)");
+        }
+
+        if (s.type === "branch") {
+          return (
+            <div key={s.id} className="w-full flex flex-col items-center">
+              <FlowArrow className="w-3.5 h-3.5 text-muted-foreground my-1" />
+              <div className="w-full bg-card border-hairline rounded-lg p-3 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-md bg-pink-500/10 flex items-center justify-center">
+                  <GitBranch className="w-4 h-4 text-pink-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Branch</div>
+                  <div className="text-sm font-medium truncate">{summary}</div>
+                </div>
+              </div>
+              <div className="w-full grid grid-cols-2 gap-2 mt-2">
+                <div className="rounded-lg border-hairline bg-emerald-500/[0.04] p-2 space-y-1">
+                  <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                    <Check className="w-3 h-3" /> If true
+                  </div>
+                  {(s.ifSteps?.length ?? 0) === 0 ? (
+                    <div className="text-[11px] text-muted-foreground italic px-1">(no steps)</div>
+                  ) : (
+                    <FlowSteps steps={s.ifSteps ?? []} />
+                  )}
+                </div>
+                <div className="rounded-lg border-hairline bg-rose-500/[0.04] p-2 space-y-1">
+                  <div className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wide text-rose-600 dark:text-rose-400">
+                    <X className="w-3 h-3" /> If false
+                  </div>
+                  {(s.elseSteps?.length ?? 0) === 0 ? (
+                    <div className="text-[11px] text-muted-foreground italic px-1">(no steps)</div>
+                  ) : (
+                    <FlowSteps steps={s.elseSteps ?? []} />
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <div key={s.id} className="w-full flex flex-col items-center">
+            <FlowArrow className="w-3.5 h-3.5 text-muted-foreground my-1" />
+            <div className="w-full bg-card border-hairline rounded-lg p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-md bg-surface flex items-center justify-center">
+                <Icon className={`w-4 h-4 ${stepMeta[s.type].tone}`} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">{stepMeta[s.type].label}</div>
+                <div className="text-sm font-medium truncate">{summary}</div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </>
+  );
+}
 
 export function AutomationBuilderDialog({
   open,
@@ -130,19 +453,6 @@ export function AutomationBuilderDialog({
       { id: "s-default", type: "send_email", emailSubject: "Thanks for getting in touch", emailTemplate: "default" },
     ],
   );
-
-  const updateStep = (id: string, patch: Partial<AutomationStep>) =>
-    setSteps((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  const removeStep = (id: string) => setSteps((prev) => prev.filter((s) => s.id !== id));
-  const moveStep = (id: string, dir: -1 | 1) =>
-    setSteps((prev) => {
-      const i = prev.findIndex((s) => s.id === id);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= prev.length) return prev;
-      const next = [...prev];
-      [next[i], next[j]] = [next[j], next[i]];
-      return next;
-    });
 
   const updateCond = (id: string, patch: Partial<Condition>) =>
     setConditions((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
@@ -253,110 +563,11 @@ export function AutomationBuilderDialog({
             </div>
 
             {/* Steps */}
-            <div className="border-hairline rounded-lg">
-              <div className="px-3 h-10 flex items-center justify-between border-b-hairline">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Steps</span>
-                <Select onValueChange={(v) => setSteps((p) => [...p, newStep(v as StepType)])}>
-                  <SelectTrigger className="h-7 w-[150px] text-xs">
-                    <Plus className="w-3 h-3 mr-1" /><SelectValue placeholder="Add step" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(Object.keys(stepMeta) as StepType[]).map((t) => {
-                      const Icon = stepMeta[t].icon;
-                      return (
-                        <SelectItem key={t} value={t}>
-                          <span className="inline-flex items-center gap-2"><Icon className={`w-3.5 h-3.5 ${stepMeta[t].tone}`} />{stepMeta[t].label}</span>
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
               </div>
-              <div className="divide-y divide-border">
-                {steps.map((s, idx) => {
-                  const Icon = stepMeta[s.type].icon;
-                  return (
-                    <div key={s.id} className="p-3 space-y-2">
-                      <div className="flex items-center gap-2">
-                        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
-                        <Icon className={`w-3.5 h-3.5 ${stepMeta[s.type].tone}`} />
-                        <span className="text-xs font-medium flex-1">{stepMeta[s.type].label}</span>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveStep(s.id, -1)} disabled={idx === 0}>
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveStep(s.id, 1)} disabled={idx === steps.length - 1}>
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeStep(s.id)}>
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                      <div className="pl-6 space-y-2">
-                        {s.type === "send_email" && (
-                          <>
-                            <Input
-                              value={s.emailSubject ?? ""}
-                              onChange={(e) => updateStep(s.id, { emailSubject: e.target.value })}
-                              className="h-8 text-xs"
-                              placeholder="Email subject"
-                            />
-                            <Select value={s.emailTemplate ?? "default"} onValueChange={(v) => updateStep(s.id, { emailTemplate: v })}>
-                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="default">Default template</SelectItem>
-                                <SelectItem value="review_request">Review request</SelectItem>
-                                <SelectItem value="winback">Win-back offer</SelectItem>
-                                <SelectItem value="reminder">Reminder</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </>
-                        )}
-                        {s.type === "wait" && (
-                          <div className="flex items-center gap-2">
-                            <Input
-                              type="number"
-                              min={1}
-                              value={s.waitAmount ?? 1}
-                              onChange={(e) => updateStep(s.id, { waitAmount: Number(e.target.value) })}
-                              className="h-8 text-xs w-20"
-                            />
-                            <Select value={s.waitUnit ?? "days"} onValueChange={(v) => updateStep(s.id, { waitUnit: v as AutomationStep["waitUnit"] })}>
-                              <SelectTrigger className="h-8 text-xs w-[120px]"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="minutes">minutes</SelectItem>
-                                <SelectItem value="hours">hours</SelectItem>
-                                <SelectItem value="days">days</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        )}
-                        {s.type === "tag_contact" && (
-                          <Input value={s.tag ?? ""} onChange={(e) => updateStep(s.id, { tag: e.target.value })} className="h-8 text-xs" placeholder="Tag name e.g. nurtured" />
-                        )}
-                        {s.type === "create_task" && (
-                          <>
-                            <Input value={s.taskTitle ?? ""} onChange={(e) => updateStep(s.id, { taskTitle: e.target.value })} className="h-8 text-xs" placeholder="Task title" />
-                            <Select value={s.taskAssignee ?? "owner"} onValueChange={(v) => updateStep(s.id, { taskAssignee: v })}>
-                              <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="owner">Contact owner</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                                <SelectItem value="sales">Sales team</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </>
-                        )}
-                        {s.type === "branch" && (
-                          <Input value={s.branchLabel ?? ""} onChange={(e) => updateStep(s.id, { branchLabel: e.target.value })} className="h-8 text-xs" placeholder="Condition label" />
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {steps.length === 0 && (
-                  <div className="p-6 text-center text-sm text-muted-foreground">No steps yet — add one above.</div>
-                )}
-              </div>
+              <StepListEditor steps={steps} onChange={setSteps} />
             </div>
           </div>
 
@@ -391,29 +602,7 @@ export function AutomationBuilderDialog({
                 </>
               )}
 
-              {steps.map((s) => {
-                const Icon = stepMeta[s.type].icon;
-                let summary = "";
-                if (s.type === "send_email") summary = s.emailSubject || "Untitled email";
-                else if (s.type === "wait") summary = `${s.waitAmount} ${s.waitUnit}`;
-                else if (s.type === "tag_contact") summary = s.tag ? `Add "${s.tag}"` : "(no tag)";
-                else if (s.type === "create_task") summary = s.taskTitle || "Untitled task";
-                else if (s.type === "branch") summary = s.branchLabel || "(no condition)";
-                return (
-                  <div key={s.id} className="w-full flex flex-col items-center">
-                    <FlowArrow className="w-3.5 h-3.5 text-muted-foreground my-1" />
-                    <div className="w-full bg-card border-hairline rounded-lg p-3 flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-md bg-surface flex items-center justify-center">
-                        <Icon className={`w-4 h-4 ${stepMeta[s.type].tone}`} />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs uppercase tracking-wide text-muted-foreground">{stepMeta[s.type].label}</div>
-                        <div className="text-sm font-medium truncate">{summary}</div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+              <FlowSteps steps={steps} />
 
               <FlowArrow className="w-3.5 h-3.5 text-muted-foreground my-1" />
               <div className="w-full bg-surface border-dashed border border-border rounded-lg p-3 text-center text-xs text-muted-foreground">
