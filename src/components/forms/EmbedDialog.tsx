@@ -183,6 +183,64 @@ export function EmbedDialog({ open, onOpenChange, formId, formName, tracking, on
             </div>
 
             <div className="border-hairline rounded-md">
+              <div className="px-3 h-9 flex items-center gap-1.5 text-xs font-medium border-b-hairline bg-surface/50">
+                <ShieldCheck className="w-3.5 h-3.5 text-primary" /> Spam protection
+              </div>
+              <div className="p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-1.5">
+                  {([
+                    { v: "off", label: "Off", desc: "No protection" },
+                    { v: "honeypot", label: "Honeypot", desc: "Invisible — no UX impact" },
+                    { v: "recaptcha_v3", label: "reCAPTCHA v3", desc: "Score-based, invisible" },
+                    { v: "recaptcha_v2", label: "reCAPTCHA v2", desc: "“I’m not a robot” checkbox" },
+                  ] as { v: SpamProtection; label: string; desc: string }[]).map((opt) => {
+                    const active = cfg.spamProtection === opt.v;
+                    return (
+                      <button
+                        key={opt.v}
+                        onClick={() => setCfg({ ...cfg, spamProtection: opt.v })}
+                        className={`text-left rounded-md border px-2.5 py-2 transition-colors ${
+                          active
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:bg-surface-hover"
+                        }`}
+                      >
+                        <div className="text-xs font-medium">{opt.label}</div>
+                        <div className="text-[11px] text-muted-foreground mt-0.5">{opt.desc}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                {cfg.spamProtection.startsWith("recaptcha") && (
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-medium text-muted-foreground">
+                      reCAPTCHA site key
+                    </label>
+                    <input
+                      type="text"
+                      value={cfg.recaptchaSiteKey ?? ""}
+                      onChange={(e) => setCfg({ ...cfg, recaptchaSiteKey: e.target.value })}
+                      placeholder="6Lc..."
+                      className="w-full h-8 rounded-md border-hairline bg-card px-2.5 text-xs font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                    <div className="text-[11px] text-muted-foreground">
+                      Get a key from{" "}
+                      <a
+                        href="https://www.google.com/recaptcha/admin"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        Google reCAPTCHA admin
+                      </a>
+                      . The secret key stays on your server.
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="border-hairline rounded-md">
               <div className="px-3 h-9 flex items-center text-xs font-medium border-b-hairline bg-surface/50">
                 Events recorded
               </div>
