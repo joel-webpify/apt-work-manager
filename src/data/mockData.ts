@@ -819,11 +819,101 @@ export const forms = [
   { id: "f3", name: "Emergency plumbing callout", trade: "Plumbing", submissions: 14, conversionRate: 78.6 },
 ];
 
-export const formSubmissions = [
-  { id: "fs1", contact: "James Okafor", service: "Plumbing", postcode: "BS9 2DE", date: "19 Apr 14:22" },
-  { id: "fs2", contact: "Riverside Cafe Ltd", service: "Window cleaning", postcode: "BS1 6XN", date: "18 Apr 09:14" },
-  { id: "fs3", contact: "Helen Marsh", service: "Artificial grass", postcode: "BS7 8AA", date: "17 Apr 19:48" },
-  { id: "fs4", contact: "Tom Bradbury", service: "Electrical", postcode: "BA1 2QH", date: "17 Apr 11:02" },
+export interface FormSubmission {
+  id: string;
+  formId: string;
+  contact: string;
+  service: string;
+  postcode: string;
+  date: string;
+  /** Field-label → value, used by the field-mapping engine when converting to a job. */
+  values: Record<string, string | number>;
+}
+
+export const formSubmissions: FormSubmission[] = [
+  {
+    id: "fs1",
+    formId: "f3",
+    contact: "James Okafor",
+    service: "Plumbing",
+    postcode: "BS9 2DE",
+    date: "19 Apr 14:22",
+    values: {
+      "Full name": "James Okafor",
+      Email: "james@okafor.co.uk",
+      Phone: "07700 900201",
+      Service: "Emergency plumbing — burst pipe",
+      Trade: "Plumbing",
+      Postcode: "BS9 2DE",
+      Address: "14 Henleaze Road",
+      Priority: "Urgent",
+      "Lead source": "Google Ads",
+      "Preferred time": "Morning",
+      "How can we help?": "Pipe burst under the sink, water shut off at the mains.",
+      Budget: 320,
+    },
+  },
+  {
+    id: "fs2",
+    formId: "f1",
+    contact: "Riverside Cafe Ltd",
+    service: "Window cleaning",
+    postcode: "BS1 6XN",
+    date: "18 Apr 09:14",
+    values: {
+      "Full name": "Riverside Cafe Ltd",
+      Email: "ops@riversidecafe.uk",
+      Phone: "07700 900512",
+      Service: "Fortnightly window clean",
+      Trade: "Window cleaning",
+      Postcode: "BS1 6XN",
+      Address: "8 Welsh Back",
+      Priority: "Normal",
+      "Lead source": "Referral",
+      "Access notes": "Side gate, key safe code in email.",
+    },
+  },
+  {
+    id: "fs3",
+    formId: "f2",
+    contact: "Helen Marsh",
+    service: "Artificial grass",
+    postcode: "BS7 8AA",
+    date: "17 Apr 19:48",
+    values: {
+      "Full name": "Helen Marsh",
+      Email: "helen.marsh@gmail.com",
+      Phone: "07700 900417",
+      Service: "Artificial grass — back garden ~35m²",
+      Trade: "Landscaping",
+      Postcode: "BS7 8AA",
+      Address: "22 Bishop Road",
+      Priority: "Low",
+      "Lead source": "Facebook",
+      Budget: 1800,
+      "Customer deadline": "2026-05-30",
+    },
+  },
+  {
+    id: "fs4",
+    formId: "f3",
+    contact: "Tom Bradbury",
+    service: "Electrical",
+    postcode: "BA1 2QH",
+    date: "17 Apr 11:02",
+    values: {
+      "Full name": "Tom Bradbury",
+      Email: "tom@bradbury.io",
+      Phone: "07700 900833",
+      Service: "EV charger install",
+      Trade: "Electrical",
+      Postcode: "BA1 2QH",
+      Address: "5 Lansdown Crescent",
+      Priority: "High",
+      "Lead source": "Google Ads",
+      Budget: 950,
+    },
+  },
 ];
 
 export const trackingEvents = [

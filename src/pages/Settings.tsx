@@ -1,14 +1,16 @@
 import { useState } from "react";
 import { PageHeader, PageBody } from "@/components/layout/PageShell";
 import { ProductsTab } from "@/components/forms/ProductsTab";
+import ChannelGroupsTab from "@/components/settings/ChannelGroupsTab";
 
-type Tab = "products";
+type Tab = "products" | "channels";
 
 export default function Settings() {
   const [tab, setTab] = useState<Tab>("products");
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "products", label: "Products & services" },
+    { id: "channels", label: "Channel grouping" },
   ];
 
   return (
@@ -35,6 +37,7 @@ export default function Settings() {
         </div>
 
         {tab === "products" && <ProductsTab />}
+        {tab === "channels" && <ChannelGroupsTab />}
       </PageBody>
     </>
   );
