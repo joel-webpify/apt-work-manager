@@ -339,11 +339,26 @@ export default function Pipeline() {
         />
       )}
 
-      {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <JobDrawer
+          job={selected}
+          onClose={() => setSelected(null)}
+          onUpdate={(patch) => {
+            setJobList((prev) => prev.map((j) => (j.id === selected.id ? { ...j, ...patch } : j)));
+            setSelected((s) => (s ? { ...s, ...patch } : s));
+          }}
+        />
+      )}
       <NewJobDialog
         open={newJobOpen}
         onOpenChange={setNewJobOpen}
         onCreate={(job) => setJobList((prev) => [job, ...prev])}
+      />
+      <ManageJobFieldsDialog
+        open={manageFieldsOpen}
+        onOpenChange={setManageFieldsOpen}
+        schema={schema}
+        onSave={setSchema}
       />
     </>
   );
