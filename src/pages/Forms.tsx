@@ -25,6 +25,47 @@ export default function Forms() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<BuilderForm | undefined>();
   const [embedFor, setEmbedFor] = useState<ListedForm | null>(null);
+  const [convertedIds, setConvertedIds] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleCreateJob = (s: typeof formSubmissions[number]) => {
+    if (convertedIds.has(s.id)) return;
+    const contact = contacts.find((c) => c.name === s.contact);
+    const job: Job = {
+      id: `j-fs-${s.id}-${Date.now()}`,
+      contactId: contact?.id ?? "manual",
+      customer: s.contact,
+      service: s.service,
+      trade: "General",
+      value: 0,
+      stage: "New enquiry",
+      daysInStage: 0,
+      address: contact?.postcode ?? s.postcode,
+      postcode: s.postcode.split(" ")[0],
+      notes: `Created from form submission on ${s.date}.`,
+      quoteValue: 0,
+      estimatedHours: 1,
+      assignments: [],
+      timeline: [
+        { type: "note", text: `Form submission converted to job (${s.service})`, date: s.date.split(" ")[0] + " " + s.date.split(" ")[1] },
+      ],
+    };
+    addJob(job);
+    setConvertedIds((prev) => new Set(prev).add(s.id));
+    toast({
+      title: "Job created",
+      description: `${s.contact} — ${s.service} added to pipeline.`,
+      action: (
+        <button
+          onClick={() => navigate("/pipeline")}
+          className="text-xs font-medium underline underline-offset-2"
+        >
+          View
+        </button>
+      ),
+    });
+  };
 
   const handleSave = (form: BuilderForm) => {
     setForms((prev) => {
