@@ -176,6 +176,10 @@ export default function Pipeline() {
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
   const [view, setView] = useState<View>("board");
   const [newJobOpen, setNewJobOpen] = useState(false);
+  const [manageFieldsOpen, setManageFieldsOpen] = useState(false);
+  const [schema, setSchema] = useJobFieldSchema();
+  const cardFields = schema.filter((f) => f.showOnCard);
+
 
   const handleDragStart = (e: DragEvent<HTMLButtonElement>, jobId: string) => {
     setDraggingId(jobId);
