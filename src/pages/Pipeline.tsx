@@ -6,6 +6,7 @@ import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, Al
 import { jobs as initialJobs, stages, stageColors, employees, type Job, type PipelineStage } from "@/data/mockData";
 import ScheduleView from "@/components/pipeline/ScheduleView";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
+import JobFieldInput from "@/components/pipeline/JobFieldInput";
 import ManageJobFieldsDialog from "@/components/pipeline/ManageJobFieldsDialog";
 import { useJobFieldSchema, formatFieldValue } from "@/lib/jobFields";
 import {
