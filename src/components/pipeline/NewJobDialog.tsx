@@ -26,11 +26,14 @@ export default function NewJobDialog({
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
+  const [schema] = useJobFieldSchema();
+  const [customValues, setCustomValues] = useState<Record<string, string | number | boolean>>({});
 
   const reset = () => {
     setContactId(""); setCustomCustomer(""); setService(""); setTrade("General");
     setValue(""); setEstimatedHours("2"); setStage("New enquiry");
     setAddress(""); setPostcode(""); setNotes("");
+    setCustomValues({});
   };
 
   const submit = () => {
