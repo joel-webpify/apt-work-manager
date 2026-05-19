@@ -93,6 +93,8 @@ export interface Job {
   estimatedHours?: number;
   assignments?: JobAssignment[];
   timeline: { type: "sms" | "email" | "note"; text: string; date: string }[];
+  /** Values for user-defined fields, keyed by field id. */
+  customFields?: Record<string, string | number | boolean>;
 }
 
 export const employees: Employee[] = [

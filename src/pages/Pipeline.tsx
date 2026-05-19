@@ -2,10 +2,13 @@ import { useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2 } from "lucide-react";
 import { jobs as initialJobs, stages, stageColors, employees, type Job, type PipelineStage } from "@/data/mockData";
 import ScheduleView from "@/components/pipeline/ScheduleView";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
+import JobFieldInput from "@/components/pipeline/JobFieldInput";
+import ManageJobFieldsDialog from "@/components/pipeline/ManageJobFieldsDialog";
+import { useJobFieldSchema, formatFieldValue } from "@/lib/jobFields";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -174,6 +177,10 @@ export default function Pipeline() {
   const [dragOverStage, setDragOverStage] = useState<PipelineStage | null>(null);
   const [view, setView] = useState<View>("board");
   const [newJobOpen, setNewJobOpen] = useState(false);
+  const [manageFieldsOpen, setManageFieldsOpen] = useState(false);
+  const [schema, setSchema] = useJobFieldSchema();
+  const cardFields = schema.filter((f) => f.showOnCard);
+
 
   const handleDragStart = (e: DragEvent<HTMLButtonElement>, jobId: string) => {
     setDraggingId(jobId);
@@ -221,6 +228,7 @@ export default function Pipeline() {
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
             </Link>
             <ViewToggle view={view} onChange={setView} />
+            <Btn variant="ghost" onClick={() => setManageFieldsOpen(true)}><Settings2 className="w-3.5 h-3.5" /> Fields</Btn>
             <Btn variant="primary" onClick={() => setNewJobOpen(true)}><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
         }
@@ -274,6 +282,19 @@ export default function Pipeline() {
                           <span className="text-sm font-medium tabular-nums">£{job.value}</span>
                           <span className="text-xs text-muted-foreground">{job.daysInStage}d</span>
                         </div>
+                        {cardFields.length > 0 && cardFields.some((f) => job.customFields?.[f.id] !== undefined && job.customFields?.[f.id] !== "") && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {cardFields.map((f) => {
+                              const v = job.customFields?.[f.id];
+                              if (v === undefined || v === "" || v === false) return null;
+                              return (
+                                <span key={f.id} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover text-muted-foreground">
+                                  {f.label}: <span className="text-foreground">{formatFieldValue(f, v)}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                         {job.assignments && job.assignments.length > 0 && (
                           <div className="flex items-center gap-1 mt-2 pt-2 border-t-hairline">
                             <Users className="w-3 h-3 text-muted-foreground" />
@@ -319,11 +340,26 @@ export default function Pipeline() {
         />
       )}
 
-      {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
+      {selected && (
+        <JobDrawer
+          job={selected}
+          onClose={() => setSelected(null)}
+          onUpdate={(patch) => {
+            setJobList((prev) => prev.map((j) => (j.id === selected.id ? { ...j, ...patch } : j)));
+            setSelected((s) => (s ? { ...s, ...patch } : s));
+          }}
+        />
+      )}
       <NewJobDialog
         open={newJobOpen}
         onOpenChange={setNewJobOpen}
         onCreate={(job) => setJobList((prev) => [job, ...prev])}
+      />
+      <ManageJobFieldsDialog
+        open={manageFieldsOpen}
+        onOpenChange={setManageFieldsOpen}
+        schema={schema}
+        onSave={setSchema}
       />
     </>
   );
@@ -673,7 +709,12 @@ function SortableTh({
   );
 }
 
-function JobDrawer({ job, onClose }: { job: Job; onClose: () => void }) {
+function JobDrawer({ job, onClose, onUpdate }: { job: Job; onClose: () => void; onUpdate: (patch: Partial<Job>) => void }) {
+  const [schema] = useJobFieldSchema();
+  const setFieldValue = (fieldId: string, value: string | number | boolean) => {
+    const next = { ...(job.customFields ?? {}), [fieldId]: value };
+    onUpdate({ customFields: next });
+  };
   return (
     <>
       <div className="fixed inset-0 bg-black/25 z-40 animate-fade-in" onClick={onClose} />
@@ -702,6 +743,23 @@ function JobDrawer({ job, onClose }: { job: Job; onClose: () => void }) {
           <Section title="Job notes">
             <p className="text-sm text-foreground">{job.notes || "No notes yet."}</p>
           </Section>
+
+          {schema.length > 0 && (
+            <Section title="Details">
+              <div className="space-y-2">
+                {schema.map((f) => (
+                  <div key={f.id} className="grid grid-cols-[120px_1fr] items-center gap-2 text-sm">
+                    <span className="text-xs text-muted-foreground">{f.label}</span>
+                    <JobFieldInput
+                      field={f}
+                      value={job.customFields?.[f.id]}
+                      onChange={(v) => v !== undefined && setFieldValue(f.id, v as string | number | boolean)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
 
           <Section title="Photos">
             <div className="grid grid-cols-3 gap-2">

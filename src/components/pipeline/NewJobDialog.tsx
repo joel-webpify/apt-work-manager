@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Btn } from "@/components/layout/PageShell";
 import { contacts, stages, type Job, type PipelineStage, type Trade } from "@/data/mockData";
+import { useJobFieldSchema } from "@/lib/jobFields";
+import JobFieldInput from "./JobFieldInput";
 
 const trades: Trade[] = ["Plumbing", "Electrical", "Window cleaning", "Landscaping", "General"];
 
@@ -24,11 +26,14 @@ export default function NewJobDialog({
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
+  const [schema] = useJobFieldSchema();
+  const [customValues, setCustomValues] = useState<Record<string, string | number | boolean>>({});
 
   const reset = () => {
     setContactId(""); setCustomCustomer(""); setService(""); setTrade("General");
     setValue(""); setEstimatedHours("2"); setStage("New enquiry");
     setAddress(""); setPostcode(""); setNotes("");
+    setCustomValues({});
   };
 
   const submit = () => {
@@ -52,6 +57,7 @@ export default function NewJobDialog({
       estimatedHours: Number(estimatedHours) || 1,
       assignments: [],
       timeline: [{ type: "note", text: "Job created manually", date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) }],
+      customFields: Object.keys(customValues).length ? customValues : undefined,
     };
     onCreate(job);
     reset();
@@ -60,7 +66,7 @@ export default function NewJobDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) reset(); onOpenChange(o); }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>New job</DialogTitle>
         </DialogHeader>
@@ -133,6 +139,21 @@ export default function NewJobDialog({
               placeholder="Anything important about this job…"
             />
           </Field>
+
+          {schema.length > 0 && (
+            <div className="pt-2 mt-2 border-t-hairline space-y-3">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Additional details</div>
+              {schema.map((f) => (
+                <Field key={f.id} label={f.label + (f.required ? " *" : "")}>
+                  <JobFieldInput
+                    field={f}
+                    value={customValues[f.id]}
+                    onChange={(v) => setCustomValues((p) => ({ ...p, [f.id]: v as string | number | boolean }))}
+                  />
+                </Field>
+              ))}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Btn variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Btn>
