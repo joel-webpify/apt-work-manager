@@ -281,6 +281,19 @@ export default function Pipeline() {
                           <span className="text-sm font-medium tabular-nums">£{job.value}</span>
                           <span className="text-xs text-muted-foreground">{job.daysInStage}d</span>
                         </div>
+                        {cardFields.length > 0 && cardFields.some((f) => job.customFields?.[f.id] !== undefined && job.customFields?.[f.id] !== "") && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {cardFields.map((f) => {
+                              const v = job.customFields?.[f.id];
+                              if (v === undefined || v === "" || v === false) return null;
+                              return (
+                                <span key={f.id} className="text-[10px] px-1.5 py-0.5 rounded bg-surface-hover text-muted-foreground">
+                                  {f.label}: <span className="text-foreground">{formatFieldValue(f, v)}</span>
+                                </span>
+                              );
+                            })}
+                          </div>
+                        )}
                         {job.assignments && job.assignments.length > 0 && (
                           <div className="flex items-center gap-1 mt-2 pt-2 border-t-hairline">
                             <Users className="w-3 h-3 text-muted-foreground" />
