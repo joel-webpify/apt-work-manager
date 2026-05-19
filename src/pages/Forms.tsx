@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Plus, FileText, ArrowRight, Pencil, Code2 } from "lucide-react";
-import { forms as seedForms, formSubmissions } from "@/data/mockData";
+import { Plus, FileText, ArrowRight, Pencil, Code2, Check } from "lucide-react";
+import { forms as seedForms, formSubmissions, contacts, type Job } from "@/data/mockData";
+import { addJob } from "@/lib/jobsStore";
+import { useToast } from "@/hooks/use-toast";
 import { FormBuilderDialog, BuilderForm } from "@/components/forms/FormBuilderDialog";
 import { EmbedDialog, TrackingConfig, defaultTracking } from "@/components/forms/EmbedDialog";
 
