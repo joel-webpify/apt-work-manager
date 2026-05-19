@@ -447,6 +447,9 @@ export function AutomationBuilderDialog({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [active, setActive] = useState(initial?.active ?? false);
   const [trigger, setTrigger] = useState<TriggerType>(initial?.trigger ?? "form_submitted");
+  const [triggerConfig, setTriggerConfig] = useState<Record<string, string>>(
+    initial?.triggerConfig ?? { days: "365" },
+  );
   const [conditions, setConditions] = useState<Condition[]>(initial?.conditions ?? []);
   const [steps, setSteps] = useState<AutomationStep[]>(
     initial?.steps ?? [
@@ -466,6 +469,7 @@ export function AutomationBuilderDialog({
       description: description.trim() || undefined,
       active,
       trigger,
+      triggerConfig,
       conditions,
       steps,
     });
@@ -516,6 +520,40 @@ export function AutomationBuilderDialog({
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">{triggerMeta[trigger].description}</p>
+
+                {(trigger === "date_anniversary" || trigger === "no_job_in_period") && (
+                  <div className="pt-2 mt-1 border-t-hairline space-y-1.5">
+                    <Label className="text-xs">
+                      {trigger === "date_anniversary"
+                        ? "Days after last job"
+                        : "Days with no job"}
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        min={1}
+                        value={triggerConfig.days ?? "365"}
+                        onChange={(e) =>
+                          setTriggerConfig((p) => ({ ...p, days: e.target.value }))
+                        }
+                        className="h-8 text-xs w-28"
+                      />
+                      <span className="text-xs text-muted-foreground">days</span>
+                      <div className="ml-auto flex gap-1">
+                        {[30, 90, 180, 365].map((d) => (
+                          <button
+                            key={d}
+                            type="button"
+                            onClick={() => setTriggerConfig((p) => ({ ...p, days: String(d) }))}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-surface hover:bg-surface-hover text-muted-foreground"
+                          >
+                            {d}d
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -582,7 +620,12 @@ export function AutomationBuilderDialog({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">Trigger</div>
-                  <div className="text-sm font-medium truncate">{triggerMeta[trigger].label}</div>
+                  <div className="text-sm font-medium truncate">
+                    {triggerMeta[trigger].label}
+                    {(trigger === "date_anniversary" || trigger === "no_job_in_period") && triggerConfig.days && (
+                      <span className="text-muted-foreground font-normal"> · {triggerConfig.days} days</span>
+                    )}
+                  </div>
                 </div>
               </div>
 

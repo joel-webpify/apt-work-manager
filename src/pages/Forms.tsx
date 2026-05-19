@@ -1,7 +1,10 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Plus, FileText, ArrowRight, Pencil, Code2 } from "lucide-react";
-import { forms as seedForms, formSubmissions } from "@/data/mockData";
+import { Plus, FileText, ArrowRight, Pencil, Code2, Check } from "lucide-react";
+import { forms as seedForms, formSubmissions, contacts, type Job } from "@/data/mockData";
+import { addJob } from "@/lib/jobsStore";
+import { useToast } from "@/hooks/use-toast";
 import { FormBuilderDialog, BuilderForm } from "@/components/forms/FormBuilderDialog";
 import { EmbedDialog, TrackingConfig, defaultTracking } from "@/components/forms/EmbedDialog";
 
@@ -22,6 +25,47 @@ export default function Forms() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<BuilderForm | undefined>();
   const [embedFor, setEmbedFor] = useState<ListedForm | null>(null);
+  const [convertedIds, setConvertedIds] = useState<Set<string>>(new Set());
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  const handleCreateJob = (s: typeof formSubmissions[number]) => {
+    if (convertedIds.has(s.id)) return;
+    const contact = contacts.find((c) => c.name === s.contact);
+    const job: Job = {
+      id: `j-fs-${s.id}-${Date.now()}`,
+      contactId: contact?.id ?? "manual",
+      customer: s.contact,
+      service: s.service,
+      trade: "General",
+      value: 0,
+      stage: "New enquiry",
+      daysInStage: 0,
+      address: contact?.postcode ?? s.postcode,
+      postcode: s.postcode.split(" ")[0],
+      notes: `Created from form submission on ${s.date}.`,
+      quoteValue: 0,
+      estimatedHours: 1,
+      assignments: [],
+      timeline: [
+        { type: "note", text: `Form submission converted to job (${s.service})`, date: s.date.split(" ")[0] + " " + s.date.split(" ")[1] },
+      ],
+    };
+    addJob(job);
+    setConvertedIds((prev) => new Set(prev).add(s.id));
+    toast({
+      title: "Job created",
+      description: `${s.contact} — ${s.service} added to pipeline.`,
+      action: (
+        <button
+          onClick={() => navigate("/pipeline")}
+          className="text-xs font-medium underline underline-offset-2"
+        >
+          View
+        </button>
+      ),
+    });
+  };
 
   const handleSave = (form: BuilderForm) => {
     setForms((prev) => {
@@ -38,7 +82,7 @@ export default function Forms() {
   return (
     <>
       <PageHeader
-        title="Forms & quote requests"
+        title="Forms"
         description="Embed forms on your website and capture leads"
         actions={
           <Btn variant="primary" onClick={() => { setEditing(undefined); setOpen(true); }}>
@@ -118,9 +162,15 @@ export default function Forms() {
               <div className="text-muted-foreground">{s.service}</div>
               <div className="text-muted-foreground tabular-nums">{s.postcode}</div>
               <div className="text-muted-foreground tabular-nums">{s.date}</div>
-              <Btn className="h-7">
-                Create job <ArrowRight className="w-3 h-3" />
-              </Btn>
+              {convertedIds.has(s.id) ? (
+                <Btn className="h-7" disabled>
+                  <Check className="w-3 h-3" /> Created
+                </Btn>
+              ) : (
+                <Btn className="h-7" onClick={() => handleCreateJob(s)}>
+                  Create job <ArrowRight className="w-3 h-3" />
+                </Btn>
+              )}
             </div>
           ))}
         </div>

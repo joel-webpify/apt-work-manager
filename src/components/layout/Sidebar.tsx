@@ -18,7 +18,7 @@ const items = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/pipeline", label: "Jobs & pipeline", icon: KanbanSquare },
   { to: "/contacts", label: "Contacts & leads", icon: Users },
-  { to: "/forms", label: "Forms & quote requests", icon: FileText },
+  { to: "/forms", label: "Forms", icon: FileText },
   { to: "/quotes", label: "Quotes & invoices", icon: Receipt },
   { to: "/email", label: "Email marketing", icon: Mail },
   { to: "/ads", label: "Google Ads", icon: Megaphone },
