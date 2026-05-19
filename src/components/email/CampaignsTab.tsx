@@ -25,10 +25,13 @@ import {
   List as ListIcon,
   Braces,
   Save,
+  Blocks,
+  Code2,
 } from "lucide-react";
 import { Btn, Pill } from "@/components/layout/PageShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { EmailDesigner, renderBlocksToHtml, createBlock, type EmailBlock } from "./EmailDesigner";
 import { useToast } from "@/hooks/use-toast";
 
 type CampaignStatus = "Sent" | "Scheduled" | "Draft" | "Sending";
@@ -650,6 +653,8 @@ function CampaignBuilder({
   const [body, setBody] = useState("");
   const [sendDate, setSendDate] = useState("");
   const [scheduleNow, setScheduleNow] = useState<"now" | "later" | "draft">("later");
+  const [editorMode, setEditorMode] = useState<"visual" | "markdown">("visual");
+  const [blocks, setBlocks] = useState<EmailBlock[]>([]);
 
   // Audience state
   const [savedAudiences, setSavedAudiences] = useState<SavedAudience[]>(initialSavedAudiences);
@@ -684,6 +689,19 @@ function CampaignBuilder({
     setMatch("all");
     setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
     setAudienceNameDraft("");
+    // Seed designer blocks from template (heading from subject + paragraph from body + CTA)
+    setEditorMode("visual");
+    setBlocks([
+      { ...createBlock("heading"), text: template.subject || "Your headline here" },
+      {
+        ...createBlock("text"),
+        text:
+          template.body && template.body.length > 0
+            ? template.body
+            : defaultBody,
+      },
+      { ...createBlock("button"), label: "Book now", url: "https://" },
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
 
@@ -708,7 +726,9 @@ function CampaignBuilder({
   const canNext1 =
     name.trim().length > 0 &&
     ((audienceMode === "saved" && !!selectedAudience) || (audienceMode === "custom" && rules.length > 0));
-  const canNext2 = subject.trim().length > 0 && body.trim().length > 0;
+  const canNext2 =
+    subject.trim().length > 0 &&
+    (editorMode === "markdown" ? body.trim().length > 0 : blocks.length > 0);
   const canSubmit = scheduleNow === "draft" || scheduleNow === "now" || (scheduleNow === "later" && sendDate);
 
   const handleSubmit = () => {
@@ -840,7 +860,7 @@ function CampaignBuilder({
 
   return (
     <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${step === 2 ? "max-w-5xl" : "max-w-3xl"} max-h-[92vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
@@ -1045,28 +1065,31 @@ function CampaignBuilder({
 
         {step === 2 && (
           <div className="space-y-3">
-            {/* Variable chips */}
-            <div className="border-hairline rounded-md p-2.5 bg-surface/50">
-              <div className="flex items-center gap-1.5 mb-2">
-                <Braces className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  Insert variable into{" "}
-                  <span className="font-medium text-foreground">{activeField === "subject" ? "subject" : "body"}</span>
-                </span>
+            {/* Mode toggle */}
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1 border-hairline rounded-md p-0.5">
+                <button
+                  onClick={() => setEditorMode("visual")}
+                  className={`h-7 px-3 rounded text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+                    editorMode === "visual" ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Blocks className="w-3.5 h-3.5" /> Visual builder
+                </button>
+                <button
+                  onClick={() => setEditorMode("markdown")}
+                  className={`h-7 px-3 rounded text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+                    editorMode === "markdown" ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <Code2 className="w-3.5 h-3.5" /> Markdown
+                </button>
               </div>
-              <div className="flex flex-wrap gap-1.5">
-                {mergeVariables.map((v) => (
-                  <button
-                    key={v.key}
-                    onClick={() => insertVariable(v.key)}
-                    className="h-6 px-2 text-xs rounded-md border-hairline bg-background hover:bg-surface-hover hover:border-primary/40 transition-colors inline-flex items-center gap-1"
-                    title={`Example: ${v.example}`}
-                  >
-                    <span className="font-mono text-muted-foreground">{`{{${v.key}}}`}</span>
-                    <span>{v.label}</span>
-                  </button>
-                ))}
-              </div>
+              <span className="text-xs text-muted-foreground">
+                {editorMode === "visual"
+                  ? "Drag blocks into the canvas to design your email."
+                  : "Write in markdown with merge variables."}
+              </span>
             </div>
 
             <Field label="Subject line">
@@ -1089,47 +1112,97 @@ function CampaignBuilder({
               />
             </Field>
 
-            <Field label="Body">
-              <div className="border-hairline rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring">
-                {/* Toolbar */}
-                <div className="flex items-center gap-0.5 px-1.5 py-1 border-b-hairline bg-surface/50">
-                  <ToolbarBtn onClick={() => wrapSelection("**")} title="Bold">
-                    <Bold className="w-3.5 h-3.5" />
-                  </ToolbarBtn>
-                  <ToolbarBtn onClick={() => wrapSelection("*")} title="Italic">
-                    <Italic className="w-3.5 h-3.5" />
-                  </ToolbarBtn>
-                  <ToolbarBtn onClick={() => insertAtCursor("\n## Heading\n")} title="Heading">
-                    <HeadingIcon className="w-3.5 h-3.5" />
-                  </ToolbarBtn>
-                  <ToolbarBtn onClick={() => insertAtCursor("\n- Item\n- Item\n")} title="List">
-                    <ListIcon className="w-3.5 h-3.5" />
-                  </ToolbarBtn>
-                  <ToolbarBtn
-                    onClick={() => {
-                      const url = window.prompt("Link URL", "https://");
-                      if (!url) return;
-                      wrapSelection("[", `](${url})`);
-                    }}
-                    title="Link"
-                  >
-                    <LinkIcon className="w-3.5 h-3.5" />
-                  </ToolbarBtn>
-                  <div className="w-px h-4 bg-border mx-1" />
-                  <span className="text-xs text-muted-foreground px-1">
-                    Markdown + {"{{variables}}"}
-                  </span>
-                </div>
-                <textarea
-                  ref={bodyRef}
-                  value={body}
-                  onFocus={() => setActiveField("body")}
-                  onChange={(e) => setBody(e.target.value)}
-                  placeholder="Write your email. Use **bold**, *italic*, [links](url) and {{first_name}} style variables."
-                  className="w-full min-h-[200px] px-3 py-2 text-sm bg-background focus:outline-none font-mono resize-y"
-                />
+            {/* Variable chips (shared) */}
+            <div className="border-hairline rounded-md p-2.5 bg-surface/50">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Braces className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  {editorMode === "markdown" ? (
+                    <>
+                      Insert variable into{" "}
+                      <span className="font-medium text-foreground">
+                        {activeField === "subject" ? "subject" : "body"}
+                      </span>
+                    </>
+                  ) : (
+                    <>Copy a variable into any text block or the subject</>
+                  )}
+                </span>
               </div>
-            </Field>
+              <div className="flex flex-wrap gap-1.5">
+                {mergeVariables.map((v) => (
+                  <button
+                    key={v.key}
+                    onClick={() => {
+                      if (editorMode === "markdown") {
+                        insertVariable(v.key);
+                      } else if (activeField === "subject") {
+                        insertVariable(v.key);
+                      } else {
+                        navigator.clipboard?.writeText(`{{${v.key}}}`).catch(() => {});
+                      }
+                    }}
+                    className="h-6 px-2 text-xs rounded-md border-hairline bg-background hover:bg-surface-hover hover:border-primary/40 transition-colors inline-flex items-center gap-1"
+                    title={`Example: ${v.example} — click to insert/copy`}
+                  >
+                    <span className="font-mono text-muted-foreground">{`{{${v.key}}}`}</span>
+                    <span>{v.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {editorMode === "visual" ? (
+              <Field label="Email design">
+                <EmailDesigner
+                  blocks={blocks}
+                  onChange={setBlocks}
+                  vars={Object.fromEntries(mergeVariables.map((v) => [v.key, v.example]))}
+                />
+              </Field>
+            ) : (
+              <Field label="Body">
+                <div className="border-hairline rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring">
+                  {/* Toolbar */}
+                  <div className="flex items-center gap-0.5 px-1.5 py-1 border-b-hairline bg-surface/50">
+                    <ToolbarBtn onClick={() => wrapSelection("**")} title="Bold">
+                      <Bold className="w-3.5 h-3.5" />
+                    </ToolbarBtn>
+                    <ToolbarBtn onClick={() => wrapSelection("*")} title="Italic">
+                      <Italic className="w-3.5 h-3.5" />
+                    </ToolbarBtn>
+                    <ToolbarBtn onClick={() => insertAtCursor("\n## Heading\n")} title="Heading">
+                      <HeadingIcon className="w-3.5 h-3.5" />
+                    </ToolbarBtn>
+                    <ToolbarBtn onClick={() => insertAtCursor("\n- Item\n- Item\n")} title="List">
+                      <ListIcon className="w-3.5 h-3.5" />
+                    </ToolbarBtn>
+                    <ToolbarBtn
+                      onClick={() => {
+                        const url = window.prompt("Link URL", "https://");
+                        if (!url) return;
+                        wrapSelection("[", `](${url})`);
+                      }}
+                      title="Link"
+                    >
+                      <LinkIcon className="w-3.5 h-3.5" />
+                    </ToolbarBtn>
+                    <div className="w-px h-4 bg-border mx-1" />
+                    <span className="text-xs text-muted-foreground px-1">
+                      Markdown + {"{{variables}}"}
+                    </span>
+                  </div>
+                  <textarea
+                    ref={bodyRef}
+                    value={body}
+                    onFocus={() => setActiveField("body")}
+                    onChange={(e) => setBody(e.target.value)}
+                    placeholder="Write your email. Use **bold**, *italic*, [links](url) and {{first_name}} style variables."
+                    className="w-full min-h-[200px] px-3 py-2 text-sm bg-background focus:outline-none font-mono resize-y"
+                  />
+                </div>
+              </Field>
+            )}
 
             {/* Inbox preview */}
             <div className="border-hairline rounded-md overflow-hidden">
@@ -1145,14 +1218,27 @@ function CampaignBuilder({
                 {preview && (
                   <div className="text-xs text-muted-foreground mt-0.5">{renderPreview(preview)}</div>
                 )}
-                <div
-                  className="text-sm mt-3 leading-relaxed text-foreground"
-                  dangerouslySetInnerHTML={{ __html: bodyPreviewHtml || "Body preview…" }}
-                />
+                {editorMode === "visual" ? (
+                  <div
+                    className="mt-3"
+                    dangerouslySetInnerHTML={{
+                      __html: renderBlocksToHtml(
+                        blocks,
+                        Object.fromEntries(mergeVariables.map((v) => [v.key, v.example])),
+                      ),
+                    }}
+                  />
+                ) : (
+                  <div
+                    className="text-sm mt-3 leading-relaxed text-foreground"
+                    dangerouslySetInnerHTML={{ __html: bodyPreviewHtml || "Body preview…" }}
+                  />
+                )}
               </div>
             </div>
           </div>
         )}
+
 
         {step === 3 && (
           <div className="space-y-3">
