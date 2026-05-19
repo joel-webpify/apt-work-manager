@@ -160,8 +160,24 @@ export default function Pipeline() {
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
             </Link>
             <ViewToggle view={view} onChange={setView} />
-            <Btn variant="ghost" onClick={() => setManageStagesOpen(true)}><Columns3 className="w-3.5 h-3.5" /> Stages</Btn>
-            <Btn variant="ghost" onClick={() => setManageFieldsOpen(true)}><Settings2 className="w-3.5 h-3.5" /> Fields</Btn>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button className="h-8 px-2.5 rounded-md text-sm font-medium inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors border-hairline">
+                  <Settings2 className="w-3.5 h-3.5" /> Settings
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
+                  Pipeline configuration
+                </DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => setManageStagesOpen(true)} className="cursor-pointer">
+                  <Columns3 className="w-3.5 h-3.5 mr-2" /> Stages
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setManageFieldsOpen(true)} className="cursor-pointer">
+                  <Settings2 className="w-3.5 h-3.5 mr-2" /> Fields
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Btn variant="primary" onClick={() => setNewJobOpen(true)}><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
         }
