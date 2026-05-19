@@ -55,19 +55,23 @@ export function useJobFieldSchema() {
   });
 
   useEffect(() => {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(schema)); } catch { /* noop */ }
-    // Notify other components on same tab
-    window.dispatchEvent(new CustomEvent("jobFieldSchema:update"));
+    try {
+      const serialized = JSON.stringify(schema);
+      if (localStorage.getItem(STORAGE_KEY) !== serialized) {
+        localStorage.setItem(STORAGE_KEY, serialized);
+        window.dispatchEvent(new CustomEvent("jobFieldSchema:update"));
+      }
+    } catch { /* noop */ }
   }, [schema]);
 
   useEffect(() => {
     const handler = () => {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as JobCustomField[];
-          if (Array.isArray(parsed)) setSchema(parsed);
-        }
+        if (!raw) return;
+        const parsed = JSON.parse(raw) as JobCustomField[];
+        if (!Array.isArray(parsed)) return;
+        setSchema((prev) => (JSON.stringify(prev) === raw ? prev : parsed));
       } catch { /* noop */ }
     };
     window.addEventListener("jobFieldSchema:update", handler);
