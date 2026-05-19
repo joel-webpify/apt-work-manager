@@ -447,6 +447,9 @@ export function AutomationBuilderDialog({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [active, setActive] = useState(initial?.active ?? false);
   const [trigger, setTrigger] = useState<TriggerType>(initial?.trigger ?? "form_submitted");
+  const [triggerConfig, setTriggerConfig] = useState<Record<string, string>>(
+    initial?.triggerConfig ?? { days: "365" },
+  );
   const [conditions, setConditions] = useState<Condition[]>(initial?.conditions ?? []);
   const [steps, setSteps] = useState<AutomationStep[]>(
     initial?.steps ?? [
@@ -466,6 +469,7 @@ export function AutomationBuilderDialog({
       description: description.trim() || undefined,
       active,
       trigger,
+      triggerConfig,
       conditions,
       steps,
     });
