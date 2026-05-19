@@ -82,7 +82,7 @@ export default function Forms() {
   return (
     <>
       <PageHeader
-        title="Forms & quote requests"
+        title="Forms"
         description="Embed forms on your website and capture leads"
         actions={
           <Btn variant="primary" onClick={() => { setEditing(undefined); setOpen(true); }}>
@@ -162,9 +162,15 @@ export default function Forms() {
               <div className="text-muted-foreground">{s.service}</div>
               <div className="text-muted-foreground tabular-nums">{s.postcode}</div>
               <div className="text-muted-foreground tabular-nums">{s.date}</div>
-              <Btn className="h-7">
-                Create job <ArrowRight className="w-3 h-3" />
-              </Btn>
+              {convertedIds.has(s.id) ? (
+                <Btn className="h-7" disabled>
+                  <Check className="w-3 h-3" /> Created
+                </Btn>
+              ) : (
+                <Btn className="h-7" onClick={() => handleCreateJob(s)}>
+                  Create job <ArrowRight className="w-3 h-3" />
+                </Btn>
+              )}
             </div>
           ))}
         </div>
