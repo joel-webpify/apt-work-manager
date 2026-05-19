@@ -227,6 +227,7 @@ export default function Pipeline() {
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
             </Link>
             <ViewToggle view={view} onChange={setView} />
+            <Btn variant="ghost" onClick={() => setManageFieldsOpen(true)}><Settings2 className="w-3.5 h-3.5" /> Fields</Btn>
             <Btn variant="primary" onClick={() => setNewJobOpen(true)}><Plus className="w-3.5 h-3.5" /> New job</Btn>
           </>
         }
