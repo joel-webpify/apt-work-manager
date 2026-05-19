@@ -1,12 +1,21 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Plus, FileText, ArrowRight, Pencil, Code2, Check } from "lucide-react";
-import { forms as seedForms, formSubmissions, contacts, type Job } from "@/data/mockData";
+import { Plus, FileText, ArrowRight, Pencil, Code2, Check, Wand2 } from "lucide-react";
+import {
+  forms as seedForms,
+  formSubmissions,
+  contacts,
+  type Job,
+  type FormSubmission,
+} from "@/data/mockData";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
 import { FormBuilderDialog, BuilderForm } from "@/components/forms/FormBuilderDialog";
 import { EmbedDialog, TrackingConfig, defaultTracking } from "@/components/forms/EmbedDialog";
+import FieldMappingDialog from "@/components/forms/FieldMappingDialog";
+import { applyMapping, useFormMappingOverrides, guessTarget, type MappingTarget } from "@/lib/formFieldMapping";
+import { useJobFieldSchema } from "@/lib/jobFields";
 
 type ListedForm = BuilderForm & { submissions: number; conversionRate: number; tracking: TrackingConfig };
 
@@ -25,28 +34,39 @@ export default function Forms() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<BuilderForm | undefined>();
   const [embedFor, setEmbedFor] = useState<ListedForm | null>(null);
+  const [mappingFor, setMappingFor] = useState<ListedForm | null>(null);
   const [convertedIds, setConvertedIds] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [schema] = useJobFieldSchema();
+  const { overrides, setFormMapping } = useFormMappingOverrides();
 
-  const handleCreateJob = (s: typeof formSubmissions[number]) => {
+  const handleCreateJob = (s: FormSubmission) => {
     if (convertedIds.has(s.id)) return;
     const contact = contacts.find((c) => c.name === s.contact);
+    const mapped = applyMapping(s.values, schema, overrides[s.formId]);
+    const matched = Object.entries(s.values).filter(([label]) => {
+      const t = overrides[s.formId]?.[label] ?? guessTarget(label, schema);
+      return t !== "ignore";
+    }).length;
+
     const job: Job = {
       id: `j-fs-${s.id}-${Date.now()}`,
       contactId: contact?.id ?? "manual",
-      customer: s.contact,
-      service: s.service,
-      trade: "General",
-      value: 0,
+      customer: String(mapped.core.customer ?? s.contact),
+      service: String(mapped.core.service ?? s.service),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      trade: ((mapped.core.trade as any) ?? "General"),
+      value: typeof mapped.core.value === "number" ? mapped.core.value : 0,
       stage: "New enquiry",
       daysInStage: 0,
-      address: contact?.postcode ?? s.postcode,
-      postcode: s.postcode.split(" ")[0],
-      notes: `Created from form submission on ${s.date}.`,
-      quoteValue: 0,
+      address: String(mapped.core.address ?? contact?.postcode ?? s.postcode),
+      postcode: String(mapped.core.postcode ?? s.postcode).split(" ")[0],
+      notes: String(mapped.core.notes ?? `Created from form submission on ${s.date}.`),
+      quoteValue: typeof mapped.core.value === "number" ? mapped.core.value : 0,
       estimatedHours: 1,
       assignments: [],
+      customFields: mapped.customFields,
       timeline: [
         { type: "note", text: `Form submission converted to job (${s.service})`, date: s.date.split(" ")[0] + " " + s.date.split(" ")[1] },
       ],
@@ -55,7 +75,7 @@ export default function Forms() {
     setConvertedIds((prev) => new Set(prev).add(s.id));
     toast({
       title: "Job created",
-      description: `${s.contact} — ${s.service} added to pipeline.`,
+      description: `${job.customer} — ${matched} field${matched === 1 ? "" : "s"} mapped from submission.`,
       action: (
         <button
           onClick={() => navigate("/pipeline")}
@@ -104,6 +124,13 @@ export default function Forms() {
                 <div className="flex items-center gap-1.5">
                   <Pill tone="success">Live</Pill>
                   <button
+                    onClick={() => setMappingFor(f)}
+                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface"
+                    title="Field mapping"
+                  >
+                    <Wand2 className="w-3.5 h-3.5 text-muted-foreground" />
+                  </button>
+                  <button
                     onClick={() => setEmbedFor(f)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface"
                     title="Get embed code"
@@ -131,12 +158,20 @@ export default function Forms() {
                   <div className="text-base font-medium tabular-nums mt-0.5">{f.conversionRate}%</div>
                 </div>
               </div>
-              <button
-                onClick={() => setEmbedFor(f)}
-                className="mt-3 w-full flex items-center justify-center gap-1.5 h-8 rounded-md border-hairline text-xs font-medium hover:bg-surface-hover transition-colors"
-              >
-                <Code2 className="w-3 h-3" /> Embed snippet
-              </button>
+              <div className="grid grid-cols-2 gap-2 mt-3">
+                <button
+                  onClick={() => setMappingFor(f)}
+                  className="flex items-center justify-center gap-1.5 h-8 rounded-md border-hairline text-xs font-medium hover:bg-surface-hover transition-colors"
+                >
+                  <Wand2 className="w-3 h-3" /> Mapping
+                </button>
+                <button
+                  onClick={() => setEmbedFor(f)}
+                  className="flex items-center justify-center gap-1.5 h-8 rounded-md border-hairline text-xs font-medium hover:bg-surface-hover transition-colors"
+                >
+                  <Code2 className="w-3 h-3" /> Embed
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -193,6 +228,26 @@ export default function Forms() {
           onTrackingChange={(cfg) => {
             setForms((prev) => prev.map((f) => (f.id === embedFor.id ? { ...f, tracking: cfg } : f)));
             setEmbedFor((prev) => (prev ? { ...prev, tracking: cfg } : prev));
+          }}
+        />
+      )}
+
+      {mappingFor && (
+        <FieldMappingDialog
+          open={!!mappingFor}
+          onOpenChange={(o) => !o && setMappingFor(null)}
+          form={mappingFor}
+          sampleLabels={Array.from(
+            new Set(
+              formSubmissions
+                .filter((s) => s.formId === mappingFor.id)
+                .flatMap((s) => Object.keys(s.values)),
+            ),
+          )}
+          initial={overrides[mappingFor.id]}
+          onSave={(formId, mapping) => {
+            setFormMapping(formId, mapping);
+            toast({ title: "Mapping saved", description: `Updated field mapping for ${mappingFor.name}.` });
           }}
         />
       )}
