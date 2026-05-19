@@ -620,7 +620,12 @@ export function AutomationBuilderDialog({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="text-xs uppercase tracking-wide text-muted-foreground">Trigger</div>
-                  <div className="text-sm font-medium truncate">{triggerMeta[trigger].label}</div>
+                  <div className="text-sm font-medium truncate">
+                    {triggerMeta[trigger].label}
+                    {(trigger === "date_anniversary" || trigger === "no_job_in_period") && triggerConfig.days && (
+                      <span className="text-muted-foreground font-normal"> · {triggerConfig.days} days</span>
+                    )}
+                  </div>
                 </div>
               </div>
 
