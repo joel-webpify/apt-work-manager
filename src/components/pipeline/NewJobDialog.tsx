@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Btn } from "@/components/layout/PageShell";
 import { contacts, stages, type Job, type PipelineStage, type Trade } from "@/data/mockData";
+import { useJobFieldSchema } from "@/lib/jobFields";
+import JobFieldInput from "./JobFieldInput";
 
 const trades: Trade[] = ["Plumbing", "Electrical", "Window cleaning", "Landscaping", "General"];
 
