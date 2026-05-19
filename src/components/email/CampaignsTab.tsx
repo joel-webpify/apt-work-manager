@@ -689,6 +689,19 @@ function CampaignBuilder({
     setMatch("all");
     setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
     setAudienceNameDraft("");
+    // Seed designer blocks from template (heading from subject + paragraph from body + CTA)
+    setEditorMode("visual");
+    setBlocks([
+      { ...createBlock("heading"), text: template.subject || "Your headline here" },
+      {
+        ...createBlock("text"),
+        text:
+          template.body && template.body.length > 0
+            ? template.body
+            : defaultBody,
+      },
+      { ...createBlock("button"), label: "Book now", url: "https://" },
+    ]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
 
