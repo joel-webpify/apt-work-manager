@@ -708,7 +708,12 @@ function SortableTh({
   );
 }
 
-function JobDrawer({ job, onClose }: { job: Job; onClose: () => void }) {
+function JobDrawer({ job, onClose, onUpdate }: { job: Job; onClose: () => void; onUpdate: (patch: Partial<Job>) => void }) {
+  const [schema] = useJobFieldSchema();
+  const setFieldValue = (fieldId: string, value: string | number | boolean) => {
+    const next = { ...(job.customFields ?? {}), [fieldId]: value };
+    onUpdate({ customFields: next });
+  };
   return (
     <>
       <div className="fixed inset-0 bg-black/25 z-40 animate-fade-in" onClick={onClose} />
