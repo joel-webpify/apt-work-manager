@@ -57,6 +57,7 @@ export default function NewJobDialog({
       estimatedHours: Number(estimatedHours) || 1,
       assignments: [],
       timeline: [{ type: "note", text: "Job created manually", date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) }],
+      customFields: Object.keys(customValues).length ? customValues : undefined,
     };
     onCreate(job);
     reset();
