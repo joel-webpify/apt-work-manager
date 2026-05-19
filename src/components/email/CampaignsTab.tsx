@@ -860,7 +860,7 @@ function CampaignBuilder({
 
   return (
     <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={`${step === 2 ? "max-w-5xl" : "max-w-3xl"} max-h-[92vh] overflow-y-auto`}>
         <DialogHeader>
           <DialogTitle>New campaign</DialogTitle>
           <DialogDescription>
