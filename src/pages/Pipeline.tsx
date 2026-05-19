@@ -743,6 +743,23 @@ function JobDrawer({ job, onClose, onUpdate }: { job: Job; onClose: () => void; 
             <p className="text-sm text-foreground">{job.notes || "No notes yet."}</p>
           </Section>
 
+          {schema.length > 0 && (
+            <Section title="Details">
+              <div className="space-y-2">
+                {schema.map((f) => (
+                  <div key={f.id} className="grid grid-cols-[120px_1fr] items-center gap-2 text-sm">
+                    <span className="text-xs text-muted-foreground">{f.label}</span>
+                    <JobFieldInput
+                      field={f}
+                      value={job.customFields?.[f.id]}
+                      onChange={(v) => v !== undefined && setFieldValue(f.id, v as string | number | boolean)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </Section>
+          )}
+
           <Section title="Photos">
             <div className="grid grid-cols-3 gap-2">
               {[1, 2, 3].map((i) => (
