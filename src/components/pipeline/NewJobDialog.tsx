@@ -139,6 +139,21 @@ export default function NewJobDialog({
               placeholder="Anything important about this job…"
             />
           </Field>
+
+          {schema.length > 0 && (
+            <div className="pt-2 mt-2 border-t-hairline space-y-3">
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Additional details</div>
+              {schema.map((f) => (
+                <Field key={f.id} label={f.label + (f.required ? " *" : "")}>
+                  <JobFieldInput
+                    field={f}
+                    value={customValues[f.id]}
+                    onChange={(v) => setCustomValues((p) => ({ ...p, [f.id]: v as string | number | boolean }))}
+                  />
+                </Field>
+              ))}
+            </div>
+          )}
         </div>
         <DialogFooter>
           <Btn variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Btn>
