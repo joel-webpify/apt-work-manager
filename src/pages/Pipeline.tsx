@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
-import { useToast } from "@/hooks/use-toast";
+import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
 import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check } from "lucide-react";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
+import { onJobStageChange } from "@/lib/lifecycle";
 import { useStages, resolveStageName, colorToCss } from "@/lib/stagesStore";
+
 import ScheduleView from "@/components/pipeline/ScheduleView";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
 import JobFieldInput from "@/components/pipeline/JobFieldInput";
@@ -126,15 +128,22 @@ export default function Pipeline() {
     e.dataTransfer.dropEffect = "move";
     if (dragOverStage !== stage) setDragOverStage(stage);
   };
+  const runLifecycle = (jobId: string, newStage: string) => {
+    const r = onJobStageChange(jobId, newStage);
+    if (r) topToast({ title: "Lifecycle automation", description: r.message });
+  };
+
   const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {
     e.preventDefault();
     const jobId = e.dataTransfer.getData("text/plain") || draggingId;
     if (!jobId) return;
+    const prevJob = jobList.find((j) => j.id === jobId);
     setJobList((prev) =>
       prev.map((j) => (j.id === jobId && j.stage !== stage ? { ...j, stage: stage as PipelineStage, daysInStage: 0 } : j)),
     );
     setDraggingId(null);
     setDragOverStage(null);
+    if (prevJob && prevJob.stage !== stage) runLifecycle(jobId, stage);
   };
 
   const handleStageRename = (oldName: string, newName: string) => {
@@ -143,8 +152,12 @@ export default function Pipeline() {
     );
   };
 
-  const updateJob = (id: string, patch: Partial<Job>) =>
+  const updateJob = (id: string, patch: Partial<Job>) => {
+    const prevJob = jobList.find((j) => j.id === id);
     setJobList((prev) => prev.map((j) => (j.id === id ? { ...j, ...patch } : j)));
+    if (patch.stage && prevJob && prevJob.stage !== patch.stage) runLifecycle(id, patch.stage);
+  };
+
 
   return (
     <>

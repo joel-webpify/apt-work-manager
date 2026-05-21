@@ -9,11 +9,11 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Send,
+  ThumbsUp,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
-  quotes as seedQuotes,
-  invoices as seedInvoices,
   quoteStatusTones,
   invoiceStatusTones,
   type Quote,
@@ -25,6 +25,9 @@ import { totals, fmt, fmtDate } from "@/lib/quoteUtils";
 import { QuoteBuilderDialog } from "@/components/quotes/QuoteBuilderDialog";
 import { QuotePreviewDialog } from "@/components/quotes/QuotePreviewDialog";
 import { toast } from "@/hooks/use-toast";
+import { useQuotes, addQuote, updateQuote } from "@/lib/quotesStore";
+import { useInvoices, addInvoice, updateInvoice } from "@/lib/invoicesStore";
+import { acceptQuote, sendInvoice, recordPayment } from "@/lib/lifecycle";
 
 type Tab = "quotes" | "invoices";
 
@@ -33,8 +36,8 @@ const invoiceStatuses: (InvoiceStatus | "All")[] = ["All", "Draft", "Sent", "Pai
 
 export default function Quotes() {
   const [tab, setTab] = useState<Tab>("quotes");
-  const [quotes, setQuotes] = useState<Quote[]>(seedQuotes);
-  const [invoices, setInvoices] = useState<Invoice[]>(seedInvoices);
+  const [quotes] = useQuotes();
+  const [invoices] = useInvoices();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
 
@@ -43,6 +46,7 @@ export default function Quotes() {
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewing, setPreviewing] = useState<Quote | Invoice | null>(null);
+
 
   const stats = useMemo(() => {
     const sent = quotes
@@ -97,23 +101,26 @@ export default function Quotes() {
 
   const saveDoc = (doc: Quote) => {
     if (tab === "quotes") {
-      setQuotes((prev) => {
-        const exists = prev.some((q) => q.id === doc.id);
-        return exists ? prev.map((q) => (q.id === doc.id ? doc : q)) : [doc, ...prev];
-      });
+      const exists = quotes.some((q) => q.id === doc.id);
+      if (exists) updateQuote(doc.id, doc);
+      else addQuote(doc);
       toast({ title: editing ? "Quote updated" : "Quote created", description: doc.number });
     } else {
       const inv = doc as unknown as Invoice;
-      setInvoices((prev) => {
-        const exists = prev.some((i) => i.id === inv.id);
-        return exists ? prev.map((i) => (i.id === inv.id ? inv : i)) : [inv, ...prev];
-      });
+      const exists = invoices.some((i) => i.id === inv.id);
+      if (exists) updateInvoice(inv.id, inv);
+      else addInvoice(inv);
       toast({ title: editing ? "Invoice updated" : "Invoice created", description: inv.number });
     }
   };
 
+  const handleAcceptQuote = (q: Quote) => {
+    const r = acceptQuote(q.id);
+    if (r) toast({ title: "Quote accepted", description: r.message });
+  };
+
   const convertToInvoice = (q: Quote) => {
-    const number = `INV-${1043 + invoices.length}`;
+    const number = `INV-${1100 + invoices.length}`;
     const inv: Invoice = {
       id: number,
       number,
@@ -126,21 +133,21 @@ export default function Quotes() {
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
       items: q.items.map((li) => ({ ...li, id: `il-${Math.random().toString(36).slice(2, 8)}` })),
     };
-    setInvoices((prev) => [inv, ...prev]);
+    addInvoice(inv);
     toast({ title: "Invoice created", description: `${number} from ${q.number}` });
     setTab("invoices");
   };
 
-  const markPaid = (i: Invoice) => {
-    setInvoices((prev) =>
-      prev.map((x) =>
-        x.id === i.id
-          ? { ...x, status: "Paid", paidDate: new Date().toISOString().slice(0, 10) }
-          : x
-      )
-    );
-    toast({ title: "Marked as paid", description: i.number });
+  const handleSendInvoice = (i: Invoice) => {
+    const r = sendInvoice(i.id);
+    if (r) toast({ title: "Invoice sent", description: r.message });
   };
+
+  const markPaid = (i: Invoice) => {
+    const r = recordPayment(i.id);
+    if (r) toast({ title: "Payment recorded", description: r.message });
+  };
+
 
   const statuses = tab === "quotes" ? quoteStatuses : invoiceStatuses;
 
@@ -275,6 +282,11 @@ export default function Quotes() {
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {(q.status === "Draft" || q.status === "Sent") && (
+                      <Btn onClick={() => handleAcceptQuote(q)} title="Mark accepted — creates a job">
+                        <ThumbsUp className="w-3.5 h-3.5" /> Accept
+                      </Btn>
+                    )}
                     {q.status === "Accepted" && (
                       <Btn onClick={() => convertToInvoice(q)}>
                         <Receipt className="w-3.5 h-3.5" /> Invoice
@@ -282,6 +294,7 @@ export default function Quotes() {
                     )}
                     <Btn onClick={() => openEdit(q)}>Edit</Btn>
                   </div>
+
                 </div>
               );
             })}
@@ -325,12 +338,18 @@ export default function Quotes() {
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {i.status === "Draft" && (
+                      <Btn onClick={() => handleSendInvoice(i)} title="Mark sent — moves job to Invoiced">
+                        <Send className="w-3.5 h-3.5" /> Send
+                      </Btn>
+                    )}
                     {(i.status === "Sent" || i.status === "Overdue" || i.status === "Draft") && (
-                      <Btn onClick={() => markPaid(i)}>
+                      <Btn onClick={() => markPaid(i)} title="Record payment — moves job to Paid">
                         <PoundSterling className="w-3.5 h-3.5" /> Mark paid
                       </Btn>
                     )}
                   </div>
+
                 </div>
               );
             })}
