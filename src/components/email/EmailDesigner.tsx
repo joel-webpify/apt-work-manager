@@ -714,6 +714,76 @@ function Inspector({
           </Field>
         </>
       )}
+      {block.type === "columns3" && (
+        <>
+          <Field label="Left"><textarea value={block.leftText ?? ""} onChange={(e) => onChange({ leftText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
+          <Field label="Middle"><textarea value={block.midText ?? ""} onChange={(e) => onChange({ midText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
+          <Field label="Right"><textarea value={block.rightText ?? ""} onChange={(e) => onChange({ rightText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
+        </>
+      )}
+      {block.type === "hero" && (
+        <>
+          <Field label="Background image URL"><input value={block.heroImage ?? ""} onChange={(e) => onChange({ heroImage: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Title"><textarea value={block.heroTitle ?? ""} onChange={(e) => onChange({ heroTitle: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="Subtitle"><textarea value={block.heroSubtitle ?? ""} onChange={(e) => onChange({ heroSubtitle: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="CTA label"><input value={block.heroCtaLabel ?? ""} onChange={(e) => onChange({ heroCtaLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="CTA URL"><input value={block.heroCtaUrl ?? ""} onChange={(e) => onChange({ heroCtaUrl: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Background"><input type="color" value={block.bgColor ?? "#0f172a"} onChange={(e) => onChange({ bgColor: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field>
+            <Field label="Text color"><input type="color" value={block.color ?? "#ffffff"} onChange={(e) => onChange({ color: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field>
+          </div>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "logo" && (
+        <>
+          <Field label="Logo URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label={`Height — ${block.height ?? 40}px`}><input type="range" min={20} max={120} step={4} value={block.height ?? 40} onChange={(e) => onChange({ height: Number(e.target.value) })} className="w-full" /></Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "list" && (
+        <>
+          <Field label="Items (one per line)">
+            <textarea value={(block.items ?? []).join("\n")} onChange={(e) => onChange({ items: e.target.value.split("\n").filter((l) => l.length > 0) })} rows={5} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" />
+          </Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "quote" && (
+        <>
+          <Field label="Quote"><textarea value={block.text ?? ""} onChange={(e) => onChange({ text: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="Attribution"><input value={block.label ?? ""} onChange={(e) => onChange({ label: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+        </>
+      )}
+      {block.type === "video" && (
+        <>
+          <Field label="Thumbnail URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Click-through URL"><input value={block.url ?? ""} onChange={(e) => onChange({ url: e.target.value })} placeholder="https://youtube.com/…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "social" && (
+        <>
+          <Field label="Networks (name | url per line)">
+            <textarea
+              value={(block.socials ?? []).map((s) => `${s.name} | ${s.url}`).join("\n")}
+              onChange={(e) => onChange({ socials: e.target.value.split("\n").map((l) => l.split("|").map((p) => p.trim())).filter((p) => p[0]).map(([name, url]) => ({ name: name ?? "", url: url ?? "" })) })}
+              rows={4}
+              className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono"
+            />
+          </Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "footer" && (
+        <>
+          <Field label="Company"><input value={block.company ?? ""} onChange={(e) => onChange({ company: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Address"><textarea value={block.address ?? ""} onChange={(e) => onChange({ address: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="Unsub label"><input value={block.unsubLabel ?? ""} onChange={(e) => onChange({ unsubLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Unsub URL"><input value={block.url ?? ""} onChange={(e) => onChange({ url: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+        </>
+      )}
     </div>
   );
 }
