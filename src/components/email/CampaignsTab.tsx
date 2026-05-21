@@ -644,14 +644,17 @@ export function CampaignsTab() {
 
       {/* Templates dialog */}
       <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-4xl max-h-[88vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Choose a template</DialogTitle>
-            <DialogDescription>Start from a proven layout or build from scratch.</DialogDescription>
+            <DialogDescription>Start from a proven layout, build from scratch, or import your own HTML.</DialogDescription>
           </DialogHeader>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mt-2">
             {templates.map((t) => {
               const Icon = t.icon;
+              const previewHtml = t.blocks && t.blocks.length > 0
+                ? renderBlocksToHtml(t.blocks, Object.fromEntries(mergeVariables.map((v) => [v.key, v.example])))
+                : null;
               return (
                 <button
                   key={t.id}
@@ -659,15 +662,29 @@ export function CampaignsTab() {
                     setTemplateOpen(false);
                     setBuilderTemplate(t);
                   }}
-                  className="text-left border-hairline rounded-lg p-3 hover:bg-surface-hover hover:border-primary/40 transition-colors"
+                  className="group text-left border-hairline rounded-lg overflow-hidden bg-card hover:border-primary/50 hover:shadow-md transition-all"
                 >
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center">
-                      <Icon className="w-3.5 h-3.5 text-primary" />
-                    </div>
-                    <div className="text-sm font-medium">{t.name}</div>
+                  <div className="h-32 bg-surface/40 border-b-hairline overflow-hidden relative">
+                    {previewHtml ? (
+                      <div
+                        className="origin-top-left scale-[0.32] w-[300%] pointer-events-none p-4 bg-white"
+                        dangerouslySetInnerHTML={{ __html: previewHtml }}
+                      />
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-muted-foreground">
+                        <Icon className="w-8 h-8" strokeWidth={1.5} />
+                      </div>
+                    )}
                   </div>
-                  <div className="text-xs text-muted-foreground">{t.description}</div>
+                  <div className="p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className={`w-6 h-6 rounded-md flex items-center justify-center ${t.accent ?? "bg-primary/10 text-primary"}`}>
+                        <Icon className="w-3.5 h-3.5" />
+                      </div>
+                      <div className="text-sm font-medium">{t.name}</div>
+                    </div>
+                    <div className="text-xs text-muted-foreground line-clamp-2">{t.description}</div>
+                  </div>
                 </button>
               );
             })}
