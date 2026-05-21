@@ -1290,7 +1290,7 @@ function CampaignBuilder({
               </div>
             </div>
 
-            {editorMode === "visual" ? (
+            {editorMode === "visual" && (
               <Field label="Email design">
                 <EmailDesigner
                   blocks={blocks}
@@ -1298,23 +1298,16 @@ function CampaignBuilder({
                   vars={Object.fromEntries(mergeVariables.map((v) => [v.key, v.example]))}
                 />
               </Field>
-            ) : (
+            )}
+
+            {editorMode === "markdown" && (
               <Field label="Body">
                 <div className="border-hairline rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring">
-                  {/* Toolbar */}
                   <div className="flex items-center gap-0.5 px-1.5 py-1 border-b-hairline bg-surface/50">
-                    <ToolbarBtn onClick={() => wrapSelection("**")} title="Bold">
-                      <Bold className="w-3.5 h-3.5" />
-                    </ToolbarBtn>
-                    <ToolbarBtn onClick={() => wrapSelection("*")} title="Italic">
-                      <Italic className="w-3.5 h-3.5" />
-                    </ToolbarBtn>
-                    <ToolbarBtn onClick={() => insertAtCursor("\n## Heading\n")} title="Heading">
-                      <HeadingIcon className="w-3.5 h-3.5" />
-                    </ToolbarBtn>
-                    <ToolbarBtn onClick={() => insertAtCursor("\n- Item\n- Item\n")} title="List">
-                      <ListIcon className="w-3.5 h-3.5" />
-                    </ToolbarBtn>
+                    <ToolbarBtn onClick={() => wrapSelection("**")} title="Bold"><Bold className="w-3.5 h-3.5" /></ToolbarBtn>
+                    <ToolbarBtn onClick={() => wrapSelection("*")} title="Italic"><Italic className="w-3.5 h-3.5" /></ToolbarBtn>
+                    <ToolbarBtn onClick={() => insertAtCursor("\n## Heading\n")} title="Heading"><HeadingIcon className="w-3.5 h-3.5" /></ToolbarBtn>
+                    <ToolbarBtn onClick={() => insertAtCursor("\n- Item\n- Item\n")} title="List"><ListIcon className="w-3.5 h-3.5" /></ToolbarBtn>
                     <ToolbarBtn
                       onClick={() => {
                         const url = window.prompt("Link URL", "https://");
@@ -1326,9 +1319,7 @@ function CampaignBuilder({
                       <LinkIcon className="w-3.5 h-3.5" />
                     </ToolbarBtn>
                     <div className="w-px h-4 bg-border mx-1" />
-                    <span className="text-xs text-muted-foreground px-1">
-                      Markdown + {"{{variables}}"}
-                    </span>
+                    <span className="text-xs text-muted-foreground px-1">Markdown + {"{{variables}}"}</span>
                   </div>
                   <textarea
                     ref={bodyRef}
@@ -1342,34 +1333,57 @@ function CampaignBuilder({
               </Field>
             )}
 
+            {editorMode === "html" && (
+              <Field label="HTML source">
+                <div className="border-hairline rounded-md overflow-hidden focus-within:ring-2 focus-within:ring-ring">
+                  <div className="flex items-center gap-2 px-2.5 py-1.5 border-b-hairline bg-surface/50">
+                    <FileCode2 className="w-3.5 h-3.5 text-muted-foreground" />
+                    <span className="text-xs text-muted-foreground">
+                      Full HTML email. Use <span className="font-mono text-foreground">{"{{variable}}"}</span> placeholders for merge fields.
+                    </span>
+                  </div>
+                  <textarea
+                    value={htmlSource}
+                    onChange={(e) => setHtmlSource(e.target.value)}
+                    placeholder={`<!doctype html>\n<html>\n  <body>\n    <h1>Hi {{first_name}},</h1>\n    <p>Your custom HTML email goes here.</p>\n  </body>\n</html>`}
+                    className="w-full min-h-[260px] px-3 py-2 text-xs bg-background focus:outline-none font-mono resize-y"
+                    spellCheck={false}
+                  />
+                </div>
+              </Field>
+            )}
+
             {/* Inbox preview */}
             <div className="border-hairline rounded-md overflow-hidden">
               <div className="px-3 py-2 border-b-hairline bg-surface/50 flex items-center gap-2">
                 <Mail className="w-3.5 h-3.5 text-muted-foreground" />
-                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Inbox preview
-                </span>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Inbox preview</span>
                 <span className="text-xs text-muted-foreground ml-auto">with example values</span>
               </div>
               <div className="px-3 py-3 bg-background">
                 <div className="text-sm font-medium">{renderPreview(subject) || "Subject line"}</div>
-                {preview && (
-                  <div className="text-xs text-muted-foreground mt-0.5">{renderPreview(preview)}</div>
-                )}
-                {editorMode === "visual" ? (
+                {preview && <div className="text-xs text-muted-foreground mt-0.5">{renderPreview(preview)}</div>}
+                {editorMode === "visual" && (
                   <div
                     className="mt-3"
                     dangerouslySetInnerHTML={{
-                      __html: renderBlocksToHtml(
-                        blocks,
-                        Object.fromEntries(mergeVariables.map((v) => [v.key, v.example])),
-                      ),
+                      __html: renderBlocksToHtml(blocks, Object.fromEntries(mergeVariables.map((v) => [v.key, v.example]))),
                     }}
                   />
-                ) : (
+                )}
+                {editorMode === "markdown" && (
                   <div
                     className="text-sm mt-3 leading-relaxed text-foreground"
                     dangerouslySetInnerHTML={{ __html: bodyPreviewHtml || "Body preview…" }}
+                  />
+                )}
+                {editorMode === "html" && (
+                  <iframe
+                    title="HTML email preview"
+                    sandbox=""
+                    className="w-full mt-3 rounded border border-border/60 bg-white"
+                    style={{ height: 420 }}
+                    srcDoc={renderPreview(htmlSource) || "<p style='font-family:sans-serif;color:#888;padding:24px'>Paste or upload HTML to preview…</p>"}
                   />
                 )}
               </div>
