@@ -7,11 +7,19 @@ import {
   Minus,
   MoveVertical,
   Columns2,
+  Columns3,
   GripVertical,
   Trash2,
   Copy,
   ChevronUp,
   ChevronDown,
+  Star,
+  Quote,
+  List as ListIcon,
+  Share2,
+  PanelBottom,
+  PanelTop,
+  Video,
 } from "lucide-react";
 
 export type BlockType =
@@ -21,12 +29,19 @@ export type BlockType =
   | "image"
   | "divider"
   | "spacer"
-  | "columns";
+  | "columns"
+  | "columns3"
+  | "hero"
+  | "logo"
+  | "list"
+  | "quote"
+  | "video"
+  | "social"
+  | "footer";
 
 export interface EmailBlock {
   id: string;
   type: BlockType;
-  // shared / per-type props
   text?: string;
   level?: 1 | 2 | 3;
   align?: "left" | "center" | "right";
@@ -37,20 +52,42 @@ export interface EmailBlock {
   height?: number;
   leftText?: string;
   rightText?: string;
+  midText?: string;
   bgColor?: string;
   color?: string;
+  heroImage?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroCtaLabel?: string;
+  heroCtaUrl?: string;
+  items?: string[];
+  socials?: { name: string; url: string }[];
+  company?: string;
+  address?: string;
+  unsubLabel?: string;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-const PALETTE: { type: BlockType; label: string; icon: typeof Type }[] = [
-  { type: "heading", label: "Heading", icon: HeadingIcon },
-  { type: "text", label: "Text", icon: Type },
-  { type: "button", label: "Button", icon: MousePointerClick },
-  { type: "image", label: "Image", icon: ImageIcon },
-  { type: "divider", label: "Divider", icon: Minus },
-  { type: "spacer", label: "Spacer", icon: MoveVertical },
-  { type: "columns", label: "2 Columns", icon: Columns2 },
+type PaletteGroup = "Basic" | "Layout" | "Content" | "Brand";
+type PaletteItem = { type: BlockType; label: string; icon: typeof Type; group: PaletteGroup };
+
+const PALETTE: PaletteItem[] = [
+  { type: "heading", label: "Heading", icon: HeadingIcon, group: "Basic" },
+  { type: "text", label: "Text", icon: Type, group: "Basic" },
+  { type: "button", label: "Button", icon: MousePointerClick, group: "Basic" },
+  { type: "image", label: "Image", icon: ImageIcon, group: "Basic" },
+  { type: "divider", label: "Divider", icon: Minus, group: "Basic" },
+  { type: "spacer", label: "Spacer", icon: MoveVertical, group: "Basic" },
+  { type: "columns", label: "2 columns", icon: Columns2, group: "Layout" },
+  { type: "columns3", label: "3 columns", icon: Columns3, group: "Layout" },
+  { type: "hero", label: "Hero", icon: PanelTop, group: "Content" },
+  { type: "list", label: "Bulleted list", icon: ListIcon, group: "Content" },
+  { type: "quote", label: "Quote", icon: Quote, group: "Content" },
+  { type: "video", label: "Video", icon: Video, group: "Content" },
+  { type: "logo", label: "Logo", icon: Star, group: "Brand" },
+  { type: "social", label: "Social icons", icon: Share2, group: "Brand" },
+  { type: "footer", label: "Footer", icon: PanelBottom, group: "Brand" },
 ];
 
 export function createBlock(type: BlockType): EmailBlock {
@@ -65,14 +102,7 @@ export function createBlock(type: BlockType): EmailBlock {
         align: "left",
       };
     case "button":
-      return {
-        ...base,
-        label: "Book now",
-        url: "https://",
-        align: "center",
-        bgColor: "#111111",
-        color: "#ffffff",
-      };
+      return { ...base, label: "Book now", url: "https://", align: "center", bgColor: "#111111", color: "#ffffff" };
     case "image":
       return { ...base, src: "", alt: "Image", align: "center" };
     case "divider":
@@ -80,10 +110,51 @@ export function createBlock(type: BlockType): EmailBlock {
     case "spacer":
       return { ...base, height: 24 };
     case "columns":
+      return { ...base, leftText: "Left column copy.", rightText: "Right column copy." };
+    case "columns3":
+      return { ...base, leftText: "Column one.", midText: "Column two.", rightText: "Column three." };
+    case "hero":
       return {
         ...base,
-        leftText: "Left column copy.",
-        rightText: "Right column copy.",
+        heroImage: "",
+        heroTitle: "A bold headline that grabs attention",
+        heroSubtitle: "One short sentence to support the headline and set the tone.",
+        heroCtaLabel: "Get started",
+        heroCtaUrl: "https://",
+        bgColor: "#0f172a",
+        color: "#ffffff",
+        align: "center",
+      };
+    case "logo":
+      return { ...base, src: "", alt: "Logo", align: "center", height: 40 };
+    case "list":
+      return {
+        ...base,
+        items: ["First benefit or feature", "Second point worth noting", "Third reason to act today"],
+        align: "left",
+      };
+    case "quote":
+      return { ...base, text: "“This service completely changed how we manage our home — couldn’t recommend more.”", label: "— Sarah W., Bristol" };
+    case "video":
+      return { ...base, src: "", url: "https://", alt: "Video thumbnail", align: "center" };
+    case "social":
+      return {
+        ...base,
+        align: "center",
+        socials: [
+          { name: "Facebook", url: "https://facebook.com/" },
+          { name: "Instagram", url: "https://instagram.com/" },
+          { name: "LinkedIn", url: "https://linkedin.com/" },
+        ],
+      };
+    case "footer":
+      return {
+        ...base,
+        company: "Your company",
+        address: "123 Example Street, Bristol BS1 1AA",
+        unsubLabel: "Unsubscribe",
+        url: "https://",
+        align: "center",
       };
   }
 }
