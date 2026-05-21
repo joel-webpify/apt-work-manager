@@ -141,6 +141,8 @@ interface Template {
   preview: string;
   body: string;
   icon: typeof Sparkles;
+  accent?: string;
+  blocks?: EmailBlock[];
 }
 
 const defaultBody = `Hi {{first_name}},
@@ -152,26 +154,46 @@ Reply to this email or call us on 0117 000 0000 if you have any questions.
 Best,
 The team`;
 
+// Helper to seed templates with rich block layouts
+const tBlock = (type: BlockType, patch: Partial<EmailBlock> = {}): EmailBlock => ({ ...createBlock(type), ...patch });
+
 const templates: Template[] = [
   {
     id: "t-blank",
     name: "Blank campaign",
-    description: "Start from scratch with an empty draft.",
+    description: "Start from an empty canvas — drag blocks to build it your way.",
     segment: "All customers",
     subject: "",
     preview: "",
     body: "",
     icon: Mail,
+    accent: "bg-slate-500/10 text-slate-600",
   },
   {
     id: "t-seasonal",
     name: "Seasonal offer",
-    description: "Promote a limited-time discount tied to the season.",
+    description: "Hero image, headline, benefits list and a strong CTA.",
     segment: "Residential — Bristol BS",
     subject: "Limited spring offer — save 15% this month",
     preview: "Book a service this April and save 15% on labour…",
     body: `Hi {{first_name}},\n\nSpring is here — and we're offering **15% off** {{service_type}} bookings made before the end of April.\n\nWe've still got a few slots left for your area ({{postcode}}). Reply to lock one in.\n\nBest,\n{{company_name}}`,
-    icon: Sparkles,
+    icon: Gift,
+    accent: "bg-rose-500/10 text-rose-600",
+    blocks: [
+      tBlock("logo"),
+      tBlock("hero", {
+        heroTitle: "Spring is here — save 15% this month",
+        heroSubtitle: "Book any {{service_type}} before April 30th and we'll take 15% off labour.",
+        heroCtaLabel: "Book my slot",
+        bgColor: "#0f766e",
+        color: "#ffffff",
+      }),
+      tBlock("text", { text: "Hi {{first_name}}, we've still got a handful of slots left in your area ({{postcode}}). Pick a time that suits and we'll do the rest." }),
+      tBlock("list", { items: ["DBS-checked, uniformed team", "Fully insured & guaranteed", "Free re-clean if you're not happy"] }),
+      tBlock("button", { label: "Claim 15% off", bgColor: "#0f766e" }),
+      tBlock("divider"),
+      tBlock("footer", { company: "{{company_name}}" }),
+    ],
   },
   {
     id: "t-winback",
@@ -182,16 +204,37 @@ const templates: Template[] = [
     preview: "It's been a while. Treat your home with a fresh service…",
     body: `Hi {{first_name}},\n\nIt's been a while since your last {{service_type}} with us. As a thank you for being a previous customer, here's **10% off** your next booking.\n\nJust reply and we'll get you back in the diary.\n\nBest,\n{{company_name}}`,
     icon: TrendingUp,
+    accent: "bg-violet-500/10 text-violet-600",
+    blocks: [
+      tBlock("logo"),
+      tBlock("heading", { text: "We miss you, {{first_name}}", level: 1, align: "center" }),
+      tBlock("text", { text: "It's been a while since your last {{service_type}} with us. As a thank-you for being a previous customer, here's **10% off** your next booking — no strings.", align: "center" }),
+      tBlock("button", { label: "Use my 10% off", bgColor: "#7c3aed" }),
+      tBlock("quote", { text: "“They were on time, tidy and the finish was spotless. Booked them again the next year.”", label: "— Emma R., previous customer" }),
+      tBlock("footer", { company: "{{company_name}}" }),
+    ],
   },
   {
     id: "t-reminder",
     name: "Service reminder",
-    description: "Annual maintenance prompt for past customers.",
+    description: "Annual maintenance prompt with a clear next step.",
     segment: "Customers — last 24 months",
     subject: "Time for your annual {{service_type}}",
     preview: "Stay on top of maintenance with a quick yearly check…",
     body: `Hi {{first_name}},\n\nJust a reminder — it's been close to a year since your last {{service_type}}. Annual checks keep everything running smoothly and catch small issues early.\n\nShall we book you in?\n\nBest,\n{{company_name}}`,
-    icon: Calendar,
+    icon: Wrench,
+    accent: "bg-amber-500/10 text-amber-600",
+    blocks: [
+      tBlock("logo"),
+      tBlock("heading", { text: "Time for your annual {{service_type}}", level: 2 }),
+      tBlock("text", { text: "Hi {{first_name}}, it's been almost a year since your last visit on {{last_job_date}}. A quick annual check keeps everything safe and catches small issues before they grow." }),
+      tBlock("columns", {
+        leftText: "**What's included**\n- Full visual inspection\n- Compliance check\n- Written report",
+        rightText: "**Typical visit**\n- 45–60 minutes\n- No mess left behind\n- Flexible time slots",
+      }),
+      tBlock("button", { label: "Book my annual check", bgColor: "#d97706" }),
+      tBlock("footer", { company: "{{company_name}}" }),
+    ],
   },
   {
     id: "t-review",
@@ -202,6 +245,62 @@ const templates: Template[] = [
     preview: "Your feedback helps other locals find us…",
     body: `Hi {{first_name}},\n\nThanks again for booking your {{service_type}} with us. If you had a good experience, would you mind leaving a short Google review? It genuinely helps other people in {{postcode}} find us.\n\n[Leave a review](https://g.page/review)\n\nThanks,\n{{company_name}}`,
     icon: CheckCircle2,
+    accent: "bg-emerald-500/10 text-emerald-600",
+    blocks: [
+      tBlock("logo"),
+      tBlock("heading", { text: "How did we do, {{first_name}}?", align: "center" }),
+      tBlock("text", { text: "Thanks again for booking your {{service_type}} with us. If we got it right, a quick Google review goes a long way for a small local business like ours.", align: "center" }),
+      tBlock("button", { label: "Leave a review", bgColor: "#059669" }),
+      tBlock("text", { text: "If anything was less than perfect, just hit reply — we'd rather hear from you directly so we can put it right.", align: "center" }),
+      tBlock("footer", { company: "{{company_name}}" }),
+    ],
+  },
+  {
+    id: "t-launch",
+    name: "New service launch",
+    description: "Announce a new offering with hero, features and CTA.",
+    segment: "All customers",
+    subject: "Introducing {{service_type}} — built for homes like yours",
+    preview: "Something new from {{company_name}}…",
+    body: "",
+    icon: PartyPopper,
+    accent: "bg-fuchsia-500/10 text-fuchsia-600",
+    blocks: [
+      tBlock("logo"),
+      tBlock("hero", {
+        heroTitle: "Introducing our newest service",
+        heroSubtitle: "Built around what {{postcode}} customers asked us for most.",
+        heroCtaLabel: "See what's new",
+        bgColor: "#1e293b",
+      }),
+      tBlock("columns3", {
+        leftText: "**Faster**\nBook online in under a minute.",
+        midText: "**Cleaner**\nLow-impact products, every visit.",
+        rightText: "**Guaranteed**\nFree re-do within 7 days.",
+      }),
+      tBlock("button", { label: "Get an instant quote" }),
+      tBlock("social"),
+      tBlock("footer", { company: "{{company_name}}" }),
+    ],
+  },
+  {
+    id: "t-compliance",
+    name: "Compliance reminder",
+    description: "Professional notice for safety / certification renewals.",
+    segment: "Commercial — all",
+    subject: "Action needed: your annual safety check is due",
+    preview: "Stay compliant with a quick yearly inspection…",
+    body: "",
+    icon: ShieldCheck,
+    accent: "bg-blue-500/10 text-blue-600",
+    blocks: [
+      tBlock("logo"),
+      tBlock("heading", { text: "Your annual safety check is due", level: 2 }),
+      tBlock("text", { text: "Hi {{first_name}}, our records show your last certificate was issued on {{last_job_date}}. To stay compliant we recommend booking your renewal within the next 30 days." }),
+      tBlock("quote", { text: "“Quick, professional, paperwork sorted same day.”", label: "— Site manager, BS3" }),
+      tBlock("button", { label: "Schedule my inspection", bgColor: "#1d4ed8" }),
+      tBlock("footer", { company: "{{company_name}}" }),
+    ],
   },
 ];
 
