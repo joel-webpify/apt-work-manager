@@ -27,6 +27,12 @@ import {
   Save,
   Blocks,
   Code2,
+  Upload,
+  FileCode2,
+  Gift,
+  Wrench,
+  ShieldCheck,
+  PartyPopper,
 } from "lucide-react";
 import { Btn, Pill } from "@/components/layout/PageShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
