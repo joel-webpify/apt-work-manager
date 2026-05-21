@@ -1,7 +1,9 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, X, Filter, Plus } from "lucide-react";
-import { contacts, type Contact, jobs } from "@/data/mockData";
+import { Search, X, Filter, Plus, Upload } from "lucide-react";
+import { contacts as mockContacts, type Contact, jobs } from "@/data/mockData";
+import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
+import { useImportedContacts, mergeWithMock } from "@/lib/contactsStore";
 
 export default function Contacts() {
   const [selected, setSelected] = useState<Contact | null>(null);
