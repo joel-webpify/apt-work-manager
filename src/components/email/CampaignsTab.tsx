@@ -31,7 +31,7 @@ import {
 import { Btn, Pill } from "@/components/layout/PageShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { EmailDesigner, renderBlocksToHtml, createBlock, type EmailBlock } from "./EmailDesigner";
+import { EmailDesigner, renderBlocksToHtml, createBlock, type EmailBlock, type BlockType } from "./EmailDesigner";
 import { useToast } from "@/hooks/use-toast";
 
 type CampaignStatus = "Sent" | "Scheduled" | "Draft" | "Sending";
