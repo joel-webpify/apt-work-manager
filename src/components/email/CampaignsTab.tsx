@@ -758,8 +758,9 @@ function CampaignBuilder({
   const [body, setBody] = useState("");
   const [sendDate, setSendDate] = useState("");
   const [scheduleNow, setScheduleNow] = useState<"now" | "later" | "draft">("later");
-  const [editorMode, setEditorMode] = useState<"visual" | "markdown">("visual");
+  const [editorMode, setEditorMode] = useState<"visual" | "markdown" | "html">("visual");
   const [blocks, setBlocks] = useState<EmailBlock[]>([]);
+  const [htmlSource, setHtmlSource] = useState<string>("");
 
   // Audience state
   const [savedAudiences, setSavedAudiences] = useState<SavedAudience[]>(initialSavedAudiences);
