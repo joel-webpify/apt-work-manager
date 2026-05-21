@@ -795,19 +795,19 @@ function CampaignBuilder({
     setMatch("all");
     setRules([{ id: "r1", field: "lifecycle", op: "is", value: "Customer" }]);
     setAudienceNameDraft("");
-    // Seed designer blocks from template (heading from subject + paragraph from body + CTA)
+    // Seed designer blocks — use template-provided layout when available, otherwise minimal default
     setEditorMode("visual");
-    setBlocks([
-      { ...createBlock("heading"), text: template.subject || "Your headline here" },
-      {
-        ...createBlock("text"),
-        text:
-          template.body && template.body.length > 0
-            ? template.body
-            : defaultBody,
-      },
-      { ...createBlock("button"), label: "Book now", url: "https://" },
-    ]);
+    setHtmlSource("");
+    if (template.blocks && template.blocks.length > 0) {
+      // Clone with fresh ids so edits don't mutate template defaults
+      setBlocks(template.blocks.map((b) => ({ ...b, id: Math.random().toString(36).slice(2, 9) })));
+    } else {
+      setBlocks([
+        { ...createBlock("heading"), text: template.subject || "Your headline here" },
+        { ...createBlock("text"), text: template.body && template.body.length > 0 ? template.body : defaultBody },
+        { ...createBlock("button"), label: "Book now", url: "https://" },
+      ]);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [template]);
 
