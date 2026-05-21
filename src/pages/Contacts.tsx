@@ -1,12 +1,17 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, X, Filter, Plus } from "lucide-react";
-import { contacts, type Contact, jobs } from "@/data/mockData";
+import { Search, X, Filter, Plus, Upload } from "lucide-react";
+import { contacts as mockContacts, type Contact, jobs } from "@/data/mockData";
+import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
+import { useImportedContacts, mergeWithMock } from "@/lib/contactsStore";
 
 export default function Contacts() {
   const [selected, setSelected] = useState<Contact | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Lead" | "Customer" | "Lapsed">("All");
+  const [importOpen, setImportOpen] = useState(false);
+  const imported = useImportedContacts();
+  const contacts = useMemo(() => mergeWithMock(mockContacts, imported), [imported]);
 
   const filtered = contacts.filter(
     (c) =>
@@ -20,7 +25,12 @@ export default function Contacts() {
       <PageHeader
         title="Contacts & leads"
         description="Every customer and lead in one place"
-        actions={<Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>}
+        actions={
+          <>
+            <Btn onClick={() => setImportOpen(true)}><Upload className="w-3.5 h-3.5" /> Import CSV</Btn>
+            <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>
+          </>
+        }
       />
       <PageBody>
         <div className="flex items-center gap-2 mb-4">
@@ -77,6 +87,7 @@ export default function Contacts() {
       </PageBody>
 
       {selected && <ContactPanel contact={selected} onClose={() => setSelected(null)} />}
+      <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
     </>
   );
 }
