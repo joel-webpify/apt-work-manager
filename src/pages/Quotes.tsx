@@ -282,6 +282,11 @@ export default function Quotes() {
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {(q.status === "Draft" || q.status === "Sent") && (
+                      <Btn onClick={() => handleAcceptQuote(q)} title="Mark accepted — creates a job">
+                        <ThumbsUp className="w-3.5 h-3.5" /> Accept
+                      </Btn>
+                    )}
                     {q.status === "Accepted" && (
                       <Btn onClick={() => convertToInvoice(q)}>
                         <Receipt className="w-3.5 h-3.5" /> Invoice
@@ -289,6 +294,7 @@ export default function Quotes() {
                     )}
                     <Btn onClick={() => openEdit(q)}>Edit</Btn>
                   </div>
+
                 </div>
               );
             })}
