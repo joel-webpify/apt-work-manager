@@ -93,7 +93,7 @@ export function completeJob(jobId: string): LifecycleResult | null {
           id: `il-${Math.random().toString(36).slice(2, 8)}`,
           name: job.service,
           qty: 1,
-          unit: "job" as const,
+          unit: "each" as const,
           unitPrice: job.value,
           taxRate: 20,
         },
