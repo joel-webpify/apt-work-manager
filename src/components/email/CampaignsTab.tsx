@@ -1176,7 +1176,7 @@ function CampaignBuilder({
         {step === 2 && (
           <div className="space-y-3">
             {/* Mode toggle */}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <div className="flex items-center gap-1 border-hairline rounded-md p-0.5">
                 <button
                   onClick={() => setEditorMode("visual")}
@@ -1194,12 +1194,40 @@ function CampaignBuilder({
                 >
                   <Code2 className="w-3.5 h-3.5" /> Markdown
                 </button>
+                <button
+                  onClick={() => setEditorMode("html")}
+                  className={`h-7 px-3 rounded text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+                    editorMode === "html" ? "bg-surface text-foreground" : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <FileCode2 className="w-3.5 h-3.5" /> HTML
+                </button>
               </div>
               <span className="text-xs text-muted-foreground">
                 {editorMode === "visual"
                   ? "Drag blocks into the canvas to design your email."
-                  : "Write in markdown with merge variables."}
+                  : editorMode === "markdown"
+                  ? "Write in markdown with merge variables."
+                  : "Paste or upload a full HTML email. Merge variables still work."}
               </span>
+              {editorMode === "html" && (
+                <label className="ml-auto inline-flex items-center gap-1.5 h-7 px-3 rounded-md border-hairline bg-background hover:bg-surface-hover text-xs font-medium cursor-pointer">
+                  <Upload className="w-3.5 h-3.5" />
+                  Upload .html
+                  <input
+                    type="file"
+                    accept=".html,.htm,text/html"
+                    className="hidden"
+                    onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      const text = await file.text();
+                      setHtmlSource(text);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              )}
             </div>
 
             <Field label="Subject line">
