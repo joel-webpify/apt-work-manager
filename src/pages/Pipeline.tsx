@@ -128,15 +128,22 @@ export default function Pipeline() {
     e.dataTransfer.dropEffect = "move";
     if (dragOverStage !== stage) setDragOverStage(stage);
   };
+  const runLifecycle = (jobId: string, newStage: string) => {
+    const r = onJobStageChange(jobId, newStage);
+    if (r) topToast({ title: "Lifecycle automation", description: r.message });
+  };
+
   const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {
     e.preventDefault();
     const jobId = e.dataTransfer.getData("text/plain") || draggingId;
     if (!jobId) return;
+    const prevJob = jobList.find((j) => j.id === jobId);
     setJobList((prev) =>
       prev.map((j) => (j.id === jobId && j.stage !== stage ? { ...j, stage: stage as PipelineStage, daysInStage: 0 } : j)),
     );
     setDraggingId(null);
     setDragOverStage(null);
+    if (prevJob && prevJob.stage !== stage) runLifecycle(jobId, stage);
   };
 
   const handleStageRename = (oldName: string, newName: string) => {
@@ -145,8 +152,12 @@ export default function Pipeline() {
     );
   };
 
-  const updateJob = (id: string, patch: Partial<Job>) =>
+  const updateJob = (id: string, patch: Partial<Job>) => {
+    const prevJob = jobList.find((j) => j.id === id);
     setJobList((prev) => prev.map((j) => (j.id === id ? { ...j, ...patch } : j)));
+    if (patch.stage && prevJob && prevJob.stage !== patch.stage) runLifecycle(id, patch.stage);
+  };
+
 
   return (
     <>
