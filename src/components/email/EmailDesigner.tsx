@@ -327,45 +327,53 @@ export function EmailDesigner({
     dragData.current = null;
   };
 
+  const groups: PaletteGroup[] = ["Basic", "Layout", "Content", "Brand"];
+
   return (
-    <div className="grid grid-cols-[180px_1fr_220px] gap-3 min-h-[420px]">
+    <div className="grid grid-cols-[200px_1fr_240px] gap-3 min-h-[480px]">
       {/* Palette */}
-      <div className="border-hairline rounded-md bg-surface/40 p-2">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium px-1.5 mb-1.5">
-          Blocks
+      <div className="border-hairline rounded-lg bg-surface/40 p-2.5 overflow-y-auto max-h-[640px]">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-1 mb-2">
+          Drag blocks
         </div>
-        <div className="space-y-1">
-          {PALETTE.map((p) => {
-            const Icon = p.icon;
-            return (
-              <div
-                key={p.type}
-                draggable
-                onDragStart={() => {
-                  dragData.current = { kind: "new", type: p.type };
-                }}
-                onDragEnd={() => {
-                  dragData.current = null;
-                  setDragOverIdx(null);
-                }}
-                onClick={() => insertAt(blocks.length, createBlock(p.type))}
-                className="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-background border-hairline hover:border-primary/40 hover:bg-surface-hover cursor-grab active:cursor-grabbing transition-colors"
-                title="Drag into canvas or click to append"
-              >
-                <Icon className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.75} />
-                <span>{p.label}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="text-[10px] text-muted-foreground px-1.5 mt-3 leading-snug">
-          Drag blocks into the canvas, or click to append. Drag handle to reorder.
+        {groups.map((g) => (
+          <div key={g} className="mb-3 last:mb-0">
+            <div className="text-[10px] font-medium text-muted-foreground/80 px-1 mb-1.5">{g}</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {PALETTE.filter((p) => p.group === g).map((p) => {
+                const Icon = p.icon;
+                return (
+                  <div
+                    key={p.type}
+                    draggable
+                    onDragStart={() => {
+                      dragData.current = { kind: "new", type: p.type };
+                    }}
+                    onDragEnd={() => {
+                      dragData.current = null;
+                      setDragOverIdx(null);
+                    }}
+                    onClick={() => insertAt(blocks.length, createBlock(p.type))}
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-md text-[11px] bg-background border-hairline hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-center"
+                    title="Drag into canvas or click to append"
+                  >
+                    <Icon className="w-4 h-4 text-foreground/70" strokeWidth={1.75} />
+                    <span className="leading-tight">{p.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        <div className="text-[10px] text-muted-foreground px-1 mt-2 leading-snug">
+          Drag into the canvas or click to append. Use the side handle to reorder.
         </div>
       </div>
 
       {/* Canvas */}
-      <div className="border-hairline rounded-md bg-surface/30 p-4 overflow-y-auto max-h-[560px]">
-        <div className="mx-auto max-w-[560px] bg-white rounded-md shadow-sm border border-border/60 p-6 min-h-[360px]">
+      <div className="border-hairline rounded-lg bg-gradient-to-b from-surface/40 to-surface/10 p-6 overflow-y-auto max-h-[640px]">
+        <div className="mx-auto max-w-[600px] bg-white rounded-lg shadow-md border border-border/60 p-6 min-h-[420px]">
+
           {blocks.length === 0 ? (
             <div
               onDragOver={(e) => {
