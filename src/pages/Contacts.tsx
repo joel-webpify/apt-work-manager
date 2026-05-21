@@ -87,6 +87,7 @@ export default function Contacts() {
       </PageBody>
 
       {selected && <ContactPanel contact={selected} onClose={() => setSelected(null)} />}
+      <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
     </>
   );
 }
