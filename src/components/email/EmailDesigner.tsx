@@ -207,6 +207,48 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
         return `<div style="height:${b.height ?? 24}px"></div>`;
       case "columns":
         return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px"><tr><td valign="top" style="width:50%;padding-right:8px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.leftText ?? "", vars))}</td><td valign="top" style="width:50%;padding-left:8px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.rightText ?? "", vars))}</td></tr></table>`;
+      case "columns3":
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px"><tr><td valign="top" style="width:33%;padding-right:6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.leftText ?? "", vars))}</td><td valign="top" style="width:34%;padding:0 6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.midText ?? "", vars))}</td><td valign="top" style="width:33%;padding-left:6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.rightText ?? "", vars))}</td></tr></table>`;
+      case "hero": {
+        const bg = b.bgColor ?? "#0f172a";
+        const fg = b.color ?? "#ffffff";
+        const img = b.heroImage
+          ? `<div><img src="${b.heroImage}" alt="" style="display:block;width:100%;height:auto"/></div>`
+          : "";
+        const cta = b.heroCtaLabel
+          ? `<div style="margin-top:14px"><a href="${b.heroCtaUrl ?? "#"}" style="display:inline-block;background:${fg};color:${bg};padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none">${renderVars(b.heroCtaLabel, vars)}</a></div>`
+          : "";
+        return `<div style="margin:0 0 16px;background:${bg};color:${fg};border-radius:8px;overflow:hidden">${img}<div style="padding:28px 24px;text-align:${a}"><div style="font-size:24px;font-weight:700;line-height:1.2;margin:0 0 8px">${inlineMd(renderVars(b.heroTitle ?? "", vars))}</div><div style="font-size:14px;line-height:1.5;opacity:.85">${inlineMd(renderVars(b.heroSubtitle ?? "", vars))}</div>${cta}</div></div>`;
+      }
+      case "logo": {
+        if (!b.src) {
+          return `<div style="text-align:${a};margin:0 0 16px"><div style="display:inline-block;height:${b.height ?? 40}px;min-width:120px;background:#f1f1f1;border:1px dashed #d4d4d4;color:#888;font-size:11px;line-height:${b.height ?? 40}px;padding:0 12px">Your logo</div></div>`;
+        }
+        return `<div style="text-align:${a};margin:0 0 16px"><img src="${b.src}" alt="${b.alt ?? ""}" style="height:${b.height ?? 40}px;width:auto"/></div>`;
+      }
+      case "list": {
+        const items = (b.items ?? []).map((it) => `<li style="margin:0 0 6px">${inlineMd(renderVars(it, vars))}</li>`).join("");
+        return `<ul style="text-align:${a};font-size:14px;line-height:1.55;color:#222;margin:0 0 12px;padding-left:20px">${items}</ul>`;
+      }
+      case "quote":
+        return `<blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #111;background:#fafafa;font-size:15px;line-height:1.5;color:#333;font-style:italic">${inlineMd(renderVars(b.text ?? "", vars))}<div style="margin-top:6px;font-size:12px;color:#666;font-style:normal">${renderVars(b.label ?? "", vars)}</div></blockquote>`;
+      case "video": {
+        const thumb = b.src
+          ? `<img src="${b.src}" alt="${b.alt ?? ""}" style="display:block;max-width:100%;height:auto;border-radius:6px"/>`
+          : `<div style="width:100%;max-width:480px;aspect-ratio:16/9;background:#0d0d0d;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:24px">▶</div>`;
+        return `<div style="text-align:${a};margin:0 0 16px"><a href="${b.url ?? "#"}" style="display:inline-block;position:relative;text-decoration:none">${thumb}</a></div>`;
+      }
+      case "social": {
+        const items = (b.socials ?? [])
+          .map(
+            (s) =>
+              `<a href="${s.url}" style="display:inline-block;margin:0 6px;padding:8px 12px;background:#f3f4f6;border-radius:999px;color:#111;font-size:12px;text-decoration:none">${s.name}</a>`,
+          )
+          .join("");
+        return `<div style="text-align:${a};margin:8px 0 12px">${items}</div>`;
+      }
+      case "footer":
+        return `<div style="text-align:${a};margin:16px 0 0;padding-top:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:#888"><div style="font-weight:600;color:#666">${renderVars(b.company ?? "", vars)}</div><div>${renderVars(b.address ?? "", vars)}</div><div style="margin-top:6px"><a href="${b.url ?? "#"}" style="color:#888;text-decoration:underline">${renderVars(b.unsubLabel ?? "Unsubscribe", vars)}</a></div></div>`;
     }
   });
   return parts.join("");
