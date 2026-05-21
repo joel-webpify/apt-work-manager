@@ -338,12 +338,18 @@ export default function Quotes() {
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    {i.status === "Draft" && (
+                      <Btn onClick={() => handleSendInvoice(i)} title="Mark sent — moves job to Invoiced">
+                        <Send className="w-3.5 h-3.5" /> Send
+                      </Btn>
+                    )}
                     {(i.status === "Sent" || i.status === "Overdue" || i.status === "Draft") && (
-                      <Btn onClick={() => markPaid(i)}>
+                      <Btn onClick={() => markPaid(i)} title="Record payment — moves job to Paid">
                         <PoundSterling className="w-3.5 h-3.5" /> Mark paid
                       </Btn>
                     )}
                   </div>
+
                 </div>
               );
             })}
