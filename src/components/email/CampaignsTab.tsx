@@ -834,7 +834,11 @@ function CampaignBuilder({
     ((audienceMode === "saved" && !!selectedAudience) || (audienceMode === "custom" && rules.length > 0));
   const canNext2 =
     subject.trim().length > 0 &&
-    (editorMode === "markdown" ? body.trim().length > 0 : blocks.length > 0);
+    (editorMode === "markdown"
+      ? body.trim().length > 0
+      : editorMode === "html"
+      ? htmlSource.trim().length > 0
+      : blocks.length > 0);
   const canSubmit = scheduleNow === "draft" || scheduleNow === "now" || (scheduleNow === "later" && sendDate);
 
   const handleSubmit = () => {
