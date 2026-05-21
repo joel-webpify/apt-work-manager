@@ -7,11 +7,19 @@ import {
   Minus,
   MoveVertical,
   Columns2,
+  Columns3,
   GripVertical,
   Trash2,
   Copy,
   ChevronUp,
   ChevronDown,
+  Star,
+  Quote,
+  List as ListIcon,
+  Share2,
+  PanelBottom,
+  PanelTop,
+  Video,
 } from "lucide-react";
 
 export type BlockType =
@@ -21,12 +29,19 @@ export type BlockType =
   | "image"
   | "divider"
   | "spacer"
-  | "columns";
+  | "columns"
+  | "columns3"
+  | "hero"
+  | "logo"
+  | "list"
+  | "quote"
+  | "video"
+  | "social"
+  | "footer";
 
 export interface EmailBlock {
   id: string;
   type: BlockType;
-  // shared / per-type props
   text?: string;
   level?: 1 | 2 | 3;
   align?: "left" | "center" | "right";
@@ -37,20 +52,42 @@ export interface EmailBlock {
   height?: number;
   leftText?: string;
   rightText?: string;
+  midText?: string;
   bgColor?: string;
   color?: string;
+  heroImage?: string;
+  heroTitle?: string;
+  heroSubtitle?: string;
+  heroCtaLabel?: string;
+  heroCtaUrl?: string;
+  items?: string[];
+  socials?: { name: string; url: string }[];
+  company?: string;
+  address?: string;
+  unsubLabel?: string;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-const PALETTE: { type: BlockType; label: string; icon: typeof Type }[] = [
-  { type: "heading", label: "Heading", icon: HeadingIcon },
-  { type: "text", label: "Text", icon: Type },
-  { type: "button", label: "Button", icon: MousePointerClick },
-  { type: "image", label: "Image", icon: ImageIcon },
-  { type: "divider", label: "Divider", icon: Minus },
-  { type: "spacer", label: "Spacer", icon: MoveVertical },
-  { type: "columns", label: "2 Columns", icon: Columns2 },
+type PaletteGroup = "Basic" | "Layout" | "Content" | "Brand";
+type PaletteItem = { type: BlockType; label: string; icon: typeof Type; group: PaletteGroup };
+
+const PALETTE: PaletteItem[] = [
+  { type: "heading", label: "Heading", icon: HeadingIcon, group: "Basic" },
+  { type: "text", label: "Text", icon: Type, group: "Basic" },
+  { type: "button", label: "Button", icon: MousePointerClick, group: "Basic" },
+  { type: "image", label: "Image", icon: ImageIcon, group: "Basic" },
+  { type: "divider", label: "Divider", icon: Minus, group: "Basic" },
+  { type: "spacer", label: "Spacer", icon: MoveVertical, group: "Basic" },
+  { type: "columns", label: "2 columns", icon: Columns2, group: "Layout" },
+  { type: "columns3", label: "3 columns", icon: Columns3, group: "Layout" },
+  { type: "hero", label: "Hero", icon: PanelTop, group: "Content" },
+  { type: "list", label: "Bulleted list", icon: ListIcon, group: "Content" },
+  { type: "quote", label: "Quote", icon: Quote, group: "Content" },
+  { type: "video", label: "Video", icon: Video, group: "Content" },
+  { type: "logo", label: "Logo", icon: Star, group: "Brand" },
+  { type: "social", label: "Social icons", icon: Share2, group: "Brand" },
+  { type: "footer", label: "Footer", icon: PanelBottom, group: "Brand" },
 ];
 
 export function createBlock(type: BlockType): EmailBlock {
@@ -65,14 +102,7 @@ export function createBlock(type: BlockType): EmailBlock {
         align: "left",
       };
     case "button":
-      return {
-        ...base,
-        label: "Book now",
-        url: "https://",
-        align: "center",
-        bgColor: "#111111",
-        color: "#ffffff",
-      };
+      return { ...base, label: "Book now", url: "https://", align: "center", bgColor: "#111111", color: "#ffffff" };
     case "image":
       return { ...base, src: "", alt: "Image", align: "center" };
     case "divider":
@@ -80,10 +110,51 @@ export function createBlock(type: BlockType): EmailBlock {
     case "spacer":
       return { ...base, height: 24 };
     case "columns":
+      return { ...base, leftText: "Left column copy.", rightText: "Right column copy." };
+    case "columns3":
+      return { ...base, leftText: "Column one.", midText: "Column two.", rightText: "Column three." };
+    case "hero":
       return {
         ...base,
-        leftText: "Left column copy.",
-        rightText: "Right column copy.",
+        heroImage: "",
+        heroTitle: "A bold headline that grabs attention",
+        heroSubtitle: "One short sentence to support the headline and set the tone.",
+        heroCtaLabel: "Get started",
+        heroCtaUrl: "https://",
+        bgColor: "#0f172a",
+        color: "#ffffff",
+        align: "center",
+      };
+    case "logo":
+      return { ...base, src: "", alt: "Logo", align: "center", height: 40 };
+    case "list":
+      return {
+        ...base,
+        items: ["First benefit or feature", "Second point worth noting", "Third reason to act today"],
+        align: "left",
+      };
+    case "quote":
+      return { ...base, text: "“This service completely changed how we manage our home — couldn’t recommend more.”", label: "— Sarah W., Bristol" };
+    case "video":
+      return { ...base, src: "", url: "https://", alt: "Video thumbnail", align: "center" };
+    case "social":
+      return {
+        ...base,
+        align: "center",
+        socials: [
+          { name: "Facebook", url: "https://facebook.com/" },
+          { name: "Instagram", url: "https://instagram.com/" },
+          { name: "LinkedIn", url: "https://linkedin.com/" },
+        ],
+      };
+    case "footer":
+      return {
+        ...base,
+        company: "Your company",
+        address: "123 Example Street, Bristol BS1 1AA",
+        unsubLabel: "Unsubscribe",
+        url: "https://",
+        align: "center",
       };
   }
 }
@@ -136,6 +207,48 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
         return `<div style="height:${b.height ?? 24}px"></div>`;
       case "columns":
         return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px"><tr><td valign="top" style="width:50%;padding-right:8px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.leftText ?? "", vars))}</td><td valign="top" style="width:50%;padding-left:8px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.rightText ?? "", vars))}</td></tr></table>`;
+      case "columns3":
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px"><tr><td valign="top" style="width:33%;padding-right:6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.leftText ?? "", vars))}</td><td valign="top" style="width:34%;padding:0 6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.midText ?? "", vars))}</td><td valign="top" style="width:33%;padding-left:6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.rightText ?? "", vars))}</td></tr></table>`;
+      case "hero": {
+        const bg = b.bgColor ?? "#0f172a";
+        const fg = b.color ?? "#ffffff";
+        const img = b.heroImage
+          ? `<div><img src="${b.heroImage}" alt="" style="display:block;width:100%;height:auto"/></div>`
+          : "";
+        const cta = b.heroCtaLabel
+          ? `<div style="margin-top:14px"><a href="${b.heroCtaUrl ?? "#"}" style="display:inline-block;background:${fg};color:${bg};padding:10px 20px;border-radius:6px;font-size:14px;font-weight:600;text-decoration:none">${renderVars(b.heroCtaLabel, vars)}</a></div>`
+          : "";
+        return `<div style="margin:0 0 16px;background:${bg};color:${fg};border-radius:8px;overflow:hidden">${img}<div style="padding:28px 24px;text-align:${a}"><div style="font-size:24px;font-weight:700;line-height:1.2;margin:0 0 8px">${inlineMd(renderVars(b.heroTitle ?? "", vars))}</div><div style="font-size:14px;line-height:1.5;opacity:.85">${inlineMd(renderVars(b.heroSubtitle ?? "", vars))}</div>${cta}</div></div>`;
+      }
+      case "logo": {
+        if (!b.src) {
+          return `<div style="text-align:${a};margin:0 0 16px"><div style="display:inline-block;height:${b.height ?? 40}px;min-width:120px;background:#f1f1f1;border:1px dashed #d4d4d4;color:#888;font-size:11px;line-height:${b.height ?? 40}px;padding:0 12px">Your logo</div></div>`;
+        }
+        return `<div style="text-align:${a};margin:0 0 16px"><img src="${b.src}" alt="${b.alt ?? ""}" style="height:${b.height ?? 40}px;width:auto"/></div>`;
+      }
+      case "list": {
+        const items = (b.items ?? []).map((it) => `<li style="margin:0 0 6px">${inlineMd(renderVars(it, vars))}</li>`).join("");
+        return `<ul style="text-align:${a};font-size:14px;line-height:1.55;color:#222;margin:0 0 12px;padding-left:20px">${items}</ul>`;
+      }
+      case "quote":
+        return `<blockquote style="margin:0 0 16px;padding:12px 16px;border-left:3px solid #111;background:#fafafa;font-size:15px;line-height:1.5;color:#333;font-style:italic">${inlineMd(renderVars(b.text ?? "", vars))}<div style="margin-top:6px;font-size:12px;color:#666;font-style:normal">${renderVars(b.label ?? "", vars)}</div></blockquote>`;
+      case "video": {
+        const thumb = b.src
+          ? `<img src="${b.src}" alt="${b.alt ?? ""}" style="display:block;max-width:100%;height:auto;border-radius:6px"/>`
+          : `<div style="width:100%;max-width:480px;aspect-ratio:16/9;background:#0d0d0d;color:#fff;display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:24px">▶</div>`;
+        return `<div style="text-align:${a};margin:0 0 16px"><a href="${b.url ?? "#"}" style="display:inline-block;position:relative;text-decoration:none">${thumb}</a></div>`;
+      }
+      case "social": {
+        const items = (b.socials ?? [])
+          .map(
+            (s) =>
+              `<a href="${s.url}" style="display:inline-block;margin:0 6px;padding:8px 12px;background:#f3f4f6;border-radius:999px;color:#111;font-size:12px;text-decoration:none">${s.name}</a>`,
+          )
+          .join("");
+        return `<div style="text-align:${a};margin:8px 0 12px">${items}</div>`;
+      }
+      case "footer":
+        return `<div style="text-align:${a};margin:16px 0 0;padding-top:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:#888"><div style="font-weight:600;color:#666">${renderVars(b.company ?? "", vars)}</div><div>${renderVars(b.address ?? "", vars)}</div><div style="margin-top:6px"><a href="${b.url ?? "#"}" style="color:#888;text-decoration:underline">${renderVars(b.unsubLabel ?? "Unsubscribe", vars)}</a></div></div>`;
     }
   });
   return parts.join("");
@@ -214,45 +327,53 @@ export function EmailDesigner({
     dragData.current = null;
   };
 
+  const groups: PaletteGroup[] = ["Basic", "Layout", "Content", "Brand"];
+
   return (
-    <div className="grid grid-cols-[180px_1fr_220px] gap-3 min-h-[420px]">
+    <div className="grid grid-cols-[200px_1fr_240px] gap-3 min-h-[480px]">
       {/* Palette */}
-      <div className="border-hairline rounded-md bg-surface/40 p-2">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium px-1.5 mb-1.5">
-          Blocks
+      <div className="border-hairline rounded-lg bg-surface/40 p-2.5 overflow-y-auto max-h-[640px]">
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-1 mb-2">
+          Drag blocks
         </div>
-        <div className="space-y-1">
-          {PALETTE.map((p) => {
-            const Icon = p.icon;
-            return (
-              <div
-                key={p.type}
-                draggable
-                onDragStart={() => {
-                  dragData.current = { kind: "new", type: p.type };
-                }}
-                onDragEnd={() => {
-                  dragData.current = null;
-                  setDragOverIdx(null);
-                }}
-                onClick={() => insertAt(blocks.length, createBlock(p.type))}
-                className="flex items-center gap-2 px-2 py-1.5 rounded text-xs bg-background border-hairline hover:border-primary/40 hover:bg-surface-hover cursor-grab active:cursor-grabbing transition-colors"
-                title="Drag into canvas or click to append"
-              >
-                <Icon className="w-3.5 h-3.5 text-muted-foreground" strokeWidth={1.75} />
-                <span>{p.label}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="text-[10px] text-muted-foreground px-1.5 mt-3 leading-snug">
-          Drag blocks into the canvas, or click to append. Drag handle to reorder.
+        {groups.map((g) => (
+          <div key={g} className="mb-3 last:mb-0">
+            <div className="text-[10px] font-medium text-muted-foreground/80 px-1 mb-1.5">{g}</div>
+            <div className="grid grid-cols-2 gap-1.5">
+              {PALETTE.filter((p) => p.group === g).map((p) => {
+                const Icon = p.icon;
+                return (
+                  <div
+                    key={p.type}
+                    draggable
+                    onDragStart={() => {
+                      dragData.current = { kind: "new", type: p.type };
+                    }}
+                    onDragEnd={() => {
+                      dragData.current = null;
+                      setDragOverIdx(null);
+                    }}
+                    onClick={() => insertAt(blocks.length, createBlock(p.type))}
+                    className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-md text-[11px] bg-background border-hairline hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-center"
+                    title="Drag into canvas or click to append"
+                  >
+                    <Icon className="w-4 h-4 text-foreground/70" strokeWidth={1.75} />
+                    <span className="leading-tight">{p.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        <div className="text-[10px] text-muted-foreground px-1 mt-2 leading-snug">
+          Drag into the canvas or click to append. Use the side handle to reorder.
         </div>
       </div>
 
       {/* Canvas */}
-      <div className="border-hairline rounded-md bg-surface/30 p-4 overflow-y-auto max-h-[560px]">
-        <div className="mx-auto max-w-[560px] bg-white rounded-md shadow-sm border border-border/60 p-6 min-h-[360px]">
+      <div className="border-hairline rounded-lg bg-gradient-to-b from-surface/40 to-surface/10 p-6 overflow-y-auto max-h-[640px]">
+        <div className="mx-auto max-w-[600px] bg-white rounded-lg shadow-md border border-border/60 p-6 min-h-[420px]">
+
           {blocks.length === 0 ? (
             <div
               onDragOver={(e) => {
@@ -591,6 +712,76 @@ function Inspector({
               className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono"
             />
           </Field>
+        </>
+      )}
+      {block.type === "columns3" && (
+        <>
+          <Field label="Left"><textarea value={block.leftText ?? ""} onChange={(e) => onChange({ leftText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
+          <Field label="Middle"><textarea value={block.midText ?? ""} onChange={(e) => onChange({ midText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
+          <Field label="Right"><textarea value={block.rightText ?? ""} onChange={(e) => onChange({ rightText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
+        </>
+      )}
+      {block.type === "hero" && (
+        <>
+          <Field label="Background image URL"><input value={block.heroImage ?? ""} onChange={(e) => onChange({ heroImage: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Title"><textarea value={block.heroTitle ?? ""} onChange={(e) => onChange({ heroTitle: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="Subtitle"><textarea value={block.heroSubtitle ?? ""} onChange={(e) => onChange({ heroSubtitle: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="CTA label"><input value={block.heroCtaLabel ?? ""} onChange={(e) => onChange({ heroCtaLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="CTA URL"><input value={block.heroCtaUrl ?? ""} onChange={(e) => onChange({ heroCtaUrl: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <div className="grid grid-cols-2 gap-2">
+            <Field label="Background"><input type="color" value={block.bgColor ?? "#0f172a"} onChange={(e) => onChange({ bgColor: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field>
+            <Field label="Text color"><input type="color" value={block.color ?? "#ffffff"} onChange={(e) => onChange({ color: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field>
+          </div>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "logo" && (
+        <>
+          <Field label="Logo URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label={`Height — ${block.height ?? 40}px`}><input type="range" min={20} max={120} step={4} value={block.height ?? 40} onChange={(e) => onChange({ height: Number(e.target.value) })} className="w-full" /></Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "list" && (
+        <>
+          <Field label="Items (one per line)">
+            <textarea value={(block.items ?? []).join("\n")} onChange={(e) => onChange({ items: e.target.value.split("\n").filter((l) => l.length > 0) })} rows={5} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" />
+          </Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "quote" && (
+        <>
+          <Field label="Quote"><textarea value={block.text ?? ""} onChange={(e) => onChange({ text: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="Attribution"><input value={block.label ?? ""} onChange={(e) => onChange({ label: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+        </>
+      )}
+      {block.type === "video" && (
+        <>
+          <Field label="Thumbnail URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Click-through URL"><input value={block.url ?? ""} onChange={(e) => onChange({ url: e.target.value })} placeholder="https://youtube.com/…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "social" && (
+        <>
+          <Field label="Networks (name | url per line)">
+            <textarea
+              value={(block.socials ?? []).map((s) => `${s.name} | ${s.url}`).join("\n")}
+              onChange={(e) => onChange({ socials: e.target.value.split("\n").map((l) => l.split("|").map((p) => p.trim())).filter((p) => p[0]).map(([name, url]) => ({ name: name ?? "", url: url ?? "" })) })}
+              rows={4}
+              className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono"
+            />
+          </Field>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
+        </>
+      )}
+      {block.type === "footer" && (
+        <>
+          <Field label="Company"><input value={block.company ?? ""} onChange={(e) => onChange({ company: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Address"><textarea value={block.address ?? ""} onChange={(e) => onChange({ address: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
+          <Field label="Unsub label"><input value={block.unsubLabel ?? ""} onChange={(e) => onChange({ unsubLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <Field label="Unsub URL"><input value={block.url ?? ""} onChange={(e) => onChange({ url: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
         </>
       )}
     </div>
