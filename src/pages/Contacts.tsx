@@ -9,6 +9,9 @@ export default function Contacts() {
   const [selected, setSelected] = useState<Contact | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Lead" | "Customer" | "Lapsed">("All");
+  const [importOpen, setImportOpen] = useState(false);
+  const imported = useImportedContacts();
+  const contacts = useMemo(() => mergeWithMock(mockContacts, imported), [imported]);
 
   const filtered = contacts.filter(
     (c) =>
