@@ -101,23 +101,26 @@ export default function Quotes() {
 
   const saveDoc = (doc: Quote) => {
     if (tab === "quotes") {
-      setQuotes((prev) => {
-        const exists = prev.some((q) => q.id === doc.id);
-        return exists ? prev.map((q) => (q.id === doc.id ? doc : q)) : [doc, ...prev];
-      });
+      const exists = quotes.some((q) => q.id === doc.id);
+      if (exists) updateQuote(doc.id, doc);
+      else addQuote(doc);
       toast({ title: editing ? "Quote updated" : "Quote created", description: doc.number });
     } else {
       const inv = doc as unknown as Invoice;
-      setInvoices((prev) => {
-        const exists = prev.some((i) => i.id === inv.id);
-        return exists ? prev.map((i) => (i.id === inv.id ? inv : i)) : [inv, ...prev];
-      });
+      const exists = invoices.some((i) => i.id === inv.id);
+      if (exists) updateInvoice(inv.id, inv);
+      else addInvoice(inv);
       toast({ title: editing ? "Invoice updated" : "Invoice created", description: inv.number });
     }
   };
 
+  const handleAcceptQuote = (q: Quote) => {
+    const r = acceptQuote(q.id);
+    if (r) toast({ title: "Quote accepted", description: r.message });
+  };
+
   const convertToInvoice = (q: Quote) => {
-    const number = `INV-${1043 + invoices.length}`;
+    const number = `INV-${1100 + invoices.length}`;
     const inv: Invoice = {
       id: number,
       number,
@@ -130,21 +133,21 @@ export default function Quotes() {
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
       items: q.items.map((li) => ({ ...li, id: `il-${Math.random().toString(36).slice(2, 8)}` })),
     };
-    setInvoices((prev) => [inv, ...prev]);
+    addInvoice(inv);
     toast({ title: "Invoice created", description: `${number} from ${q.number}` });
     setTab("invoices");
   };
 
-  const markPaid = (i: Invoice) => {
-    setInvoices((prev) =>
-      prev.map((x) =>
-        x.id === i.id
-          ? { ...x, status: "Paid", paidDate: new Date().toISOString().slice(0, 10) }
-          : x
-      )
-    );
-    toast({ title: "Marked as paid", description: i.number });
+  const handleSendInvoice = (i: Invoice) => {
+    const r = sendInvoice(i.id);
+    if (r) toast({ title: "Invoice sent", description: r.message });
   };
+
+  const markPaid = (i: Invoice) => {
+    const r = recordPayment(i.id);
+    if (r) toast({ title: "Payment recorded", description: r.message });
+  };
+
 
   const statuses = tab === "quotes" ? quoteStatuses : invoiceStatuses;
 
