@@ -9,11 +9,11 @@ import {
   Clock,
   CheckCircle2,
   AlertCircle,
+  Send,
+  ThumbsUp,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
-  quotes as seedQuotes,
-  invoices as seedInvoices,
   quoteStatusTones,
   invoiceStatusTones,
   type Quote,
@@ -25,6 +25,9 @@ import { totals, fmt, fmtDate } from "@/lib/quoteUtils";
 import { QuoteBuilderDialog } from "@/components/quotes/QuoteBuilderDialog";
 import { QuotePreviewDialog } from "@/components/quotes/QuotePreviewDialog";
 import { toast } from "@/hooks/use-toast";
+import { useQuotes, addQuote, updateQuote } from "@/lib/quotesStore";
+import { useInvoices, addInvoice, updateInvoice } from "@/lib/invoicesStore";
+import { acceptQuote, sendInvoice, recordPayment } from "@/lib/lifecycle";
 
 type Tab = "quotes" | "invoices";
 
@@ -33,8 +36,8 @@ const invoiceStatuses: (InvoiceStatus | "All")[] = ["All", "Draft", "Sent", "Pai
 
 export default function Quotes() {
   const [tab, setTab] = useState<Tab>("quotes");
-  const [quotes, setQuotes] = useState<Quote[]>(seedQuotes);
-  const [invoices, setInvoices] = useState<Invoice[]>(seedInvoices);
+  const [quotes] = useQuotes();
+  const [invoices] = useInvoices();
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
 
@@ -43,6 +46,7 @@ export default function Quotes() {
 
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewing, setPreviewing] = useState<Quote | Invoice | null>(null);
+
 
   const stats = useMemo(() => {
     const sent = quotes
