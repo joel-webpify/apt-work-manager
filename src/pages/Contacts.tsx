@@ -25,7 +25,12 @@ export default function Contacts() {
       <PageHeader
         title="Contacts & leads"
         description="Every customer and lead in one place"
-        actions={<Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>}
+        actions={
+          <>
+            <Btn onClick={() => setImportOpen(true)}><Upload className="w-3.5 h-3.5" /> Import CSV</Btn>
+            <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>
+          </>
+        }
       />
       <PageBody>
         <div className="flex items-center gap-2 mb-4">
