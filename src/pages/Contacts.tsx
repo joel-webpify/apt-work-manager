@@ -7,6 +7,7 @@ import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } f
 import { ContactKpis } from "@/components/contacts/ContactKpis";
 import { BulkActionsBar } from "@/components/contacts/BulkActionsBar";
 import { ContactPanel } from "@/components/contacts/ContactPanel";
+import { EditContactDialog } from "@/components/contacts/EditContactDialog";
 import { initials, avatarColor } from "@/lib/avatar";
 
 type SortKey = "name" | "lastJob" | "totalSpend";
@@ -17,6 +18,7 @@ export default function Contacts() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Lead" | "Customer" | "Lapsed">("All");
   const [importOpen, setImportOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -90,7 +92,7 @@ export default function Contacts() {
         actions={
           <>
             <Btn onClick={() => setImportOpen(true)}><Upload className="w-3.5 h-3.5" /> Import CSV</Btn>
-            <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>
+            <Btn variant="primary" onClick={() => setCreateOpen(true)}><Plus className="w-3.5 h-3.5" /> New contact</Btn>
           </>
         }
       />
@@ -124,7 +126,7 @@ export default function Contacts() {
         </div>
 
         {filtered.length === 0 ? (
-          <EmptyState onImport={() => setImportOpen(true)} />
+          <EmptyState onImport={() => setImportOpen(true)} onCreate={() => setCreateOpen(true)} />
         ) : (
           <div className="border-hairline rounded-lg bg-card overflow-hidden">
             <div className="grid grid-cols-[36px_2.4fr_1fr_1.6fr_1.4fr_1fr_120px] px-4 h-10 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
@@ -221,6 +223,7 @@ export default function Contacts() {
       />
 
       {selected && <ContactPanel contact={selected} onClose={() => setSelected(null)} />}
+      <EditContactDialog contact={null} open={createOpen} onOpenChange={setCreateOpen} mode="create" />
       <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
     </>
   );
@@ -253,7 +256,7 @@ function Chip({ children }: { children: React.ReactNode }) {
   );
 }
 
-function EmptyState({ onImport }: { onImport: () => void }) {
+function EmptyState({ onImport, onCreate }: { onImport: () => void; onCreate: () => void }) {
   return (
     <div className="border-hairline rounded-lg bg-card py-16 flex flex-col items-center text-center px-6">
       <div className="w-12 h-12 rounded-full bg-surface flex items-center justify-center mb-4">
@@ -265,7 +268,7 @@ function EmptyState({ onImport }: { onImport: () => void }) {
       </p>
       <div className="flex gap-2">
         <Btn onClick={onImport}><Upload className="w-3.5 h-3.5" /> Import CSV</Btn>
-        <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>
+        <Btn variant="primary" onClick={onCreate}><Plus className="w-3.5 h-3.5" /> New contact</Btn>
       </div>
     </div>
   );

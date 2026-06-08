@@ -59,6 +59,27 @@ export function useContactExtras() {
   return map;
 }
 
+export function createContact(data: Partial<Contact>): string {
+  const id = `new_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+  const list = read();
+  const newContact: Contact = {
+    id,
+    name: data.name || "",
+    type: data.type || "Residential",
+    phone: data.phone || "",
+    email: data.email || "",
+    source: data.source || "Manual",
+    lifecycle: data.lifecycle || "Lead",
+    lastJob: data.lastJob || "—",
+    totalSpend: data.totalSpend || 0,
+    postcode: data.postcode || "",
+    notes: data.notes || "",
+    ...data,
+  };
+  write([...list, newContact]);
+  return id;
+}
+
 export function updateContact(id: string, patch: Partial<Contact>) {
   const extras = readExtras();
   extras[id] = { ...extras[id], overrides: { ...extras[id]?.overrides, ...patch } };

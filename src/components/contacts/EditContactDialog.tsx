@@ -3,7 +3,7 @@ import { z } from "zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Btn } from "@/components/layout/PageShell";
 import type { Contact, ContactType, LifecycleState } from "@/data/mockData";
-import { updateContact } from "@/lib/contactsStore";
+import { updateContact, createContact } from "@/lib/contactsStore";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Name is required").max(100),
@@ -17,22 +17,38 @@ const schema = z.object({
   notes: z.string().trim().max(2000).optional().or(z.literal("")),
 });
 
+const blankContact: Contact = {
+  id: "",
+  name: "",
+  type: "Residential",
+  phone: "",
+  email: "",
+  source: "",
+  lifecycle: "Lead",
+  lastJob: "—",
+  totalSpend: 0,
+  postcode: "",
+  notes: "",
+};
+
 export function EditContactDialog({
   contact,
   open,
   onOpenChange,
+  mode = "edit",
 }: {
   contact: Contact | null;
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  mode?: "edit" | "create";
 }) {
-  const [form, setForm] = useState<Contact | null>(contact);
+  const [form, setForm] = useState<Contact | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    setForm(contact);
+    setForm(mode === "create" ? { ...blankContact } : contact);
     setErrors({});
-  }, [contact, open]);
+  }, [contact, open, mode]);
 
   if (!form) return null;
 
@@ -48,7 +64,11 @@ export function EditContactDialog({
       setErrors(e);
       return;
     }
-    updateContact(form!.id, parsed.data as Partial<Contact>);
+    if (mode === "create") {
+      createContact(parsed.data as Partial<Contact>);
+    } else {
+      updateContact(form!.id, parsed.data as Partial<Contact>);
+    }
     onOpenChange(false);
   }
 
@@ -56,7 +76,7 @@ export function EditContactDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit contact</DialogTitle>
+          <DialogTitle>{mode === "create" ? "New contact" : "Edit contact"}</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-3 text-sm">
@@ -109,7 +129,9 @@ export function EditContactDialog({
 
         <DialogFooter>
           <Btn onClick={() => onOpenChange(false)}>Cancel</Btn>
-          <Btn variant="primary" onClick={save}>Save changes</Btn>
+          <Btn variant="primary" onClick={save}>
+            {mode === "create" ? "Create contact" : "Save changes"}
+          </Btn>
         </DialogFooter>
       </DialogContent>
     </Dialog>
