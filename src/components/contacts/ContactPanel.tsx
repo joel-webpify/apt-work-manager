@@ -16,11 +16,17 @@ type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("Overview");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("All");
   const [editOpen, setEditOpen] = useState(false);
   const extras = useContactExtras();
   const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
   const av = avatarColor(contact.email || contact.name);
+  const timeline = useMemo(() => buildTimeline(contact, history), [contact, history]);
+  const visibleTimeline = useMemo(
+    () => (activityFilter === "All" ? timeline : timeline.filter((e) => e.category === activityFilter)),
+    [timeline, activityFilter],
+  );
 
   return (
     <>
