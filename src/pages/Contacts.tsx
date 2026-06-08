@@ -3,7 +3,7 @@ import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Search, Filter, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
-import { useImportedContacts, mergeWithMock } from "@/lib/contactsStore";
+import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
 import { ContactKpis } from "@/components/contacts/ContactKpis";
 import { BulkActionsBar } from "@/components/contacts/BulkActionsBar";
 import { ContactPanel } from "@/components/contacts/ContactPanel";
