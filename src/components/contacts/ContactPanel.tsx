@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
+  Briefcase, Megaphone, User, ArrowUpRight,
 } from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
@@ -160,6 +162,22 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
                         <div className="text-[11px] text-muted-foreground shrink-0 tabular-nums">{e.when}</div>
                       </div>
                       <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
+                      {e.refs && e.refs.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1.5">
+                          {e.refs.map((r) => (
+                            <Link
+                              key={r.label + r.to}
+                              to={r.to}
+                              onClick={onClose}
+                              className="inline-flex items-center gap-1 h-6 px-1.5 rounded border-hairline bg-background hover:bg-surface-hover text-[11px] font-medium text-foreground transition-colors"
+                            >
+                              <r.icon className="w-3 h-3 text-muted-foreground" />
+                              {r.label}
+                              <ArrowUpRight className="w-2.5 h-2.5 text-muted-foreground" />
+                            </Link>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -223,6 +241,12 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+type TimelineRef = {
+  label: string;
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
 type TimelineEvent = {
   title: string;
   detail: string;
@@ -232,7 +256,10 @@ type TimelineEvent = {
   category: Exclude<ActivityFilter, "All">;
   at: number;
   when: string;
+  refs?: TimelineRef[];
 };
+
+
 
 function relTime(at: number): string {
   const diff = Date.now() - at;
@@ -261,11 +288,21 @@ function seeded(seed: string) {
   };
 }
 
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] {
   const events: Omit<TimelineEvent, "when">[] = [];
   const now = Date.now();
   const day = 86400000;
   const rnd = seeded(contact.id);
+
+  const contactRef: TimelineRef = {
+    label: contact.name.split(" ")[0] || "Contact",
+    to: `/contacts?id=${contact.id}`,
+    icon: User,
+  };
 
   // Jobs
   history.forEach((j, idx) => {
@@ -279,6 +316,10 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: done ? "text-[hsl(var(--success))]" : "text-primary",
       category: "Jobs",
       at,
+      refs: [
+        { label: `Job #${j.id}`, to: `/pipeline?job=${j.id}`, icon: Briefcase },
+        contactRef,
+      ],
     });
   });
 
@@ -290,6 +331,14 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
   ];
   emails.forEach((em) => {
     const sentAt = now - em.daysAgo * day;
+    const campaignId = slugify(em.subject);
+    const campaignRef: TimelineRef = {
+      label: em.subject,
+      to: `/email?campaign=${campaignId}`,
+      icon: Megaphone,
+    };
+    const refs = [campaignRef, contactRef];
+
     events.push({
       title: `Sent: ${em.subject}`,
       detail: `To ${contact.email || "—"}`,
@@ -298,6 +347,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: "text-primary",
       category: "Email",
       at: sentAt,
+      refs,
     });
     const r = rnd();
     if (r < 0.15) {
@@ -309,6 +359,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-[hsl(var(--destructive))]",
         category: "Email",
         at: sentAt + 60000,
+        refs,
       });
       return;
     }
@@ -322,6 +373,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-[hsl(var(--success))]",
         category: "Email",
         at: openAt,
+        refs,
       });
       if (rnd() < 0.55) {
         events.push({
@@ -332,6 +384,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
           fg: "text-primary",
           category: "Email",
           at: openAt + 90000,
+          refs,
         });
       }
     }
@@ -347,6 +400,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: "text-foreground",
       category: "Calls",
       at: now - (4 + Math.floor(rnd() * 20)) * day,
+      refs: [contactRef],
     });
     if (rnd() > 0.5) {
       events.push({
@@ -357,9 +411,11 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-foreground",
         category: "Calls",
         at: now - (1 + Math.floor(rnd() * 5)) * day,
+        refs: [contactRef],
       });
     }
   }
+
 
   if (contact.notes) {
     events.push({
