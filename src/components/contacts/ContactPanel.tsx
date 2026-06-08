@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import {
-  X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
-  Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
+  X, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
+  Send, MailOpen, MousePointerClick, AlertTriangle,
   Briefcase, Megaphone, ArrowUpRight,
 } from "lucide-react";
 import type { Contact } from "@/data/mockData";
@@ -14,7 +14,7 @@ import { TagEditor } from "./TagEditor";
 import { RefDrawer, type DrawerRef } from "./RefDrawer";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
-type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
+type ActivityFilter = "All" | "Email" | "Jobs" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("Overview");
@@ -66,8 +66,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
-            <QuickAction icon={Phone} label="Call" href={`tel:${contact.phone}`} />
+          <div className="grid grid-cols-3 gap-2">
             <QuickAction icon={Mail} label="Email" href={`mailto:${contact.email}`} />
             <QuickAction icon={MessageSquare} label="Chat" />
             <QuickAction icon={Plus} label="New job" primary />
@@ -130,7 +129,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
           {tab === "Activity" && (
             <div>
               <div className="flex gap-1 mb-4 flex-wrap">
-                {(["All", "Email", "Jobs", "Calls", "Notes"] as ActivityFilter[]).map((f) => {
+                {(["All", "Email", "Jobs", "Notes"] as ActivityFilter[]).map((f) => {
                   const count =
                     f === "All" ? timeline.length : timeline.filter((e) => e.category === f).length;
                   return (
@@ -384,29 +383,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
     }
   });
 
-  // Mock call / SMS
-  if (contact.phone) {
-    events.push({
-      title: "Outbound call",
-      detail: `${1 + Math.floor(rnd() * 6)}m ${Math.floor(rnd() * 60)}s • answered`,
-      icon: PhoneCall,
-      bg: "bg-surface",
-      fg: "text-foreground",
-      category: "Calls",
-      at: now - (4 + Math.floor(rnd() * 20)) * day,
-    });
-    if (rnd() > 0.5) {
-      events.push({
-        title: "SMS sent",
-        detail: "“On my way, ETA 20 min”",
-        icon: MessageCircle,
-        bg: "bg-surface",
-        fg: "text-foreground",
-        category: "Calls",
-        at: now - (1 + Math.floor(rnd() * 5)) * day,
-      });
-    }
-  }
 
 
   if (contact.notes) {
