@@ -59,6 +59,13 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
             <QuickAction icon={MessageSquare} label="Chat" />
             <QuickAction icon={Plus} label="New job" primary />
           </div>
+
+          <div className="mt-4">
+            <div className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-2">
+              Tags
+            </div>
+            <TagEditor contactId={contact.id} tags={tags} />
+          </div>
         </div>
 
         <nav className="flex px-5 border-b-hairline">
