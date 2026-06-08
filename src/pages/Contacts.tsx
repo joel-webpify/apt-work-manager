@@ -179,6 +179,11 @@ export default function Contacts() {
                   <div className="flex gap-1 flex-wrap">
                     <Chip>{c.type}</Chip>
                     {c.source && <Chip>{c.source}</Chip>}
+                    {(extras[c.id]?.tags ?? []).map((t) => (
+                      <span key={t} className="inline-flex items-center h-5 px-1.5 rounded bg-primary/10 text-primary text-[11px] font-medium">
+                        {t}
+                      </span>
+                    ))}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     <div>{c.lastJob || <span className="text-muted-foreground/60">No activity</span>}</div>
