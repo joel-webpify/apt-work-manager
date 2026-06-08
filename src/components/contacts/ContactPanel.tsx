@@ -299,12 +299,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
   const day = 86400000;
   const rnd = seeded(contact.id);
 
-  const contactRef: TimelineRef = {
-    label: contact.name.split(" ")[0] || "Contact",
-    to: `/contacts?id=${contact.id}`,
-    icon: User,
-  };
-
   // Jobs
   history.forEach((j, idx) => {
     const at = now - (idx + 1) * day * (3 + Math.floor(rnd() * 14));
@@ -318,8 +312,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       category: "Jobs",
       at,
       refs: [
-        { label: `Job #${j.id}`, to: `/pipeline?job=${j.id}`, icon: Briefcase },
-        contactRef,
+        { label: `Job #${j.id}`, target: { kind: "job", jobId: j.id }, icon: Briefcase },
       ],
     });
   });
@@ -335,10 +328,10 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
     const campaignId = slugify(em.subject);
     const campaignRef: TimelineRef = {
       label: em.subject,
-      to: `/email?campaign=${campaignId}`,
+      target: { kind: "campaign", campaignId, subject: em.subject },
       icon: Megaphone,
     };
-    const refs = [campaignRef, contactRef];
+    const refs = [campaignRef];
 
     events.push({
       title: `Sent: ${em.subject}`,
