@@ -3,7 +3,7 @@ import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Search, Filter, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
-import { useImportedContacts, mergeWithMock } from "@/lib/contactsStore";
+import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
 import { ContactKpis } from "@/components/contacts/ContactKpis";
 import { BulkActionsBar } from "@/components/contacts/BulkActionsBar";
 import { ContactPanel } from "@/components/contacts/ContactPanel";
@@ -22,7 +22,11 @@ export default function Contacts() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const imported = useImportedContacts();
-  const contacts = useMemo(() => mergeWithMock(mockContacts, imported), [imported]);
+  const extras = useContactExtras();
+  const contacts = useMemo(
+    () => applyExtrasTo(mergeWithMock(mockContacts, imported), extras),
+    [imported, extras],
+  );
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -175,6 +179,11 @@ export default function Contacts() {
                   <div className="flex gap-1 flex-wrap">
                     <Chip>{c.type}</Chip>
                     {c.source && <Chip>{c.source}</Chip>}
+                    {(extras[c.id]?.tags ?? []).map((t) => (
+                      <span key={t} className="inline-flex items-center h-5 px-1.5 rounded bg-primary/10 text-primary text-[11px] font-medium">
+                        {t}
+                      </span>
+                    ))}
                   </div>
                   <div className="text-muted-foreground text-xs">
                     <div>{c.lastJob || <span className="text-muted-foreground/60">No activity</span>}</div>

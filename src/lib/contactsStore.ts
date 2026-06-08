@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { Contact } from "@/data/mockData";
 
 const KEY = "contacts.imported.v1";
+const EXTRAS_KEY = "contacts.extras.v1";
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
@@ -19,6 +20,21 @@ function write(list: Contact[]) {
   listeners.forEach((l) => l());
 }
 
+export type ContactExtra = { overrides?: Partial<Contact>; tags?: string[] };
+type ExtrasMap = Record<string, ContactExtra>;
+
+function readExtras(): ExtrasMap {
+  try {
+    return JSON.parse(localStorage.getItem(EXTRAS_KEY) || "{}");
+  } catch {
+    return {};
+  }
+}
+function writeExtras(map: ExtrasMap) {
+  localStorage.setItem(EXTRAS_KEY, JSON.stringify(map));
+  listeners.forEach((l) => l());
+}
+
 export function useImportedContacts() {
   const [list, setList] = useState<Contact[]>(read);
   useEffect(() => {
@@ -29,6 +45,48 @@ export function useImportedContacts() {
     };
   }, []);
   return list;
+}
+
+export function useContactExtras() {
+  const [map, setMap] = useState<ExtrasMap>(readExtras);
+  useEffect(() => {
+    const l = () => setMap(readExtras());
+    listeners.add(l);
+    return () => {
+      listeners.delete(l);
+    };
+  }, []);
+  return map;
+}
+
+export function updateContact(id: string, patch: Partial<Contact>) {
+  const extras = readExtras();
+  extras[id] = { ...extras[id], overrides: { ...extras[id]?.overrides, ...patch } };
+  writeExtras(extras);
+}
+
+export function addContactTag(id: string, tag: string) {
+  const clean = tag.trim().slice(0, 32);
+  if (!clean) return;
+  const extras = readExtras();
+  const current = extras[id]?.tags ?? [];
+  if (current.some((t) => t.toLowerCase() === clean.toLowerCase())) return;
+  extras[id] = { ...extras[id], tags: [...current, clean] };
+  writeExtras(extras);
+}
+
+export function removeContactTag(id: string, tag: string) {
+  const extras = readExtras();
+  const current = extras[id]?.tags ?? [];
+  extras[id] = { ...extras[id], tags: current.filter((t) => t !== tag) };
+  writeExtras(extras);
+}
+
+export function applyExtrasTo(list: Contact[], extras: ExtrasMap): Contact[] {
+  return list.map((c) => {
+    const o = extras[c.id]?.overrides;
+    return o ? ({ ...c, ...o } as Contact) : c;
+  });
 }
 
 /** Merge incoming rows by email (case-insensitive). Existing fields are

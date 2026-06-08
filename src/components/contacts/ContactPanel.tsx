@@ -1,14 +1,20 @@
 import { useState } from "react";
-import { X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote } from "lucide-react";
+import { X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil } from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
 import { initials, avatarColor } from "@/lib/avatar";
+import { useContactExtras, updateContact } from "@/lib/contactsStore";
+import { EditContactDialog } from "./EditContactDialog";
+import { TagEditor } from "./TagEditor";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("Overview");
+  const [editOpen, setEditOpen] = useState(false);
+  const extras = useContactExtras();
+  const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
   const av = avatarColor(contact.email || contact.name);
 
@@ -18,9 +24,17 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
       <aside className="fixed top-0 right-0 h-screen w-[460px] bg-background border-l-hairline z-50 flex flex-col animate-slide-in-right">
         <header className="h-14 px-5 flex items-center justify-between border-b-hairline">
           <span className="text-sm font-medium text-muted-foreground">Contact</span>
-          <button onClick={onClose} className="w-7 h-7 rounded-md hover:bg-surface-hover flex items-center justify-center">
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setEditOpen(true)}
+              className="h-7 px-2 rounded-md hover:bg-surface-hover flex items-center gap-1 text-xs"
+            >
+              <Pencil className="w-3.5 h-3.5" /> Edit
+            </button>
+            <button onClick={onClose} className="w-7 h-7 rounded-md hover:bg-surface-hover flex items-center justify-center">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </header>
 
         <div className="px-5 pt-5 pb-4 border-b-hairline">
@@ -44,6 +58,13 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
             <QuickAction icon={Mail} label="Email" href={`mailto:${contact.email}`} />
             <QuickAction icon={MessageSquare} label="Chat" />
             <QuickAction icon={Plus} label="New job" primary />
+          </div>
+
+          <div className="mt-4">
+            <div className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-2">
+              Tags
+            </div>
+            <TagEditor contactId={contact.id} tags={tags} />
           </div>
         </div>
 
@@ -113,13 +134,18 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
 
           {tab === "Notes" && (
             <textarea
+              key={contact.id}
               defaultValue={contact.notes}
               placeholder="Add a note…"
+              maxLength={2000}
+              onBlur={(e) => updateContact(contact.id, { notes: e.target.value })}
               className="w-full min-h-[140px] border-hairline rounded-md p-2.5 text-sm bg-background resize-none focus:outline-none focus:border-primary/40"
             />
           )}
         </div>
       </aside>
+
+      <EditContactDialog contact={contact} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }
