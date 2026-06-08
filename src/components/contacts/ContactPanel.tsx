@@ -199,6 +199,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
       </aside>
 
       <EditContactDialog contact={contact} open={editOpen} onOpenChange={setEditOpen} />
+      {drawerRef && <RefDrawer refItem={drawerRef} onClose={() => setDrawerRef(null)} />}
     </>
   );
 }
