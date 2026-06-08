@@ -134,13 +134,18 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
 
           {tab === "Notes" && (
             <textarea
+              key={contact.id}
               defaultValue={contact.notes}
               placeholder="Add a note…"
+              maxLength={2000}
+              onBlur={(e) => updateContact(contact.id, { notes: e.target.value })}
               className="w-full min-h-[140px] border-hairline rounded-md p-2.5 text-sm bg-background resize-none focus:outline-none focus:border-primary/40"
             />
           )}
         </div>
       </aside>
+
+      <EditContactDialog contact={contact} open={editOpen} onOpenChange={setEditOpen} />
     </>
   );
 }
