@@ -394,7 +394,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: "text-foreground",
       category: "Calls",
       at: now - (4 + Math.floor(rnd() * 20)) * day,
-      refs: [contactRef],
     });
     if (rnd() > 0.5) {
       events.push({
@@ -405,7 +404,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-foreground",
         category: "Calls",
         at: now - (1 + Math.floor(rnd() * 5)) * day,
-        refs: [contactRef],
       });
     }
   }
