@@ -130,7 +130,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
           {tab === "Activity" && (
             <div>
               <div className="flex gap-1 mb-4 flex-wrap">
-                {(["All", "Email", "Jobs", "Calls", "Notes"] as ActivityFilter[]).map((f) => {
+                {(["All", "Email", "Jobs", "Notes"] as ActivityFilter[]).map((f) => {
                   const count =
                     f === "All" ? timeline.length : timeline.filter((e) => e.category === f).length;
                   return (
