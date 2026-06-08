@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
+  Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
+} from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
@@ -9,14 +12,21 @@ import { EditContactDialog } from "./EditContactDialog";
 import { TagEditor } from "./TagEditor";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
+type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("Overview");
+  const [activityFilter, setActivityFilter] = useState<ActivityFilter>("All");
   const [editOpen, setEditOpen] = useState(false);
   const extras = useContactExtras();
   const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
   const av = avatarColor(contact.email || contact.name);
+  const timeline = useMemo(() => buildTimeline(contact, history), [contact, history]);
+  const visibleTimeline = useMemo(
+    () => (activityFilter === "All" ? timeline : timeline.filter((e) => e.category === activityFilter)),
+    [timeline, activityFilter],
+  );
 
   return (
     <>
@@ -115,19 +125,44 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
           )}
 
           {tab === "Activity" && (
-            <div className="relative pl-6">
-              <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
-              {buildTimeline(contact, history).map((e, i) => (
-                <div key={i} className="relative mb-5 last:mb-0">
-                  <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center ${e.bg}`}>
-                    <e.icon className={`w-2.5 h-2.5 ${e.fg}`} />
-                  </div>
-                  <div className="text-sm font-medium">{e.title}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
+            <div>
+              <div className="flex gap-1 mb-4 flex-wrap">
+                {(["All", "Email", "Jobs", "Calls", "Notes"] as ActivityFilter[]).map((f) => {
+                  const count =
+                    f === "All" ? timeline.length : timeline.filter((e) => e.category === f).length;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setActivityFilter(f)}
+                      className={`h-6 px-2 rounded-md text-xs font-medium transition-colors ${
+                        activityFilter === f
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-surface text-muted-foreground hover:bg-surface-hover"
+                      }`}
+                    >
+                      {f} <span className="opacity-60">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {visibleTimeline.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No activity yet.</p>
+              ) : (
+                <div className="relative pl-6">
+                  <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
+                  {visibleTimeline.map((e, i) => (
+                    <div key={i} className="relative mb-5 last:mb-0">
+                      <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center ${e.bg}`}>
+                        <e.icon className={`w-2.5 h-2.5 ${e.fg}`} />
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="text-sm font-medium truncate">{e.title}</div>
+                        <div className="text-[11px] text-muted-foreground shrink-0 tabular-nums">{e.when}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {buildTimeline(contact, history).length === 0 && (
-                <p className="text-sm text-muted-foreground -ml-6">No activity yet.</p>
               )}
             </div>
           )}
@@ -188,27 +223,144 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildTimeline(contact: Contact, history: typeof jobs) {
-  const events: { title: string; detail: string; icon: React.ComponentType<{ className?: string }>; bg: string; fg: string }[] = [];
-  for (const j of history) {
-    if (j.stage === "Paid" || j.stage === "Completed" || j.stage === "Invoiced") {
+type TimelineEvent = {
+  title: string;
+  detail: string;
+  icon: React.ComponentType<{ className?: string }>;
+  bg: string;
+  fg: string;
+  category: Exclude<ActivityFilter, "All">;
+  at: number;
+  when: string;
+};
+
+function relTime(at: number): string {
+  const diff = Date.now() - at;
+  const mins = Math.round(diff / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.round(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  const mos = Math.round(days / 30);
+  if (mos < 12) return `${mos}mo ago`;
+  return `${Math.round(mos / 12)}y ago`;
+}
+
+// Deterministic pseudo-random from string seed
+function seeded(seed: string) {
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return () => {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    return ((h >>> 0) % 10000) / 10000;
+  };
+}
+
+function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] {
+  const events: Omit<TimelineEvent, "when">[] = [];
+  const now = Date.now();
+  const day = 86400000;
+  const rnd = seeded(contact.id);
+
+  // Jobs
+  history.forEach((j, idx) => {
+    const at = now - (idx + 1) * day * (3 + Math.floor(rnd() * 14));
+    const done = j.stage === "Paid" || j.stage === "Completed" || j.stage === "Invoiced";
+    events.push({
+      title: `${j.stage}: ${j.service}`,
+      detail: `£${j.value.toLocaleString()}${j.address ? ` • ${j.address}` : ""}`,
+      icon: done ? CheckCircle2 : FileText,
+      bg: done ? "bg-[hsl(var(--success)/0.15)]" : "bg-primary/10",
+      fg: done ? "text-[hsl(var(--success))]" : "text-primary",
+      category: "Jobs",
+      at,
+    });
+  });
+
+  // Mock email thread (sent → opened → clicked, sometimes bounced)
+  const emails: { subject: string; daysAgo: number }[] = [
+    { subject: "Quote for your job", daysAgo: 2 + Math.floor(rnd() * 4) },
+    { subject: "Invoice ready", daysAgo: 9 + Math.floor(rnd() * 6) },
+    { subject: "Booking confirmation", daysAgo: 22 + Math.floor(rnd() * 10) },
+  ];
+  emails.forEach((em) => {
+    const sentAt = now - em.daysAgo * day;
+    events.push({
+      title: `Sent: ${em.subject}`,
+      detail: `To ${contact.email || "—"}`,
+      icon: Send,
+      bg: "bg-primary/10",
+      fg: "text-primary",
+      category: "Email",
+      at: sentAt,
+    });
+    const r = rnd();
+    if (r < 0.15) {
       events.push({
-        title: `${j.stage}: ${j.service}`,
-        detail: `£${j.value.toLocaleString()} • ${j.address || ""}`,
-        icon: CheckCircle2,
+        title: `Bounced: ${em.subject}`,
+        detail: "Address rejected by recipient server",
+        icon: AlertTriangle,
+        bg: "bg-[hsl(var(--destructive)/0.15)]",
+        fg: "text-[hsl(var(--destructive))]",
+        category: "Email",
+        at: sentAt + 60000,
+      });
+      return;
+    }
+    if (r < 0.85) {
+      const openAt = sentAt + (15 + Math.floor(rnd() * 600)) * 60000;
+      events.push({
+        title: `Opened: ${em.subject}`,
+        detail: rnd() > 0.5 ? "Opened on iPhone Mail" : "Opened on Gmail (web)",
+        icon: MailOpen,
         bg: "bg-[hsl(var(--success)/0.15)]",
         fg: "text-[hsl(var(--success))]",
+        category: "Email",
+        at: openAt,
       });
-    } else {
+      if (rnd() < 0.55) {
+        events.push({
+          title: `Clicked link in ${em.subject}`,
+          detail: rnd() > 0.5 ? "Tapped “View quote”" : "Tapped “Pay invoice”",
+          icon: MousePointerClick,
+          bg: "bg-primary/15",
+          fg: "text-primary",
+          category: "Email",
+          at: openAt + 90000,
+        });
+      }
+    }
+  });
+
+  // Mock call / SMS
+  if (contact.phone) {
+    events.push({
+      title: "Outbound call",
+      detail: `${1 + Math.floor(rnd() * 6)}m ${Math.floor(rnd() * 60)}s • answered`,
+      icon: PhoneCall,
+      bg: "bg-surface",
+      fg: "text-foreground",
+      category: "Calls",
+      at: now - (4 + Math.floor(rnd() * 20)) * day,
+    });
+    if (rnd() > 0.5) {
       events.push({
-        title: `${j.stage}: ${j.service}`,
-        detail: `£${j.value.toLocaleString()}`,
-        icon: FileText,
-        bg: "bg-primary/10",
-        fg: "text-primary",
+        title: "SMS sent",
+        detail: "“On my way, ETA 20 min”",
+        icon: MessageCircle,
+        bg: "bg-surface",
+        fg: "text-foreground",
+        category: "Calls",
+        at: now - (1 + Math.floor(rnd() * 5)) * day,
       });
     }
   }
+
   if (contact.notes) {
     events.push({
       title: "Note",
@@ -216,7 +368,12 @@ function buildTimeline(contact: Contact, history: typeof jobs) {
       icon: StickyNote,
       bg: "bg-surface",
       fg: "text-muted-foreground",
+      category: "Notes",
+      at: now - day,
     });
   }
-  return events;
+
+  return events
+    .sort((a, b) => b.at - a.at)
+    .map((e) => ({ ...e, when: relTime(e.at) }));
 }
