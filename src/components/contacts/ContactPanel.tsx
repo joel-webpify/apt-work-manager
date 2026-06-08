@@ -101,13 +101,39 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
 
         <div className="flex-1 overflow-y-auto p-5">
           {tab === "Overview" && (
-            <div className="space-y-1.5 text-sm">
-              <Row label="Phone" value={contact.phone} />
-              <Row label="Email" value={contact.email} />
-              <Row label="Postcode" value={contact.postcode} />
-              <Row label="Lead source" value={contact.source} />
-              <Row label="Last job" value={contact.lastJob || "—"} />
-              <Row label="Total spend" value={`£${contact.totalSpend.toLocaleString()}`} />
+            <div className="space-y-5">
+              <div className="space-y-1.5 text-sm">
+                <Row label="Phone" value={contact.phone} />
+                <Row label="Email" value={contact.email} />
+                <Row label="Postcode" value={contact.postcode} />
+                <Row label="Lead source" value={contact.source} />
+                <Row label="Lead since" value={formatDate(leadSinceAt)} />
+                <Row label="Last job" value={contact.lastJob || "—"} />
+                <Row label="Total spend" value={`£${contact.totalSpend.toLocaleString()}`} />
+              </div>
+
+              {productSummary.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
+                      Products purchased
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">For retargeting</span>
+                  </div>
+                  <div className="space-y-1">
+                    {productSummary.map((p) => (
+                      <div key={p.name} className="flex items-center justify-between text-sm border-hairline rounded-md px-3 h-9">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Package className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">{p.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">×{p.qty}</span>
+                        </div>
+                        <span className="font-medium tabular-nums text-xs">£{p.spend.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -115,15 +141,9 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
             history.length === 0 ? (
               <p className="text-sm text-muted-foreground">No jobs yet.</p>
             ) : (
-              <div className="space-y-1.5">
-                {history.map((j) => (
-                  <div key={j.id} className="flex items-center justify-between text-sm border-hairline rounded-md px-3 h-10">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{j.service}</div>
-                      <div className="text-xs text-muted-foreground">{j.stage}</div>
-                    </div>
-                    <span className="font-medium tabular-nums">£{j.value}</span>
-                  </div>
+              <div className="space-y-2">
+                {jobsMeta.map((j) => (
+                  <JobCard key={j.id} job={j} />
                 ))}
               </div>
             )
