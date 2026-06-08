@@ -1,9 +1,12 @@
 import { useState } from "react";
-import { X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote } from "lucide-react";
+import { X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil } from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
 import { initials, avatarColor } from "@/lib/avatar";
+import { useContactExtras, updateContact } from "@/lib/contactsStore";
+import { EditContactDialog } from "./EditContactDialog";
+import { TagEditor } from "./TagEditor";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
 
