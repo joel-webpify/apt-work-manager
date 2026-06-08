@@ -225,6 +225,12 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
+type TimelineRef = {
+  label: string;
+  to: string;
+  icon: React.ComponentType<{ className?: string }>;
+};
+
 type TimelineEvent = {
   title: string;
   detail: string;
@@ -234,7 +240,10 @@ type TimelineEvent = {
   category: Exclude<ActivityFilter, "All">;
   at: number;
   when: string;
+  refs?: TimelineRef[];
 };
+
+
 
 function relTime(at: number): string {
   const diff = Date.now() - at;
