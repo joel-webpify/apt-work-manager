@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
-  Briefcase, Megaphone, User, ArrowUpRight,
+  Briefcase, Megaphone, ArrowUpRight,
 } from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
@@ -12,6 +11,7 @@ import { initials, avatarColor } from "@/lib/avatar";
 import { useContactExtras, updateContact } from "@/lib/contactsStore";
 import { EditContactDialog } from "./EditContactDialog";
 import { TagEditor } from "./TagEditor";
+import { RefDrawer, type DrawerRef } from "./RefDrawer";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
 type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
