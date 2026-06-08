@@ -7,6 +7,7 @@ import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } f
 import { ContactKpis } from "@/components/contacts/ContactKpis";
 import { BulkActionsBar } from "@/components/contacts/BulkActionsBar";
 import { ContactPanel } from "@/components/contacts/ContactPanel";
+import { EditContactDialog } from "@/components/contacts/EditContactDialog";
 import { initials, avatarColor } from "@/lib/avatar";
 
 type SortKey = "name" | "lastJob" | "totalSpend";
