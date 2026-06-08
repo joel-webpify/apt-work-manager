@@ -18,6 +18,7 @@ export default function Contacts() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | "Lead" | "Customer" | "Lapsed">("All");
   const [importOpen, setImportOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
