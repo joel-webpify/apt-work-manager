@@ -14,7 +14,7 @@ import { TagEditor } from "./TagEditor";
 import { RefDrawer, type DrawerRef } from "./RefDrawer";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
-type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
+type ActivityFilter = "All" | "Email" | "Jobs" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("Overview");
