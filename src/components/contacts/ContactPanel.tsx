@@ -125,19 +125,44 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
           )}
 
           {tab === "Activity" && (
-            <div className="relative pl-6">
-              <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
-              {buildTimeline(contact, history).map((e, i) => (
-                <div key={i} className="relative mb-5 last:mb-0">
-                  <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center ${e.bg}`}>
-                    <e.icon className={`w-2.5 h-2.5 ${e.fg}`} />
-                  </div>
-                  <div className="text-sm font-medium">{e.title}</div>
-                  <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
+            <div>
+              <div className="flex gap-1 mb-4 flex-wrap">
+                {(["All", "Email", "Jobs", "Calls", "Notes"] as ActivityFilter[]).map((f) => {
+                  const count =
+                    f === "All" ? timeline.length : timeline.filter((e) => e.category === f).length;
+                  return (
+                    <button
+                      key={f}
+                      onClick={() => setActivityFilter(f)}
+                      className={`h-6 px-2 rounded-md text-xs font-medium transition-colors ${
+                        activityFilter === f
+                          ? "bg-primary text-primary-foreground"
+                          : "bg-surface text-muted-foreground hover:bg-surface-hover"
+                      }`}
+                    >
+                      {f} <span className="opacity-60">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+              {visibleTimeline.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No activity yet.</p>
+              ) : (
+                <div className="relative pl-6">
+                  <div className="absolute left-[9px] top-2 bottom-2 w-px bg-border" />
+                  {visibleTimeline.map((e, i) => (
+                    <div key={i} className="relative mb-5 last:mb-0">
+                      <div className={`absolute -left-6 top-0.5 w-5 h-5 rounded-full flex items-center justify-center ${e.bg}`}>
+                        <e.icon className={`w-2.5 h-2.5 ${e.fg}`} />
+                      </div>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <div className="text-sm font-medium truncate">{e.title}</div>
+                        <div className="text-[11px] text-muted-foreground shrink-0 tabular-nums">{e.when}</div>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
+                    </div>
+                  ))}
                 </div>
-              ))}
-              {buildTimeline(contact, history).length === 0 && (
-                <p className="text-sm text-muted-foreground -ml-6">No activity yet.</p>
               )}
             </div>
           )}
