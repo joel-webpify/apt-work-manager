@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
+  Briefcase, Megaphone, User, ArrowUpRight,
 } from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
