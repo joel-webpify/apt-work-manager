@@ -22,7 +22,11 @@ export default function Contacts() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const imported = useImportedContacts();
-  const contacts = useMemo(() => mergeWithMock(mockContacts, imported), [imported]);
+  const extras = useContactExtras();
+  const contacts = useMemo(
+    () => applyExtrasTo(mergeWithMock(mockContacts, imported), extras),
+    [imported, extras],
+  );
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
