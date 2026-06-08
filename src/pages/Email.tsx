@@ -41,7 +41,7 @@ const seed: BuilderAutomation[] = initialAutomations.map((a, i) => ({
           { id: `${a.id}-s1`, type: "send_email", emailSubject: "We miss you — 15% off", emailTemplate: "winback" },
           { id: `${a.id}-s2`, type: "wait", waitAmount: 7, waitUnit: "days" },
           { id: `${a.id}-s3`, type: "branch", branchLabel: "Has opened email" },
-          { id: `${a.id}-s4`, type: "create_task", taskTitle: "Call lapsed customer", taskAssignee: "sales" },
+          { id: `${a.id}-s4`, type: "create_task", taskTitle: "Follow up with lapsed customer", taskAssignee: "sales" },
         ]
       : [
           { id: `${a.id}-s1`, type: "send_email", emailSubject: "Time for your annual service", emailTemplate: "reminder" },

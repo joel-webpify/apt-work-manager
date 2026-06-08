@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
+import { Search, Plus, Upload, Mail, ArrowUpDown, Users } from "lucide-react";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
 import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
@@ -221,15 +221,9 @@ export default function Contacts() {
                   </div>
                   <div className="text-muted-foreground text-xs">
                     <div>{c.lastJob || <span className="text-muted-foreground/60">No activity</span>}</div>
-                    {c.phone && <div className="tabular-nums">{c.phone}</div>}
                   </div>
                   <div className="text-right font-medium tabular-nums">£{c.totalSpend.toLocaleString()}</div>
                   <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {c.phone && (
-                      <a href={`tel:${c.phone}`} className="w-7 h-7 rounded-md border-hairline bg-background hover:bg-surface-hover flex items-center justify-center" aria-label="Call">
-                        <Phone className="w-3.5 h-3.5" />
-                      </a>
-                    )}
                     {c.email && (
                       <a href={`mailto:${c.email}`} className="w-7 h-7 rounded-md border-hairline bg-background hover:bg-surface-hover flex items-center justify-center" aria-label="Email">
                         <Mail className="w-3.5 h-3.5" />
