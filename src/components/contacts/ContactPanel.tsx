@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import {
-  X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
+  X, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle,
   Briefcase, Megaphone, ArrowUpRight,
 } from "lucide-react";
