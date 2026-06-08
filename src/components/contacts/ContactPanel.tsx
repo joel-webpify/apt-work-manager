@@ -384,29 +384,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
     }
   });
 
-  // Mock call / SMS
-  if (contact.phone) {
-    events.push({
-      title: "Outbound call",
-      detail: `${1 + Math.floor(rnd() * 6)}m ${Math.floor(rnd() * 60)}s • answered`,
-      icon: PhoneCall,
-      bg: "bg-surface",
-      fg: "text-foreground",
-      category: "Calls",
-      at: now - (4 + Math.floor(rnd() * 20)) * day,
-    });
-    if (rnd() > 0.5) {
-      events.push({
-        title: "SMS sent",
-        detail: "“On my way, ETA 20 min”",
-        icon: MessageCircle,
-        bg: "bg-surface",
-        fg: "text-foreground",
-        category: "Calls",
-        at: now - (1 + Math.floor(rnd() * 5)) * day,
-      });
-    }
-  }
 
 
   if (contact.notes) {
