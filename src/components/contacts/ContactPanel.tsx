@@ -288,11 +288,21 @@ function seeded(seed: string) {
   };
 }
 
+function slugify(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
 function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] {
   const events: Omit<TimelineEvent, "when">[] = [];
   const now = Date.now();
   const day = 86400000;
   const rnd = seeded(contact.id);
+
+  const contactRef: TimelineRef = {
+    label: contact.name.split(" ")[0] || "Contact",
+    to: `/contacts?id=${contact.id}`,
+    icon: User,
+  };
 
   // Jobs
   history.forEach((j, idx) => {
@@ -306,6 +316,10 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: done ? "text-[hsl(var(--success))]" : "text-primary",
       category: "Jobs",
       at,
+      refs: [
+        { label: `Job #${j.id}`, to: `/pipeline?job=${j.id}`, icon: Briefcase },
+        contactRef,
+      ],
     });
   });
 
@@ -317,6 +331,14 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
   ];
   emails.forEach((em) => {
     const sentAt = now - em.daysAgo * day;
+    const campaignId = slugify(em.subject);
+    const campaignRef: TimelineRef = {
+      label: em.subject,
+      to: `/email?campaign=${campaignId}`,
+      icon: Megaphone,
+    };
+    const refs = [campaignRef, contactRef];
+
     events.push({
       title: `Sent: ${em.subject}`,
       detail: `To ${contact.email || "—"}`,
@@ -325,6 +347,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: "text-primary",
       category: "Email",
       at: sentAt,
+      refs,
     });
     const r = rnd();
     if (r < 0.15) {
@@ -336,6 +359,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-[hsl(var(--destructive))]",
         category: "Email",
         at: sentAt + 60000,
+        refs,
       });
       return;
     }
@@ -349,6 +373,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-[hsl(var(--success))]",
         category: "Email",
         at: openAt,
+        refs,
       });
       if (rnd() < 0.55) {
         events.push({
@@ -359,6 +384,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
           fg: "text-primary",
           category: "Email",
           at: openAt + 90000,
+          refs,
         });
       }
     }
@@ -374,6 +400,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: "text-foreground",
       category: "Calls",
       at: now - (4 + Math.floor(rnd() * 20)) * day,
+      refs: [contactRef],
     });
     if (rnd() > 0.5) {
       events.push({
@@ -384,9 +411,11 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-foreground",
         category: "Calls",
         at: now - (1 + Math.floor(rnd() * 5)) * day,
+        refs: [contactRef],
       });
     }
   }
+
 
   if (contact.notes) {
     events.push({
