@@ -20,6 +20,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
   const [tab, setTab] = useState<Tab>("Overview");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("All");
   const [editOpen, setEditOpen] = useState(false);
+  const [drawerRef, setDrawerRef] = useState<DrawerRef | null>(null);
   const extras = useContactExtras();
   const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
