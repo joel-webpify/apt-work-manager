@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, Filter, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
+import { Search, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
 import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
@@ -9,6 +9,13 @@ import { BulkActionsBar } from "@/components/contacts/BulkActionsBar";
 import { ContactPanel } from "@/components/contacts/ContactPanel";
 import { EditContactDialog } from "@/components/contacts/EditContactDialog";
 import { initials, avatarColor } from "@/lib/avatar";
+import {
+  ContactFilters,
+  emptyFilters,
+  presetToRange,
+  parseActivityDate,
+  type ContactFilterState,
+} from "@/components/contacts/ContactFilters";
 
 type SortKey = "name" | "lastJob" | "totalSpend";
 type SortDir = "asc" | "desc";
@@ -23,6 +30,8 @@ export default function Contacts() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  const [advFilters, setAdvFilters] = useState<ContactFilterState>(emptyFilters);
+
   const imported = useImportedContacts();
   const extras = useContactExtras();
   const contacts = useMemo(
@@ -30,13 +39,36 @@ export default function Contacts() {
     [imported, extras],
   );
 
+  const allTags = useMemo(() => {
+    const s = new Set<string>();
+    Object.values(extras).forEach((e) => e?.tags?.forEach((t) => s.add(t)));
+    return Array.from(s).sort();
+  }, [extras]);
+
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    const list = contacts.filter(
-      (c) =>
-        (filter === "All" || c.lifecycle === filter) &&
-        (c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q)),
-    );
+    const activityRange = presetToRange(advFilters.lastActivity.preset, advFilters.lastActivity.range);
+    const from = activityRange?.from ? new Date(activityRange.from.setHours(0, 0, 0, 0)) : null;
+    const to = activityRange?.to
+      ? new Date(new Date(activityRange.to).setHours(23, 59, 59, 999))
+      : activityRange?.from
+        ? new Date(new Date(activityRange.from).setHours(23, 59, 59, 999))
+        : null;
+
+    const list = contacts.filter((c) => {
+      if (filter !== "All" && c.lifecycle !== filter) return false;
+      if (q && !(c.name.toLowerCase().includes(q) || c.email.toLowerCase().includes(q))) return false;
+
+      if (advFilters.tags.length > 0) {
+        const tags = extras[c.id]?.tags ?? [];
+        if (!advFilters.tags.every((t) => tags.includes(t))) return false;
+      }
+      if (from && to) {
+        const d = parseActivityDate(c.lastJob);
+        if (!d || d < from || d > to) return false;
+      }
+      return true;
+    });
     list.sort((a, b) => {
       const dir = sortDir === "asc" ? 1 : -1;
       if (sortKey === "totalSpend") return ((a.totalSpend || 0) - (b.totalSpend || 0)) * dir;
@@ -45,7 +77,7 @@ export default function Contacts() {
       return av.localeCompare(bv) * dir;
     });
     return list;
-  }, [contacts, query, filter, sortKey, sortDir]);
+  }, [contacts, query, filter, sortKey, sortDir, advFilters, extras]);
 
   function toggleSort(key: SortKey) {
     if (key === sortKey) setSortDir(sortDir === "asc" ? "desc" : "asc");
@@ -122,7 +154,7 @@ export default function Contacts() {
               </button>
             ))}
           </div>
-          <Btn><Filter className="w-3.5 h-3.5" /> Service type</Btn>
+          <ContactFilters allTags={allTags} value={advFilters} onChange={setAdvFilters} />
         </div>
 
         {filtered.length === 0 ? (
