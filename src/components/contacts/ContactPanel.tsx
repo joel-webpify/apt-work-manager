@@ -244,7 +244,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 type TimelineRef = {
   label: string;
-  to: string;
+  target: DrawerRef;
   icon: React.ComponentType<{ className?: string }>;
 };
 
