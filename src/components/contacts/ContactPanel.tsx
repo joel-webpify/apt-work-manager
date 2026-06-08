@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import {
   X, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle,
-  Briefcase, Megaphone, ArrowUpRight,
+  Briefcase, Megaphone, ArrowUpRight, Package, ChevronDown, ChevronRight,
 } from "lucide-react";
-import type { Contact } from "@/data/mockData";
+import type { Contact, Job } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
 import { initials, avatarColor } from "@/lib/avatar";
@@ -25,7 +25,10 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
   const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
   const av = avatarColor(contact.email || contact.name);
-  const timeline = useMemo(() => buildTimeline(contact, history), [contact, history]);
+  const jobsMeta = useMemo(() => buildJobsMeta(contact, history), [contact, history]);
+  const leadSinceAt = useMemo(() => computeLeadSince(contact, jobsMeta), [contact, jobsMeta]);
+  const productSummary = useMemo(() => summarizeProducts(jobsMeta), [jobsMeta]);
+  const timeline = useMemo(() => buildTimeline(contact, jobsMeta), [contact, jobsMeta]);
   const visibleTimeline = useMemo(
     () => (activityFilter === "All" ? timeline : timeline.filter((e) => e.category === activityFilter)),
     [timeline, activityFilter],
@@ -98,13 +101,39 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
 
         <div className="flex-1 overflow-y-auto p-5">
           {tab === "Overview" && (
-            <div className="space-y-1.5 text-sm">
-              <Row label="Phone" value={contact.phone} />
-              <Row label="Email" value={contact.email} />
-              <Row label="Postcode" value={contact.postcode} />
-              <Row label="Lead source" value={contact.source} />
-              <Row label="Last job" value={contact.lastJob || "—"} />
-              <Row label="Total spend" value={`£${contact.totalSpend.toLocaleString()}`} />
+            <div className="space-y-5">
+              <div className="space-y-1.5 text-sm">
+                <Row label="Phone" value={contact.phone} />
+                <Row label="Email" value={contact.email} />
+                <Row label="Postcode" value={contact.postcode} />
+                <Row label="Lead source" value={contact.source} />
+                <Row label="Lead since" value={formatDate(leadSinceAt)} />
+                <Row label="Last job" value={contact.lastJob || "—"} />
+                <Row label="Total spend" value={`£${contact.totalSpend.toLocaleString()}`} />
+              </div>
+
+              {productSummary.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
+                      Products purchased
+                    </div>
+                    <span className="text-[10px] text-muted-foreground">For retargeting</span>
+                  </div>
+                  <div className="space-y-1">
+                    {productSummary.map((p) => (
+                      <div key={p.name} className="flex items-center justify-between text-sm border-hairline rounded-md px-3 h-9">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Package className="w-3.5 h-3.5 text-muted-foreground shrink-0" />
+                          <span className="truncate">{p.name}</span>
+                          <span className="text-xs text-muted-foreground shrink-0">×{p.qty}</span>
+                        </div>
+                        <span className="font-medium tabular-nums text-xs">£{p.spend.toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -112,15 +141,9 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
             history.length === 0 ? (
               <p className="text-sm text-muted-foreground">No jobs yet.</p>
             ) : (
-              <div className="space-y-1.5">
-                {history.map((j) => (
-                  <div key={j.id} className="flex items-center justify-between text-sm border-hairline rounded-md px-3 h-10">
-                    <div className="min-w-0">
-                      <div className="truncate font-medium">{j.service}</div>
-                      <div className="text-xs text-muted-foreground">{j.stage}</div>
-                    </div>
-                    <span className="font-medium tabular-nums">£{j.value}</span>
-                  </div>
+              <div className="space-y-2">
+                {jobsMeta.map((j) => (
+                  <JobCard key={j.id} job={j} />
                 ))}
               </div>
             )
@@ -292,15 +315,118 @@ function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] {
+type JobMeta = Job & { at: number; products: { name: string; qty: number; price: number }[] };
+
+const PRODUCTS_BY_TRADE: Record<string, string[]> = {
+  Plumbing: ["Boiler service", "Leak repair", "Tap replacement", "Pipework", "Radiator install"],
+  Electrical: ["Consumer unit", "EICR test", "Socket install", "Lighting circuit", "EV charger"],
+  "Window cleaning": ["Standard window clean", "Conservatory roof clean", "Gutter clear", "Fascia wash"],
+  Landscaping: ["Lawn treatment", "Hedge trim", "Patio jet wash", "Bedding plant install"],
+  General: ["Handyman hour", "Minor repair", "Materials"],
+};
+
+function deriveProducts(j: Job, rnd: () => number) {
+  const pool = PRODUCTS_BY_TRADE[j.trade ?? "General"] ?? PRODUCTS_BY_TRADE.General;
+  const count = 1 + Math.floor(rnd() * 2); // 1-2 items
+  const picks: string[] = [];
+  while (picks.length < count && picks.length < pool.length) {
+    const name = pool[Math.floor(rnd() * pool.length)];
+    if (!picks.includes(name)) picks.push(name);
+  }
+  // Distribute job value across picks
+  const weights = picks.map(() => 1 + rnd());
+  const total = weights.reduce((s, w) => s + w, 0);
+  return picks.map((name, i) => {
+    const share = Math.round((j.value * weights[i]) / total);
+    const qty = 1 + Math.floor(rnd() * 2);
+    return { name, qty, price: Math.max(1, Math.round(share / qty)) };
+  });
+}
+
+function buildJobsMeta(contact: Contact, history: Job[]): JobMeta[] {
+  const rnd = seeded(contact.id + ":jobs");
+  const now = Date.now();
+  const day = 86400000;
+  return history.map((j, idx) => {
+    const at = now - (idx + 1) * day * (3 + Math.floor(rnd() * 14));
+    return { ...j, at, products: deriveProducts(j, rnd) };
+  });
+}
+
+function computeLeadSince(contact: Contact, jobsMeta: JobMeta[]): number {
+  const day = 86400000;
+  const rnd = seeded(contact.id + ":lead");
+  if (jobsMeta.length === 0) {
+    return Date.now() - (5 + Math.floor(rnd() * 60)) * day;
+  }
+  const earliest = Math.min(...jobsMeta.map((j) => j.at));
+  return earliest - (3 + Math.floor(rnd() * 21)) * day;
+}
+
+function summarizeProducts(jobsMeta: JobMeta[]) {
+  const map = new Map<string, { name: string; qty: number; spend: number }>();
+  jobsMeta.forEach((j) =>
+    j.products.forEach((p) => {
+      const cur = map.get(p.name) ?? { name: p.name, qty: 0, spend: 0 };
+      cur.qty += p.qty;
+      cur.spend += p.qty * p.price;
+      map.set(p.name, cur);
+    }),
+  );
+  return Array.from(map.values()).sort((a, b) => b.spend - a.spend);
+}
+
+function formatDate(at: number): string {
+  return new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+}
+
+function JobCard({ job }: { job: JobMeta }) {
+  const [open, setOpen] = useState(false);
+  const done = job.stage === "Paid" || job.stage === "Completed" || job.stage === "Invoiced";
+  return (
+    <div className="border-hairline rounded-md">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center gap-2 px-3 h-12 text-left hover:bg-surface-hover rounded-md transition-colors"
+      >
+        {open ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground shrink-0" />}
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium">{job.service}</div>
+          <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
+            <span>{formatDate(job.at)}</span>
+            <span>·</span>
+            <span className={done ? "text-[hsl(var(--success))]" : ""}>{job.stage}</span>
+          </div>
+        </div>
+        <span className="text-sm font-medium tabular-nums">£{job.value.toLocaleString()}</span>
+      </button>
+      {open && (
+        <div className="border-t-hairline px-3 py-2 space-y-1">
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Line items</div>
+          {job.products.map((p) => (
+            <div key={p.name} className="flex items-center justify-between text-xs">
+              <div className="flex items-center gap-2 min-w-0">
+                <Package className="w-3 h-3 text-muted-foreground shrink-0" />
+                <span className="truncate">{p.name}</span>
+                <span className="text-muted-foreground shrink-0">× {p.qty}</span>
+              </div>
+              <span className="tabular-nums">£{(p.price * p.qty).toLocaleString()}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function buildTimeline(contact: Contact, jobsMeta: JobMeta[]): TimelineEvent[] {
   const events: Omit<TimelineEvent, "when">[] = [];
   const now = Date.now();
   const day = 86400000;
   const rnd = seeded(contact.id);
 
   // Jobs
-  history.forEach((j, idx) => {
-    const at = now - (idx + 1) * day * (3 + Math.floor(rnd() * 14));
+  jobsMeta.forEach((j) => {
     const done = j.stage === "Paid" || j.stage === "Completed" || j.stage === "Invoiced";
     events.push({
       title: `${j.stage}: ${j.service}`,
@@ -309,7 +435,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       bg: done ? "bg-[hsl(var(--success)/0.15)]" : "bg-primary/10",
       fg: done ? "text-[hsl(var(--success))]" : "text-primary",
       category: "Jobs",
-      at,
+      at: j.at,
       refs: [
         { label: `Job #${j.id}`, target: { kind: "job", jobId: j.id }, icon: Briefcase },
       ],
