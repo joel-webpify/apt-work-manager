@@ -92,7 +92,7 @@ export default function Contacts() {
         actions={
           <>
             <Btn onClick={() => setImportOpen(true)}><Upload className="w-3.5 h-3.5" /> Import CSV</Btn>
-            <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>
+            <Btn variant="primary" onClick={() => setCreateOpen(true)}><Plus className="w-3.5 h-3.5" /> New contact</Btn>
           </>
         }
       />
@@ -267,7 +267,7 @@ function EmptyState({ onImport }: { onImport: () => void }) {
       </p>
       <div className="flex gap-2">
         <Btn onClick={onImport}><Upload className="w-3.5 h-3.5" /> Import CSV</Btn>
-        <Btn variant="primary"><Plus className="w-3.5 h-3.5" /> New contact</Btn>
+        <Btn variant="primary" onClick={() => setCreateOpen(true)}><Plus className="w-3.5 h-3.5" /> New contact</Btn>
       </div>
     </div>
   );
