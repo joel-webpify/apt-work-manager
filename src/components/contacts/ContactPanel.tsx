@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import {
   X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
-  Briefcase, Megaphone, User, ArrowUpRight,
+  Briefcase, Megaphone, ArrowUpRight,
 } from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
@@ -12,6 +11,7 @@ import { initials, avatarColor } from "@/lib/avatar";
 import { useContactExtras, updateContact } from "@/lib/contactsStore";
 import { EditContactDialog } from "./EditContactDialog";
 import { TagEditor } from "./TagEditor";
+import { RefDrawer, type DrawerRef } from "./RefDrawer";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
 type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
@@ -20,6 +20,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
   const [tab, setTab] = useState<Tab>("Overview");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("All");
   const [editOpen, setEditOpen] = useState(false);
+  const [drawerRef, setDrawerRef] = useState<DrawerRef | null>(null);
   const extras = useContactExtras();
   const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
@@ -164,17 +165,16 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
                       <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
                       {e.refs && e.refs.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {e.refs.map((r) => (
-                            <Link
-                              key={r.label + r.to}
-                              to={r.to}
-                              onClick={onClose}
+                          {e.refs.map((r, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setDrawerRef(r.target)}
                               className="inline-flex items-center gap-1 h-6 px-1.5 rounded border-hairline bg-background hover:bg-surface-hover text-[11px] font-medium text-foreground transition-colors"
                             >
                               <r.icon className="w-3 h-3 text-muted-foreground" />
                               {r.label}
                               <ArrowUpRight className="w-2.5 h-2.5 text-muted-foreground" />
-                            </Link>
+                            </button>
                           ))}
                         </div>
                       )}
@@ -199,6 +199,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
       </aside>
 
       <EditContactDialog contact={contact} open={editOpen} onOpenChange={setEditOpen} />
+      {drawerRef && <RefDrawer refItem={drawerRef} onClose={() => setDrawerRef(null)} />}
     </>
   );
 }
@@ -243,7 +244,7 @@ function Row({ label, value }: { label: string; value: string }) {
 
 type TimelineRef = {
   label: string;
-  to: string;
+  target: DrawerRef;
   icon: React.ComponentType<{ className?: string }>;
 };
 
@@ -298,12 +299,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
   const day = 86400000;
   const rnd = seeded(contact.id);
 
-  const contactRef: TimelineRef = {
-    label: contact.name.split(" ")[0] || "Contact",
-    to: `/contacts?id=${contact.id}`,
-    icon: User,
-  };
-
   // Jobs
   history.forEach((j, idx) => {
     const at = now - (idx + 1) * day * (3 + Math.floor(rnd() * 14));
@@ -317,8 +312,7 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       category: "Jobs",
       at,
       refs: [
-        { label: `Job #${j.id}`, to: `/pipeline?job=${j.id}`, icon: Briefcase },
-        contactRef,
+        { label: `Job #${j.id}`, target: { kind: "job", jobId: j.id }, icon: Briefcase },
       ],
     });
   });
@@ -334,10 +328,10 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
     const campaignId = slugify(em.subject);
     const campaignRef: TimelineRef = {
       label: em.subject,
-      to: `/email?campaign=${campaignId}`,
+      target: { kind: "campaign", campaignId, subject: em.subject },
       icon: Megaphone,
     };
-    const refs = [campaignRef, contactRef];
+    const refs = [campaignRef];
 
     events.push({
       title: `Sent: ${em.subject}`,
@@ -400,7 +394,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
       fg: "text-foreground",
       category: "Calls",
       at: now - (4 + Math.floor(rnd() * 20)) * day,
-      refs: [contactRef],
     });
     if (rnd() > 0.5) {
       events.push({
@@ -411,7 +404,6 @@ function buildTimeline(contact: Contact, history: typeof jobs): TimelineEvent[] 
         fg: "text-foreground",
         category: "Calls",
         at: now - (1 + Math.floor(rnd() * 5)) * day,
-        refs: [contactRef],
       });
     }
   }
