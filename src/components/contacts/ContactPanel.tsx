@@ -66,8 +66,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-2">
-            <QuickAction icon={Phone} label="Call" href={`tel:${contact.phone}`} />
+          <div className="grid grid-cols-3 gap-2">
             <QuickAction icon={Mail} label="Email" href={`mailto:${contact.email}`} />
             <QuickAction icon={MessageSquare} label="Chat" />
             <QuickAction icon={Plus} label="New job" primary />
