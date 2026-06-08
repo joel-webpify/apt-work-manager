@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import {
   X, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle,
-  Briefcase, Megaphone, ArrowUpRight,
+  Briefcase, Megaphone, ArrowUpRight, Package, ChevronDown, ChevronRight,
 } from "lucide-react";
-import type { Contact } from "@/data/mockData";
+import type { Contact, Job } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
 import { initials, avatarColor } from "@/lib/avatar";
@@ -25,7 +25,10 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
   const tags = extras[contact.id]?.tags ?? [];
   const history = jobs.filter((j) => j.contactId === contact.id);
   const av = avatarColor(contact.email || contact.name);
-  const timeline = useMemo(() => buildTimeline(contact, history), [contact, history]);
+  const jobsMeta = useMemo(() => buildJobsMeta(contact, history), [contact, history]);
+  const leadSinceAt = useMemo(() => computeLeadSince(contact, jobsMeta), [contact, jobsMeta]);
+  const productSummary = useMemo(() => summarizeProducts(jobsMeta), [jobsMeta]);
+  const timeline = useMemo(() => buildTimeline(contact, jobsMeta), [contact, jobsMeta]);
   const visibleTimeline = useMemo(
     () => (activityFilter === "All" ? timeline : timeline.filter((e) => e.category === activityFilter)),
     [timeline, activityFilter],
