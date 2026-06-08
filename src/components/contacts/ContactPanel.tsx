@@ -165,17 +165,16 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
                       <div className="text-xs text-muted-foreground mt-0.5">{e.detail}</div>
                       {e.refs && e.refs.length > 0 && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {e.refs.map((r) => (
-                            <Link
-                              key={r.label + r.to}
-                              to={r.to}
-                              onClick={onClose}
+                          {e.refs.map((r, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setDrawerRef(r.target)}
                               className="inline-flex items-center gap-1 h-6 px-1.5 rounded border-hairline bg-background hover:bg-surface-hover text-[11px] font-medium text-foreground transition-colors"
                             >
                               <r.icon className="w-3 h-3 text-muted-foreground" />
                               {r.label}
                               <ArrowUpRight className="w-2.5 h-2.5 text-muted-foreground" />
-                            </Link>
+                            </button>
                           ))}
                         </div>
                       )}
