@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, Filter, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
+import { Search, Plus, Upload, Phone, Mail, ArrowUpDown, Users } from "lucide-react";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
 import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
@@ -9,6 +9,13 @@ import { BulkActionsBar } from "@/components/contacts/BulkActionsBar";
 import { ContactPanel } from "@/components/contacts/ContactPanel";
 import { EditContactDialog } from "@/components/contacts/EditContactDialog";
 import { initials, avatarColor } from "@/lib/avatar";
+import {
+  ContactFilters,
+  emptyFilters,
+  presetToRange,
+  parseActivityDate,
+  type ContactFilterState,
+} from "@/components/contacts/ContactFilters";
 
 type SortKey = "name" | "lastJob" | "totalSpend";
 type SortDir = "asc" | "desc";
