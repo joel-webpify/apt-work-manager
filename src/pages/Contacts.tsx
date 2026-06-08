@@ -154,7 +154,7 @@ export default function Contacts() {
               </button>
             ))}
           </div>
-          <Btn><Filter className="w-3.5 h-3.5" /> Service type</Btn>
+          <ContactFilters allTags={allTags} value={advFilters} onChange={setAdvFilters} />
         </div>
 
         {filtered.length === 0 ? (
