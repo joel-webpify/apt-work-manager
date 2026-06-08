@@ -92,7 +92,7 @@ export interface Job {
   invoiceId?: string;
   estimatedHours?: number;
   assignments?: JobAssignment[];
-  timeline: { type: "sms" | "email" | "note"; text: string; date: string }[];
+  timeline: { type: "email" | "note"; text: string; date: string }[];
   /** Values for user-defined fields, keyed by field id. */
   customFields?: Record<string, string | number | boolean>;
 }
@@ -272,7 +272,7 @@ export const jobs: Job[] = [
   { id: "j1", contactId: "c3", customer: "James Okafor", service: "Plumbing — leak repair", trade: "Plumbing", value: 180, stage: "New enquiry", daysInStage: 1, address: "14 Elm Grove, Bristol BS9 2DE", postcode: "BS9", notes: "Slow leak under kitchen sink.", quoteValue: 180, estimatedHours: 2, assignments: [], timeline: [{ type: "email", text: "Enquiry received via website form", date: "19 Apr" }] },
   { id: "j2", contactId: "c6", customer: "Riverside Cafe Ltd", service: "Window cleaning — monthly", trade: "Window cleaning", value: 240, stage: "New enquiry", daysInStage: 2, address: "8 Welsh Back, Bristol BS1 6XN", postcode: "BS1", notes: "Large frontage, 12 panels.", quoteValue: 240, estimatedHours: 3, assignments: [], timeline: [] },
   { id: "j3", contactId: "c1", customer: "Sarah Whitcombe", service: "Artificial grass install", trade: "Landscaping", value: 2850, stage: "Quote sent", daysInStage: 3, address: "22 Whiteladies Rd, Bristol BS8 4QE", postcode: "BS8", notes: "45 sqm rear garden. Wants premium grade.", quoteValue: 2850, estimatedHours: 16, assignments: [], timeline: [{ type: "email", text: "Quote sent", date: "16 Apr" }] },
-  { id: "j4", contactId: "c5", customer: "Dawn Hartley", service: "Electrical — consumer unit", trade: "Electrical", value: 620, stage: "Quote sent", daysInStage: 5, address: "3 Lyncombe Hill, Bath BA2 6QH", postcode: "BA2", notes: "Replace old fuse box.", quoteValue: 620, estimatedHours: 5, assignments: [], timeline: [{ type: "sms", text: "Quote follow-up sent", date: "17 Apr" }] },
+  { id: "j4", contactId: "c5", customer: "Dawn Hartley", service: "Electrical — consumer unit", trade: "Electrical", value: 620, stage: "Quote sent", daysInStage: 5, address: "3 Lyncombe Hill, Bath BA2 6QH", postcode: "BA2", notes: "Replace old fuse box.", quoteValue: 620, estimatedHours: 5, assignments: [], timeline: [{ type: "email", text: "Quote follow-up sent", date: "17 Apr" }] },
   { id: "j5", contactId: "c4", customer: "Highfield Primary School", service: "Window cleaning — termly", trade: "Window cleaning", value: 480, stage: "Job booked", daysInStage: 1, address: "Highfield Rd, Bristol BS4 3HP", postcode: "BS4", notes: "Half term week. Access via reception.", quoteValue: 480, estimatedHours: 5, assignments: [
     { employeeId: "e3", date: "2026-05-05", start: "08:00", duration: 5 },
     { employeeId: "e4", date: "2026-05-05", start: "08:00", duration: 5 },

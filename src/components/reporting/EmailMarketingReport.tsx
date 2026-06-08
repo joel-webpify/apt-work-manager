@@ -708,7 +708,7 @@ function buildInsights(c: RankedCampaign, b: Benchmarks): StageInsight[] {
       recommendation:
         cBookRate >= 50
           ? "Document what the team did differently and replicate it in the playbook."
-          : "Aim for first contact within 1 hour of submit, and send a follow-up SMS at 24h and 72h for non-responders.",
+          : "Aim for first contact within 1 hour of submit, and send a follow-up email at 24h and 72h for non-responders.",
     },
     {
       key: "unsub",

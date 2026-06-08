@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, MessageSquare, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check } from "lucide-react";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
@@ -27,7 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-type Channel = "sms" | "email";
+type Channel = "email";
 interface MessageTemplate {
   id: string;
   label: string;
@@ -35,14 +35,6 @@ interface MessageTemplate {
   stages?: PipelineStage[];
   build: (job: Job) => { subject?: string; body: string };
 }
-
-const smsTemplates: MessageTemplate[] = [
-  { id: "quote-followup", label: "Quote follow-up", description: "Nudge after a quote was sent", stages: ["Quote sent"], build: (j) => ({ body: `Hi ${j.customer.split(" ")[0]}, just checking in on the quote we sent for ${j.service} (£${j.value}). Happy to answer any questions — shall we get it booked in?` }) },
-  { id: "booking-confirm", label: "Booking confirmation", description: "Confirm date and arrival window", stages: ["Job booked"], build: (j) => ({ body: `Hi ${j.customer.split(" ")[0]}, confirming your ${j.service} booking. We'll arrive within a 30-min window and call ahead. Reply STOP to opt out.` }) },
-  { id: "on-the-way", label: "On the way", description: "Let them know you're heading over", stages: ["Job booked", "In progress"], build: (j) => ({ body: `Hi ${j.customer.split(" ")[0]}, we're on our way for the ${j.service} job. ETA approx 20 minutes.` }) },
-  { id: "payment-reminder", label: "Payment reminder", description: "Friendly nudge on an unpaid invoice", stages: ["Invoiced"], build: (j) => ({ body: `Hi ${j.customer.split(" ")[0]}, a quick reminder that invoice ${j.invoiceId ?? "(pending)"} for £${j.value} is due. Let us know if you need bank details again.` }) },
-  { id: "review-request", label: "Review request", description: "Ask for a Google review after payment", stages: ["Paid", "Completed"], build: (j) => ({ body: `Hi ${j.customer.split(" ")[0]}, thanks for choosing us for your ${j.service}! If you have 30 seconds, a Google review would mean the world: [link]` }) },
-];
 
 const emailTemplates: MessageTemplate[] = [
   { id: "quote-followup", label: "Quote follow-up", description: "Detailed nudge with quote recap", stages: ["Quote sent"], build: (j) => ({ subject: `Following up on your ${j.service} quote`, body: `Hi ${j.customer.split(" ")[0]},\n\nJust circling back on the quote we sent for ${j.service} at £${j.value}. Let me know if anything in the scope needs adjusting, or if you'd like to lock in a date.\n\nThanks,\nThe team` }) },
@@ -436,13 +428,12 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
   );
 }
 
-function getLastContact(job: Job): { type: "sms" | "email" | "note"; text: string; date: string } | null {
+function getLastContact(job: Job): { type: "email" | "note"; text: string; date: string } | null {
   if (!job.timeline || job.timeline.length === 0) return null;
   return job.timeline[job.timeline.length - 1];
 }
 
-const channelMeta: Record<"sms" | "email" | "note", { label: string; Icon: typeof Mail }> = {
-  sms: { label: "SMS", Icon: MessageSquare },
+const channelMeta: Record<"email" | "note", { label: string; Icon: typeof Mail }> = {
   email: { label: "Email", Icon: Mail },
   note: { label: "Note", Icon: StickyNote },
 };
@@ -468,8 +459,8 @@ function JobsListView({
   const handleTemplateSend = (job: Job, channel: Channel, template: MessageTemplate) => {
     const built = template.build(job);
     toast({
-      title: `${channel === "sms" ? "SMS" : "Email"} drafted: ${template.label}`,
-      description: channel === "email" && built.subject ? `To ${job.customer} — "${built.subject}"` : `To ${job.customer} — ${built.body.slice(0, 80)}${built.body.length > 80 ? "…" : ""}`,
+      title: `Email drafted: ${template.label}`,
+      description: built.subject ? `To ${job.customer} — "${built.subject}"` : `To ${job.customer} — ${built.body.slice(0, 80)}${built.body.length > 80 ? "…" : ""}`,
     });
   };
 
@@ -599,7 +590,6 @@ function JobsListView({
                     <td className="px-3 py-3 text-muted-foreground tabular-nums">{job.invoiceId ?? "—"}</td>
                     <td className="px-3 py-3 text-right whitespace-nowrap">
                       <div className="inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-                        <TemplateMenu channel="sms" job={job} icon={<MessageSquare className="w-3.5 h-3.5" />} label="Send SMS" onSend={handleTemplateSend} />
                         <TemplateMenu channel="email" job={job} icon={<Mail className="w-3.5 h-3.5" />} label="Send email" onSend={handleTemplateSend} />
                       </div>
                     </td>
@@ -615,8 +605,7 @@ function JobsListView({
 }
 
 function TemplateMenu({ channel, job, icon, label, onSend }: { channel: Channel; job: Job; icon: React.ReactNode; label: string; onSend: (job: Job, channel: Channel, template: MessageTemplate) => void; }) {
-  const templates = channel === "sms" ? smsTemplates : emailTemplates;
-  const ordered = sortTemplatesForJob(templates, job);
+  const ordered = sortTemplatesForJob(emailTemplates, job);
   const suggested = ordered.filter((t) => t.stages?.includes(job.stage));
   const others = ordered.filter((t) => !t.stages?.includes(job.stage));
 
@@ -628,7 +617,7 @@ function TemplateMenu({ channel, job, icon, label, onSend }: { channel: Channel;
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72" onClick={(e) => e.stopPropagation()}>
-        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">{channel === "sms" ? "SMS templates" : "Email templates"}</DropdownMenuLabel>
+        <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Email templates</DropdownMenuLabel>
         {suggested.length > 0 && (
           <>
             <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium pt-0">Suggested for {job.stage}</DropdownMenuLabel>
