@@ -1,5 +1,8 @@
-import { useState } from "react";
-import { X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil } from "lucide-react";
+import { useMemo, useState } from "react";
+import {
+  X, Phone, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
+  Send, MailOpen, MousePointerClick, AlertTriangle, PhoneCall, MessageCircle,
+} from "lucide-react";
 import type { Contact } from "@/data/mockData";
 import { jobs } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
@@ -9,6 +12,7 @@ import { EditContactDialog } from "./EditContactDialog";
 import { TagEditor } from "./TagEditor";
 
 type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
+type ActivityFilter = "All" | "Email" | "Jobs" | "Calls" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>("Overview");
