@@ -113,6 +113,10 @@ export function FormBuilderDialog({
   const [pickerQuery, setPickerQuery] = useState("");
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [bookingValue, setBookingValue] = useState<string>("");
+  const [submitted, setSubmitted] = useState(false);
+  const { toast } = useToast();
 
   const update = (id: string, patch: Partial<BuilderField>) =>
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
@@ -160,23 +164,86 @@ export function FormBuilderDialog({
 
   const previewTotal = selectedItems.reduce((s, x) => s + x.line, 0);
 
-  // Build the step list for preview
-  const steps = useMemo(() => {
-    const s: { key: string; label: string }[] = [{ key: "details", label: "Your details" }];
-    if (products.length) s.push({ key: "products", label: "Choose products" });
-    if (booking.enabled) s.push({ key: "booking", label: "Pick a time" });
-    if (quoteMode) s.push({ key: "quote", label: "Your quote" });
+  // Typeform-style: one field per step in wizard mode. Plus products/booking/quote.
+  type StepDef = { key: string; label: string; kind: "field" | "products" | "booking" | "quote"; field?: BuilderField };
+  const steps = useMemo<StepDef[]>(() => {
+    const s: StepDef[] = fields.map((f) => ({ key: `field-${f.id}`, label: f.label, kind: "field", field: f }));
+    if (products.length) s.push({ key: "products", label: "Choose products", kind: "products" });
+    if (booking.enabled) s.push({ key: "booking", label: booking.label || "Pick a time", kind: "booking" });
+    if (quoteMode) s.push({ key: "quote", label: "Your quote", kind: "quote" });
     return s;
-  }, [products.length, booking.enabled, quoteMode]);
+  }, [fields, products.length, booking.enabled, booking.label, quoteMode]);
 
   const isStepped = layout === "steps" && steps.length > 1;
-  const currentStep = isStepped ? steps[Math.min(previewStep, steps.length - 1)] : null;
+  const safeStepIdx = Math.min(previewStep, Math.max(0, steps.length - 1));
+  const currentStep = isStepped ? steps[safeStepIdx] : null;
 
   const minBookingDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + (booking.leadDays ?? 0));
     return d.toISOString().slice(0, booking.mode === "datetime" ? 16 : 10);
   }, [booking.leadDays, booking.mode]);
+
+  const handlePreviewSubmit = () => {
+    const get = (label: string) => {
+      const f = fields.find((x) => x.label.toLowerCase() === label.toLowerCase());
+      return f ? (fieldValues[f.id] ?? "").trim() : "";
+    };
+    const emailField = fields.find((f) => f.type === "email");
+    const nameField = fields.find((f) => /name/i.test(f.label));
+    const phoneField = fields.find((f) => f.type === "phone");
+    const email = (emailField ? fieldValues[emailField.id] : "") || `lead+${Date.now()}@example.com`;
+    const name = (nameField ? fieldValues[nameField.id] : "") || get("full name") || email.split("@")[0];
+    const phone = phoneField ? fieldValues[phoneField.id] ?? "" : "";
+
+    const contactId = createContact({
+      name,
+      email,
+      phone,
+      source: `Form: ${trade}`,
+      lifecycle: "Lead",
+      notes: `Submitted via "${name || "form"}"${bookingValue ? ` · Requested slot ${bookingValue}` : ""}.`,
+    });
+
+    const lineItems = selectedItems.filter((x) => x.qty > 0);
+    const service = lineItems.length
+      ? lineItems.map((x) => `${x.item.name} × ${x.qty}`).join(", ")
+      : trade !== "General" ? `${trade} enquiry` : "Form enquiry";
+    const value = Math.round(previewTotal);
+
+    const tradeForJob: Trade = (["Plumbing", "Electrical", "Window cleaning", "Landscaping"] as Trade[]).includes(trade as Trade)
+      ? (trade as Trade)
+      : "General";
+
+    const nowIso = new Date().toISOString().slice(0, 16).replace("T", " ");
+    const job: Job = {
+      id: `j-form-${Date.now()}`,
+      contactId,
+      customer: name,
+      service,
+      trade: tradeForJob,
+      value,
+      stage: "Quote sent",
+      daysInStage: 0,
+      address: "",
+      notes: `Draft quote from form submission${quoteMode ? ` (instant quote £${value.toFixed(2)})` : ""}.${bookingValue ? ` Preferred slot: ${bookingValue}.` : ""}`,
+      quoteValue: value,
+      estimatedHours: 1,
+      assignments: [],
+      timeline: [
+        { type: "note", text: `Form submission — draft quote created${bookingValue ? ` for ${bookingValue}` : ""}.`, date: nowIso },
+      ],
+    };
+    addJob(job);
+
+    toast({
+      title: "Lead saved · Draft quote created",
+      description: `${name} added as a lead${bookingValue ? `, slot ${bookingValue}` : ""}. Find the draft in Pipeline → Quote sent.`,
+    });
+    setSubmitted(true);
+  };
+
+
 
   const handleSave = () => {
     if (!name.trim()) return;
