@@ -270,6 +270,67 @@ export function FormBuilderDialog({
         ? "Place order"
         : "Submit";
 
+  const setFieldValue = (id: string, v: string) =>
+    setFieldValues((prev) => ({ ...prev, [id]: v }));
+
+  // Renders one field as a full Typeform-style screen
+  const renderFieldHero = (f: BuilderField, idx: number, total: number) => {
+    const inputType =
+      f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text";
+    const value = fieldValues[f.id] ?? "";
+    return (
+      <div className="space-y-5">
+        <div className="text-[11px] tracking-wide uppercase text-muted-foreground">
+          Question {idx + 1} of {total}
+        </div>
+        <h2 className="text-2xl font-medium leading-snug">
+          {f.label || "Untitled question"}
+          {f.required && <span className="text-destructive ml-1">*</span>}
+        </h2>
+        {f.placeholder && <p className="text-sm text-muted-foreground">{f.placeholder}</p>}
+        <div className="pt-1">
+          {f.type === "textarea" ? (
+            <Textarea
+              autoFocus
+              value={value}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
+              placeholder="Type your answer…"
+              rows={4}
+              className="text-base border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+            />
+          ) : f.type === "select" ? (
+            <div className="space-y-2">
+              {(f.options ?? []).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setFieldValue(f.id, opt)}
+                  className={`w-full text-left px-4 py-3 rounded-md border-hairline text-sm transition-colors ${
+                    value === opt ? "bg-primary/10 border-primary text-foreground" : "hover:bg-surface-hover"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Input
+              autoFocus
+              type={inputType}
+              value={value}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
+              placeholder="Type your answer…"
+              className="h-12 text-lg border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+            />
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground inline-flex items-center gap-1.5">
+          press <kbd className="px-1.5 py-0.5 rounded bg-surface border-hairline text-[10px]">Enter ↵</kbd> to continue
+        </p>
+      </div>
+    );
+  };
+
   const renderDetails = () => (
     <>
       {fields.map((f) => (
@@ -278,16 +339,25 @@ export function FormBuilderDialog({
             {f.label} {f.required && <span className="text-destructive">*</span>}
           </Label>
           {f.type === "textarea" ? (
-            <Textarea placeholder={f.placeholder} rows={3} disabled />
+            <Textarea
+              placeholder={f.placeholder}
+              rows={3}
+              value={fieldValues[f.id] ?? ""}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
+            />
           ) : f.type === "select" ? (
-            <Select disabled>
+            <Select value={fieldValues[f.id] ?? ""} onValueChange={(v) => setFieldValue(f.id, v)}>
               <SelectTrigger><SelectValue placeholder={f.placeholder || "Select..."} /></SelectTrigger>
+              <SelectContent>
+                {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
             </Select>
           ) : (
             <Input
               type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
               placeholder={f.placeholder}
-              disabled
+              value={fieldValues[f.id] ?? ""}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
             />
           )}
         </div>
@@ -345,12 +415,18 @@ export function FormBuilderDialog({
         <Label className="text-xs">
           {booking.label} {booking.required && <span className="text-destructive">*</span>}
         </Label>
-        <Input type={booking.mode === "datetime" ? "datetime-local" : "date"} min={minBookingDate} disabled />
+        <Input
+          type={booking.mode === "datetime" ? "datetime-local" : "date"}
+          min={minBookingDate}
+          value={bookingValue}
+          onChange={(e) => setBookingValue(e.target.value)}
+        />
         {booking.leadDays ? (
           <p className="text-[11px] text-muted-foreground">Earliest available: {(booking.leadDays)} day(s) from today.</p>
         ) : null}
       </div>
     );
+
 
   const renderQuote = () => (
     <div className="space-y-3">
