@@ -758,67 +758,130 @@ export function FormBuilderDialog({
 
           {/* Right — preview */}
           <div className="overflow-y-auto border-hairline rounded-lg bg-surface/40 p-5">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Live preview</div>
-            <div className="bg-card border-hairline rounded-lg p-5 space-y-4">
-              <div>
-                <h3 className="text-base font-medium">{name || "Form name"}</h3>
-                {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Live preview</div>
+              {(submitted || Object.keys(fieldValues).length > 0 || bookingValue || Object.values(previewQty).some((v) => v > 0)) && (
+                <button
+                  type="button"
+                  onClick={() => { setFieldValues({}); setBookingValue(""); setPreviewQty({}); setPreviewStep(0); setSubmitted(false); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
 
-              {isStepped && (
-                <div className="flex items-center gap-1.5">
-                  {steps.map((s, i) => (
-                    <div key={s.key} className="flex items-center gap-1.5 flex-1">
+            {isStepped ? (
+              <div className="bg-card border-hairline rounded-lg min-h-[480px] flex flex-col">
+                {/* progress bar */}
+                <div className="px-6 pt-5">
+                  <div className="flex items-center gap-1">
+                    {steps.map((s, i) => (
                       <div
-                        className={`h-1.5 flex-1 rounded-full ${i <= previewStep ? "bg-primary" : "bg-border"}`}
+                        key={s.key}
+                        className={`h-1 flex-1 rounded-full transition-colors ${i <= safeStepIdx ? "bg-primary" : "bg-border"}`}
                       />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    {name || "Form name"}
+                  </div>
                 </div>
-              )}
-              {isStepped && currentStep && (
-                <div className="text-xs text-muted-foreground">
-                  Step {previewStep + 1} of {steps.length} · {currentStep.label}
+
+                {/* hero step */}
+                <div className="flex-1 px-8 py-10 flex items-center">
+                  <div className="w-full max-w-md mx-auto">
+                    {submitted ? (
+                      <div className="text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+                          <Check className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-2xl font-medium">Thanks — we'll be in touch.</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Your request has been saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.
+                        </p>
+                      </div>
+                    ) : currentStep?.kind === "field" && currentStep.field ? (
+                      renderFieldHero(
+                        currentStep.field,
+                        safeStepIdx,
+                        steps.length,
+                      )
+                    ) : currentStep?.kind === "products" ? (
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-medium leading-snug">Choose what you need</h2>
+                        <p className="text-sm text-muted-foreground">Tick anything that applies — adjust quantities to match.</p>
+                        {renderProducts()}
+                      </div>
+                    ) : currentStep?.kind === "booking" ? (
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-medium leading-snug">{booking.label || "When works for you?"}</h2>
+                        <p className="text-sm text-muted-foreground">Pick your preferred slot — we'll confirm by email.</p>
+                        {renderBooking()}
+                      </div>
+                    ) : currentStep?.kind === "quote" ? (
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-medium leading-snug">Here's your instant quote</h2>
+                        {renderQuote()}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              )}
 
-              {isStepped ? (
-                <>
-                  {currentStep?.key === "details" && renderDetails()}
-                  {currentStep?.key === "products" && renderProducts()}
-                  {currentStep?.key === "booking" && renderBooking()}
-                  {currentStep?.key === "quote" && renderQuote()}
-
-                  <div className="flex items-center justify-between pt-2">
+                {/* nav */}
+                {!submitted && (
+                  <div className="px-6 py-4 border-t-hairline flex items-center justify-between">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => setPreviewStep((s) => Math.max(0, s - 1))}
-                      disabled={previewStep === 0}
+                      disabled={safeStepIdx === 0}
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Back
                     </Button>
-                    {previewStep < steps.length - 1 ? (
+                    <div className="text-[11px] text-muted-foreground">
+                      {safeStepIdx + 1} / {steps.length}
+                    </div>
+                    {safeStepIdx < steps.length - 1 ? (
                       <Button size="sm" onClick={() => setPreviewStep((s) => Math.min(steps.length - 1, s + 1))}>
-                        Next <ArrowRight className="w-3.5 h-3.5" />
+                        OK <CornerDownLeft className="w-3.5 h-3.5" />
                       </Button>
                     ) : (
-                      <Button size="sm" disabled>{submitLabel}</Button>
+                      <Button size="sm" onClick={handlePreviewSubmit}>
+                        {submitLabel} <ArrowRight className="w-3.5 h-3.5" />
+                      </Button>
                     )}
                   </div>
-                </>
-              ) : (
-                <>
-                  {renderDetails()}
-                  {products.length > 0 && <div className="pt-2 border-t-hairline">{renderProducts()}</div>}
-                  {booking.enabled && <div className="pt-2 border-t-hairline">{renderBooking()}</div>}
-                  {quoteMode && <div className="pt-2 border-t-hairline">{renderQuote()}</div>}
-                  <Button className="w-full" disabled>{submitLabel}</Button>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-card border-hairline rounded-lg p-5 space-y-4">
+                <div>
+                  <h3 className="text-base font-medium">{name || "Form name"}</h3>
+                  {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+                </div>
+                {submitted ? (
+                  <div className="text-center space-y-2 py-6">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+                      <Check className="w-5 h-5" />
+                    </div>
+                    <div className="text-sm font-medium">Thanks — we'll be in touch.</div>
+                    <p className="text-xs text-muted-foreground">Saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.</p>
+                  </div>
+                ) : (
+                  <>
+                    {renderDetails()}
+                    {products.length > 0 && <div className="pt-2 border-t-hairline">{renderProducts()}</div>}
+                    {booking.enabled && <div className="pt-2 border-t-hairline">{renderBooking()}</div>}
+                    {quoteMode && <div className="pt-2 border-t-hairline">{renderQuote()}</div>}
+                    <Button className="w-full" onClick={handlePreviewSubmit}>{submitLabel}</Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
+
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
