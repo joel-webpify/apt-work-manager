@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight } from "lucide-react";
-import { products as catalog } from "@/data/mockData";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check } from "lucide-react";
+import { products as catalog, type Job, type Trade } from "@/data/mockData";
+import { createContact } from "@/lib/contactsStore";
+import { addJob } from "@/lib/jobsStore";
+import { useToast } from "@/hooks/use-toast";
 
 export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number";
 
@@ -110,6 +113,10 @@ export function FormBuilderDialog({
   const [pickerQuery, setPickerQuery] = useState("");
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  const [bookingValue, setBookingValue] = useState<string>("");
+  const [submitted, setSubmitted] = useState(false);
+  const { toast } = useToast();
 
   const update = (id: string, patch: Partial<BuilderField>) =>
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
@@ -157,23 +164,86 @@ export function FormBuilderDialog({
 
   const previewTotal = selectedItems.reduce((s, x) => s + x.line, 0);
 
-  // Build the step list for preview
-  const steps = useMemo(() => {
-    const s: { key: string; label: string }[] = [{ key: "details", label: "Your details" }];
-    if (products.length) s.push({ key: "products", label: "Choose products" });
-    if (booking.enabled) s.push({ key: "booking", label: "Pick a time" });
-    if (quoteMode) s.push({ key: "quote", label: "Your quote" });
+  // Typeform-style: one field per step in wizard mode. Plus products/booking/quote.
+  type StepDef = { key: string; label: string; kind: "field" | "products" | "booking" | "quote"; field?: BuilderField };
+  const steps = useMemo<StepDef[]>(() => {
+    const s: StepDef[] = fields.map((f) => ({ key: `field-${f.id}`, label: f.label, kind: "field", field: f }));
+    if (products.length) s.push({ key: "products", label: "Choose products", kind: "products" });
+    if (booking.enabled) s.push({ key: "booking", label: booking.label || "Pick a time", kind: "booking" });
+    if (quoteMode) s.push({ key: "quote", label: "Your quote", kind: "quote" });
     return s;
-  }, [products.length, booking.enabled, quoteMode]);
+  }, [fields, products.length, booking.enabled, booking.label, quoteMode]);
 
   const isStepped = layout === "steps" && steps.length > 1;
-  const currentStep = isStepped ? steps[Math.min(previewStep, steps.length - 1)] : null;
+  const safeStepIdx = Math.min(previewStep, Math.max(0, steps.length - 1));
+  const currentStep = isStepped ? steps[safeStepIdx] : null;
 
   const minBookingDate = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + (booking.leadDays ?? 0));
     return d.toISOString().slice(0, booking.mode === "datetime" ? 16 : 10);
   }, [booking.leadDays, booking.mode]);
+
+  const handlePreviewSubmit = () => {
+    const get = (label: string) => {
+      const f = fields.find((x) => x.label.toLowerCase() === label.toLowerCase());
+      return f ? (fieldValues[f.id] ?? "").trim() : "";
+    };
+    const emailField = fields.find((f) => f.type === "email");
+    const nameField = fields.find((f) => /name/i.test(f.label));
+    const phoneField = fields.find((f) => f.type === "phone");
+    const email = (emailField ? fieldValues[emailField.id] : "") || `lead+${Date.now()}@example.com`;
+    const name = (nameField ? fieldValues[nameField.id] : "") || get("full name") || email.split("@")[0];
+    const phone = phoneField ? fieldValues[phoneField.id] ?? "" : "";
+
+    const contactId = createContact({
+      name,
+      email,
+      phone,
+      source: `Form: ${trade}`,
+      lifecycle: "Lead",
+      notes: `Submitted via "${name || "form"}"${bookingValue ? ` · Requested slot ${bookingValue}` : ""}.`,
+    });
+
+    const lineItems = selectedItems.filter((x) => x.qty > 0);
+    const service = lineItems.length
+      ? lineItems.map((x) => `${x.item.name} × ${x.qty}`).join(", ")
+      : trade !== "General" ? `${trade} enquiry` : "Form enquiry";
+    const value = Math.round(previewTotal);
+
+    const tradeForJob: Trade = (["Plumbing", "Electrical", "Window cleaning", "Landscaping"] as Trade[]).includes(trade as Trade)
+      ? (trade as Trade)
+      : "General";
+
+    const nowIso = new Date().toISOString().slice(0, 16).replace("T", " ");
+    const job: Job = {
+      id: `j-form-${Date.now()}`,
+      contactId,
+      customer: name,
+      service,
+      trade: tradeForJob,
+      value,
+      stage: "Quote sent",
+      daysInStage: 0,
+      address: "",
+      notes: `Draft quote from form submission${quoteMode ? ` (instant quote £${value.toFixed(2)})` : ""}.${bookingValue ? ` Preferred slot: ${bookingValue}.` : ""}`,
+      quoteValue: value,
+      estimatedHours: 1,
+      assignments: [],
+      timeline: [
+        { type: "note", text: `Form submission — draft quote created${bookingValue ? ` for ${bookingValue}` : ""}.`, date: nowIso },
+      ],
+    };
+    addJob(job);
+
+    toast({
+      title: "Lead saved · Draft quote created",
+      description: `${name} added as a lead${bookingValue ? `, slot ${bookingValue}` : ""}. Find the draft in Pipeline → Quote sent.`,
+    });
+    setSubmitted(true);
+  };
+
+
 
   const handleSave = () => {
     if (!name.trim()) return;
@@ -200,6 +270,67 @@ export function FormBuilderDialog({
         ? "Place order"
         : "Submit";
 
+  const setFieldValue = (id: string, v: string) =>
+    setFieldValues((prev) => ({ ...prev, [id]: v }));
+
+  // Renders one field as a full Typeform-style screen
+  const renderFieldHero = (f: BuilderField, idx: number, total: number) => {
+    const inputType =
+      f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text";
+    const value = fieldValues[f.id] ?? "";
+    return (
+      <div className="space-y-5">
+        <div className="text-[11px] tracking-wide uppercase text-muted-foreground">
+          Question {idx + 1} of {total}
+        </div>
+        <h2 className="text-2xl font-medium leading-snug">
+          {f.label || "Untitled question"}
+          {f.required && <span className="text-destructive ml-1">*</span>}
+        </h2>
+        {f.placeholder && <p className="text-sm text-muted-foreground">{f.placeholder}</p>}
+        <div className="pt-1">
+          {f.type === "textarea" ? (
+            <Textarea
+              autoFocus
+              value={value}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
+              placeholder="Type your answer…"
+              rows={4}
+              className="text-base border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+            />
+          ) : f.type === "select" ? (
+            <div className="space-y-2">
+              {(f.options ?? []).map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setFieldValue(f.id, opt)}
+                  className={`w-full text-left px-4 py-3 rounded-md border-hairline text-sm transition-colors ${
+                    value === opt ? "bg-primary/10 border-primary text-foreground" : "hover:bg-surface-hover"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <Input
+              autoFocus
+              type={inputType}
+              value={value}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
+              placeholder="Type your answer…"
+              className="h-12 text-lg border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
+            />
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground inline-flex items-center gap-1.5">
+          press <kbd className="px-1.5 py-0.5 rounded bg-surface border-hairline text-[10px]">Enter ↵</kbd> to continue
+        </p>
+      </div>
+    );
+  };
+
   const renderDetails = () => (
     <>
       {fields.map((f) => (
@@ -208,16 +339,25 @@ export function FormBuilderDialog({
             {f.label} {f.required && <span className="text-destructive">*</span>}
           </Label>
           {f.type === "textarea" ? (
-            <Textarea placeholder={f.placeholder} rows={3} disabled />
+            <Textarea
+              placeholder={f.placeholder}
+              rows={3}
+              value={fieldValues[f.id] ?? ""}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
+            />
           ) : f.type === "select" ? (
-            <Select disabled>
+            <Select value={fieldValues[f.id] ?? ""} onValueChange={(v) => setFieldValue(f.id, v)}>
               <SelectTrigger><SelectValue placeholder={f.placeholder || "Select..."} /></SelectTrigger>
+              <SelectContent>
+                {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+              </SelectContent>
             </Select>
           ) : (
             <Input
               type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
               placeholder={f.placeholder}
-              disabled
+              value={fieldValues[f.id] ?? ""}
+              onChange={(e) => setFieldValue(f.id, e.target.value)}
             />
           )}
         </div>
@@ -275,12 +415,18 @@ export function FormBuilderDialog({
         <Label className="text-xs">
           {booking.label} {booking.required && <span className="text-destructive">*</span>}
         </Label>
-        <Input type={booking.mode === "datetime" ? "datetime-local" : "date"} min={minBookingDate} disabled />
+        <Input
+          type={booking.mode === "datetime" ? "datetime-local" : "date"}
+          min={minBookingDate}
+          value={bookingValue}
+          onChange={(e) => setBookingValue(e.target.value)}
+        />
         {booking.leadDays ? (
           <p className="text-[11px] text-muted-foreground">Earliest available: {(booking.leadDays)} day(s) from today.</p>
         ) : null}
       </div>
     );
+
 
   const renderQuote = () => (
     <div className="space-y-3">
@@ -612,67 +758,130 @@ export function FormBuilderDialog({
 
           {/* Right — preview */}
           <div className="overflow-y-auto border-hairline rounded-lg bg-surface/40 p-5">
-            <div className="text-xs uppercase tracking-wide text-muted-foreground mb-3">Live preview</div>
-            <div className="bg-card border-hairline rounded-lg p-5 space-y-4">
-              <div>
-                <h3 className="text-base font-medium">{name || "Form name"}</h3>
-                {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
-              </div>
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-xs uppercase tracking-wide text-muted-foreground">Live preview</div>
+              {(submitted || Object.keys(fieldValues).length > 0 || bookingValue || Object.values(previewQty).some((v) => v > 0)) && (
+                <button
+                  type="button"
+                  onClick={() => { setFieldValues({}); setBookingValue(""); setPreviewQty({}); setPreviewStep(0); setSubmitted(false); }}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
 
-              {isStepped && (
-                <div className="flex items-center gap-1.5">
-                  {steps.map((s, i) => (
-                    <div key={s.key} className="flex items-center gap-1.5 flex-1">
+            {isStepped ? (
+              <div className="bg-card border-hairline rounded-lg min-h-[480px] flex flex-col">
+                {/* progress bar */}
+                <div className="px-6 pt-5">
+                  <div className="flex items-center gap-1">
+                    {steps.map((s, i) => (
                       <div
-                        className={`h-1.5 flex-1 rounded-full ${i <= previewStep ? "bg-primary" : "bg-border"}`}
+                        key={s.key}
+                        className={`h-1 flex-1 rounded-full transition-colors ${i <= safeStepIdx ? "bg-primary" : "bg-border"}`}
                       />
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                  <div className="mt-2 text-[11px] text-muted-foreground">
+                    {name || "Form name"}
+                  </div>
                 </div>
-              )}
-              {isStepped && currentStep && (
-                <div className="text-xs text-muted-foreground">
-                  Step {previewStep + 1} of {steps.length} · {currentStep.label}
+
+                {/* hero step */}
+                <div className="flex-1 px-8 py-10 flex items-center">
+                  <div className="w-full max-w-md mx-auto">
+                    {submitted ? (
+                      <div className="text-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+                          <Check className="w-6 h-6" />
+                        </div>
+                        <h2 className="text-2xl font-medium">Thanks — we'll be in touch.</h2>
+                        <p className="text-sm text-muted-foreground">
+                          Your request has been saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.
+                        </p>
+                      </div>
+                    ) : currentStep?.kind === "field" && currentStep.field ? (
+                      renderFieldHero(
+                        currentStep.field,
+                        safeStepIdx,
+                        steps.length,
+                      )
+                    ) : currentStep?.kind === "products" ? (
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-medium leading-snug">Choose what you need</h2>
+                        <p className="text-sm text-muted-foreground">Tick anything that applies — adjust quantities to match.</p>
+                        {renderProducts()}
+                      </div>
+                    ) : currentStep?.kind === "booking" ? (
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-medium leading-snug">{booking.label || "When works for you?"}</h2>
+                        <p className="text-sm text-muted-foreground">Pick your preferred slot — we'll confirm by email.</p>
+                        {renderBooking()}
+                      </div>
+                    ) : currentStep?.kind === "quote" ? (
+                      <div className="space-y-4">
+                        <h2 className="text-2xl font-medium leading-snug">Here's your instant quote</h2>
+                        {renderQuote()}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              )}
 
-              {isStepped ? (
-                <>
-                  {currentStep?.key === "details" && renderDetails()}
-                  {currentStep?.key === "products" && renderProducts()}
-                  {currentStep?.key === "booking" && renderBooking()}
-                  {currentStep?.key === "quote" && renderQuote()}
-
-                  <div className="flex items-center justify-between pt-2">
+                {/* nav */}
+                {!submitted && (
+                  <div className="px-6 py-4 border-t-hairline flex items-center justify-between">
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="sm"
                       onClick={() => setPreviewStep((s) => Math.max(0, s - 1))}
-                      disabled={previewStep === 0}
+                      disabled={safeStepIdx === 0}
                     >
                       <ArrowLeft className="w-3.5 h-3.5" /> Back
                     </Button>
-                    {previewStep < steps.length - 1 ? (
+                    <div className="text-[11px] text-muted-foreground">
+                      {safeStepIdx + 1} / {steps.length}
+                    </div>
+                    {safeStepIdx < steps.length - 1 ? (
                       <Button size="sm" onClick={() => setPreviewStep((s) => Math.min(steps.length - 1, s + 1))}>
-                        Next <ArrowRight className="w-3.5 h-3.5" />
+                        OK <CornerDownLeft className="w-3.5 h-3.5" />
                       </Button>
                     ) : (
-                      <Button size="sm" disabled>{submitLabel}</Button>
+                      <Button size="sm" onClick={handlePreviewSubmit}>
+                        {submitLabel} <ArrowRight className="w-3.5 h-3.5" />
+                      </Button>
                     )}
                   </div>
-                </>
-              ) : (
-                <>
-                  {renderDetails()}
-                  {products.length > 0 && <div className="pt-2 border-t-hairline">{renderProducts()}</div>}
-                  {booking.enabled && <div className="pt-2 border-t-hairline">{renderBooking()}</div>}
-                  {quoteMode && <div className="pt-2 border-t-hairline">{renderQuote()}</div>}
-                  <Button className="w-full" disabled>{submitLabel}</Button>
-                </>
-              )}
-            </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-card border-hairline rounded-lg p-5 space-y-4">
+                <div>
+                  <h3 className="text-base font-medium">{name || "Form name"}</h3>
+                  {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+                </div>
+                {submitted ? (
+                  <div className="text-center space-y-2 py-6">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 text-primary mx-auto flex items-center justify-center">
+                      <Check className="w-5 h-5" />
+                    </div>
+                    <div className="text-sm font-medium">Thanks — we'll be in touch.</div>
+                    <p className="text-xs text-muted-foreground">Saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.</p>
+                  </div>
+                ) : (
+                  <>
+                    {renderDetails()}
+                    {products.length > 0 && <div className="pt-2 border-t-hairline">{renderProducts()}</div>}
+                    {booking.enabled && <div className="pt-2 border-t-hairline">{renderBooking()}</div>}
+                    {quoteMode && <div className="pt-2 border-t-hairline">{renderQuote()}</div>}
+                    <Button className="w-full" onClick={handlePreviewSubmit}>{submitLabel}</Button>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
+
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
