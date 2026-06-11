@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -6,7 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search } from "lucide-react";
+import { products as catalog } from "@/data/mockData";
 
 export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number";
 
@@ -19,12 +21,27 @@ export interface BuilderField {
   options?: string[];
 }
 
+export interface BuilderProduct {
+  productId: string;
+  /** Customer chooses a quantity; if false they just tick to add one */
+  quantitySelectable: boolean;
+  /** Minimum qty when added (defaults to 1) */
+  minQty?: number;
+  /** Maximum qty when selectable (optional) */
+  maxQty?: number;
+  /** Required = at least one of the selected products must be picked */
+  required?: boolean;
+}
+
 export interface BuilderForm {
   id: string;
   name: string;
   trade: string;
   description?: string;
   fields: BuilderField[];
+  products?: BuilderProduct[];
+  /** Treat this as a booking/order form (shows totals + required pick) */
+  productMode?: boolean;
 }
 
 const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
@@ -67,6 +84,10 @@ export function FormBuilderDialog({
       { id: "f-msg", type: "textarea", label: "How can we help?", required: false },
     ],
   );
+  const [products, setProducts] = useState<BuilderProduct[]>(initial?.products ?? []);
+  const [productMode, setProductMode] = useState<boolean>(initial?.productMode ?? (initial?.products?.length ?? 0) > 0);
+  const [pickerQuery, setPickerQuery] = useState("");
+  const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
 
   const update = (id: string, patch: Partial<BuilderField>) =>
     setFields((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
@@ -81,6 +102,33 @@ export function FormBuilderDialog({
       return next;
     });
 
+  const addProduct = (productId: string) => {
+    if (products.some((p) => p.productId === productId)) return;
+    setProducts((prev) => [...prev, { productId, quantitySelectable: true, minQty: 1 }]);
+    if (!productMode) setProductMode(true);
+  };
+  const updateProduct = (productId: string, patch: Partial<BuilderProduct>) =>
+    setProducts((prev) => prev.map((p) => (p.productId === productId ? { ...p, ...patch } : p)));
+  const removeProduct = (productId: string) =>
+    setProducts((prev) => prev.filter((p) => p.productId !== productId));
+
+  const availableProducts = useMemo(() => {
+    const chosen = new Set(products.map((p) => p.productId));
+    const q = pickerQuery.trim().toLowerCase();
+    return catalog
+      .filter((p) => p.active && !chosen.has(p.id))
+      .filter((p) => !q || p.name.toLowerCase().includes(q) || (p.sku ?? "").toLowerCase().includes(q));
+  }, [products, pickerQuery]);
+
+  const previewTotal = useMemo(() => {
+    return products.reduce((sum, bp) => {
+      const item = catalog.find((c) => c.id === bp.productId);
+      if (!item) return sum;
+      const qty = previewQty[bp.productId] ?? 0;
+      return sum + qty * item.price;
+    }, 0);
+  }, [products, previewQty]);
+
   const handleSave = () => {
     if (!name.trim()) return;
     onSave({
@@ -89,13 +137,15 @@ export function FormBuilderDialog({
       trade,
       description: description.trim() || undefined,
       fields,
+      products: products.length ? products : undefined,
+      productMode: products.length ? productMode : false,
     });
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>{initial ? "Edit form" : "New form"}</DialogTitle>
         </DialogHeader>
@@ -199,6 +249,111 @@ export function FormBuilderDialog({
                 )}
               </div>
             </div>
+
+            {/* Products / Booking */}
+            <div className="border-hairline rounded-lg">
+              <div className="px-3 h-10 flex items-center justify-between border-b-hairline">
+                <div className="flex items-center gap-2">
+                  <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Products & booking</span>
+                </div>
+                {products.length > 0 && (
+                  <label className="inline-flex items-center gap-2 text-xs text-muted-foreground">
+                    Require a selection
+                    <Switch checked={productMode} onCheckedChange={setProductMode} />
+                  </label>
+                )}
+              </div>
+
+              <div className="p-3 space-y-3">
+                <div className="relative">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                    placeholder="Search products to add…"
+                    className="h-8 pl-8 text-sm"
+                  />
+                  {pickerQuery && availableProducts.length > 0 && (
+                    <div className="absolute z-10 left-0 right-0 mt-1 bg-popover border-hairline rounded-md shadow-md max-h-56 overflow-y-auto">
+                      {availableProducts.slice(0, 8).map((p) => (
+                        <button
+                          key={p.id}
+                          onClick={() => { addProduct(p.id); setPickerQuery(""); }}
+                          className="w-full text-left px-3 py-2 hover:bg-surface-hover flex items-center justify-between"
+                        >
+                          <span className="text-sm">{p.name}</span>
+                          <span className="text-xs tabular-nums text-muted-foreground">£{p.price.toFixed(2)} / {p.unit}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {products.length === 0 ? (
+                  <div className="text-center text-xs text-muted-foreground py-6">
+                    No products attached. Add one to turn this into a product or booking form.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {products.map((bp) => {
+                      const item = catalog.find((c) => c.id === bp.productId);
+                      if (!item) return null;
+                      return (
+                        <div key={bp.productId} className="border-hairline rounded-md p-2.5 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-3.5 h-3.5 text-muted-foreground" />
+                            <div className="flex-1 min-w-0">
+                              <div className="text-sm font-medium truncate">{item.name}</div>
+                              <div className="text-xs text-muted-foreground tabular-nums">
+                                £{item.price.toFixed(2)} / {item.unit}{item.sku ? ` · ${item.sku}` : ""}
+                              </div>
+                            </div>
+                            <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeProduct(bp.productId)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-3 flex-wrap pl-6">
+                            <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Checkbox
+                                checked={bp.quantitySelectable}
+                                onCheckedChange={(v) => updateProduct(bp.productId, { quantitySelectable: !!v })}
+                              />
+                              Customer picks quantity
+                            </label>
+                            {bp.quantitySelectable && (
+                              <>
+                                <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                  Min
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={bp.minQty ?? 1}
+                                    onChange={(e) => updateProduct(bp.productId, { minQty: Number(e.target.value) || 0 })}
+                                    className="h-7 w-16 text-xs"
+                                  />
+                                </div>
+                                <div className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                                  Max
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    value={bp.maxQty ?? ""}
+                                    onChange={(e) => updateProduct(bp.productId, { maxQty: e.target.value === "" ? undefined : Number(e.target.value) })}
+                                    className="h-7 w-16 text-xs"
+                                    placeholder="—"
+                                  />
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Right — preview */}
@@ -229,7 +384,58 @@ export function FormBuilderDialog({
                   )}
                 </div>
               ))}
-              <Button className="w-full" disabled>Submit</Button>
+
+              {products.length > 0 && (
+                <div className="space-y-2 pt-2 border-t-hairline">
+                  <Label className="text-xs">
+                    Choose products {productMode && <span className="text-destructive">*</span>}
+                  </Label>
+                  <div className="space-y-1.5">
+                    {products.map((bp) => {
+                      const item = catalog.find((c) => c.id === bp.productId);
+                      if (!item) return null;
+                      const qty = previewQty[bp.productId] ?? 0;
+                      return (
+                        <div key={bp.productId} className="flex items-center gap-2 border-hairline rounded-md px-2.5 py-2">
+                          <Checkbox
+                            checked={qty > 0}
+                            onCheckedChange={(v) =>
+                              setPreviewQty((p) => ({ ...p, [bp.productId]: v ? Math.max(1, bp.minQty ?? 1) : 0 }))
+                            }
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm truncate">{item.name}</div>
+                            <div className="text-xs text-muted-foreground tabular-nums">£{item.price.toFixed(2)} / {item.unit}</div>
+                          </div>
+                          {bp.quantitySelectable && qty > 0 && (
+                            <Input
+                              type="number"
+                              min={bp.minQty ?? 0}
+                              max={bp.maxQty}
+                              value={qty}
+                              onChange={(e) =>
+                                setPreviewQty((p) => ({ ...p, [bp.productId]: Math.max(0, Number(e.target.value) || 0) }))
+                              }
+                              className="h-7 w-16 text-xs"
+                            />
+                          )}
+                          <div className="text-xs tabular-nums w-16 text-right">
+                            £{(qty * item.price).toFixed(2)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div className="flex items-center justify-between pt-1 text-sm">
+                    <span className="text-muted-foreground">Total</span>
+                    <span className="font-medium tabular-nums">£{previewTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+              )}
+
+              <Button className="w-full" disabled>
+                {products.length > 0 ? "Book now" : "Submit"}
+              </Button>
             </div>
           </div>
         </div>
