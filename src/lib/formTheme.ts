@@ -96,3 +96,46 @@ export const buttonShapeClass = (shape: BuilderTheme["buttonShape"]) =>
     : shape === "square"
       ? "[&_button]:rounded-none"
       : "";
+
+const withAlpha = (hex: string, alpha: number) => {
+  const { r, g, b } = hexToRgb(hex);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
+export const headerTitleSizeClass = (size: BuilderTheme["headerSize"]) =>
+  size === "lg" ? "text-3xl" : size === "sm" ? "text-lg" : "text-2xl";
+
+export const headerContainerStyle = (t: BuilderTheme): React.CSSProperties => {
+  const base: React.CSSProperties = {
+    textAlign: t.headerAlign === "center" ? "center" : "left",
+    color: t.text,
+  };
+  if (t.headerStyle === "banner") {
+    return {
+      ...base,
+      background: withAlpha(t.accent, 0.12),
+      color: t.text,
+      padding: "20px 24px",
+      borderRadius: "10px",
+      borderLeft: t.headerAlign === "left" ? `3px solid ${t.accent}` : undefined,
+    };
+  }
+  if (t.headerStyle === "gradient") {
+    const fg = contrastForeground(t.accent) === "0 0% 100%" ? "#ffffff" : "#0a0a0a";
+    return {
+      ...base,
+      background: `linear-gradient(135deg, ${t.accent}, ${withAlpha(t.accent, 0.7)})`,
+      color: fg,
+      padding: "24px",
+      borderRadius: "10px",
+    };
+  }
+  if (t.headerStyle === "underline") {
+    return {
+      ...base,
+      paddingBottom: "10px",
+      borderBottom: `2px solid ${t.accent}`,
+    };
+  }
+  return base;
+};
