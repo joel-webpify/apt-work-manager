@@ -378,86 +378,148 @@ export function FormBuilderDialog({
     );
   };
 
-  const renderDetails = () => (
-    <>
-      {fields.map((f) => (
-        <div key={f.id} className="space-y-1.5">
-          <Label className="text-xs">
-            {f.label} {f.required && <span className="text-destructive">*</span>}
-          </Label>
-          {f.type === "textarea" ? (
-            <Textarea
-              placeholder={f.placeholder}
-              rows={3}
-              value={fieldValues[f.id] ?? ""}
-              onChange={(e) => setFieldValue(f.id, e.target.value)}
-            />
-          ) : f.type === "select" ? (
-            <Select value={fieldValues[f.id] ?? ""} onValueChange={(v) => setFieldValue(f.id, v)}>
-              <SelectTrigger><SelectValue placeholder={f.placeholder || "Select..."} /></SelectTrigger>
-              <SelectContent>
-                {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          ) : f.type === "radio" ? (
-            <div className="space-y-1.5">
-              {(f.options ?? []).map((o) => (
-                <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name={f.id}
-                    checked={(fieldValues[f.id] ?? "") === o}
-                    onChange={() => setFieldValue(f.id, o)}
-                  />
-                  {o}
-                </label>
-              ))}
-            </div>
-          ) : f.type === "yesno" ? (
-            <div className="flex gap-2">
-              {["Yes", "No"].map((o) => (
-                <button
-                  key={o}
-                  type="button"
-                  onClick={() => setFieldValue(f.id, o)}
-                  className={`flex-1 h-9 rounded-md border-hairline text-sm transition-colors ${
-                    (fieldValues[f.id] ?? "") === o ? "bg-primary/10 border-primary" : "hover:bg-surface-hover"
-                  }`}
-                >
-                  {o}
-                </button>
-              ))}
-            </div>
-          ) : f.type === "checkboxes" ? (
-            <div className="space-y-1.5">
-              {(f.options ?? []).map((o) => {
-                const set = new Set((fieldValues[f.id] ?? "") ? (fieldValues[f.id] ?? "").split("||") : []);
-                const checked = set.has(o);
-                return (
-                  <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(v) => {
-                        if (v) set.add(o); else set.delete(o);
-                        setFieldValue(f.id, Array.from(set).join("||"));
-                      }}
-                    />
-                    {o}
-                  </label>
-                );
-              })}
-            </div>
-          ) : (
-            <Input
-              type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
-              placeholder={f.placeholder}
-              value={fieldValues[f.id] ?? ""}
-              onChange={(e) => setFieldValue(f.id, e.target.value)}
-            />
-          )}
+  const renderFieldInput = (f: BuilderField) => {
+    if (f.type === "textarea") {
+      return (
+        <Textarea
+          placeholder={f.placeholder}
+          rows={3}
+          value={fieldValues[f.id] ?? ""}
+          onChange={(e) => setFieldValue(f.id, e.target.value)}
+        />
+      );
+    }
+    if (f.type === "select") {
+      return (
+        <Select value={fieldValues[f.id] ?? ""} onValueChange={(v) => setFieldValue(f.id, v)}>
+          <SelectTrigger><SelectValue placeholder={f.placeholder || "Select..."} /></SelectTrigger>
+          <SelectContent>
+            {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      );
+    }
+    if (f.type === "radio") {
+      return (
+        <div className="space-y-1.5">
+          {(f.options ?? []).map((o) => (
+            <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name={f.id}
+                checked={(fieldValues[f.id] ?? "") === o}
+                onChange={() => setFieldValue(f.id, o)}
+              />
+              {o}
+            </label>
+          ))}
         </div>
-      ))}
-    </>
+      );
+    }
+    if (f.type === "yesno") {
+      return (
+        <div className="flex gap-2">
+          {["Yes", "No"].map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => setFieldValue(f.id, o)}
+              className={`flex-1 h-9 rounded-md border-hairline text-sm transition-colors ${
+                (fieldValues[f.id] ?? "") === o ? "bg-primary/10 border-primary" : "hover:bg-surface-hover"
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      );
+    }
+    if (f.type === "checkboxes") {
+      return (
+        <div className="space-y-1.5">
+          {(f.options ?? []).map((o) => {
+            const set = new Set((fieldValues[f.id] ?? "") ? (fieldValues[f.id] ?? "").split("||") : []);
+            const checked = set.has(o);
+            return (
+              <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(v) => {
+                    if (v) set.add(o); else set.delete(o);
+                    setFieldValue(f.id, Array.from(set).join("||"));
+                  }}
+                />
+                {o}
+              </label>
+            );
+          })}
+        </div>
+      );
+    }
+    return (
+      <Input
+        type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
+        placeholder={f.placeholder}
+        value={fieldValues[f.id] ?? ""}
+        onChange={(e) => setFieldValue(f.id, e.target.value)}
+      />
+    );
+  };
+
+  const renderFieldRow = (f: BuilderField) => (
+    <div key={f.id} className="space-y-1.5">
+      <Label className="text-xs">
+        {f.label} {f.required && <span className="text-destructive">*</span>}
+      </Label>
+      {renderFieldInput(f)}
+    </div>
+  );
+
+  // Group fields into sections for the single-page layout
+  const fieldGroups = useMemo(() => {
+    const groups: { id: string; label: string | null; fields: BuilderField[] }[] = [
+      { id: "__top", label: null, fields: [] },
+    ];
+    for (const f of fields) {
+      if (f.type === "section") {
+        groups.push({ id: f.id, label: f.label || "Section", fields: [] });
+      } else {
+        groups[groups.length - 1].fields.push(f);
+      }
+    }
+    return groups.filter((g) => g.fields.length > 0 || g.label !== null);
+  }, [fields]);
+
+  const renderDetails = () => (
+    <div className="space-y-3">
+      {fieldGroups.map((g) => {
+        if (g.label === null) {
+          return (
+            <div key={g.id} className="space-y-3">
+              {g.fields.map(renderFieldRow)}
+            </div>
+          );
+        }
+        const collapsed = !!collapsedSections[g.id];
+        return (
+          <div key={g.id} className="border-hairline rounded-md overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCollapsedSections((p) => ({ ...p, [g.id]: !p[g.id] }))}
+              className="w-full flex items-center justify-between px-3 h-9 bg-surface/60 hover:bg-surface-hover transition-colors"
+            >
+              <span className="text-xs font-medium">{g.label}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+            </button>
+            {!collapsed && (
+              <div className="p-3 space-y-3">
+                {g.fields.map(renderFieldRow)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 
   const renderProducts = () =>
