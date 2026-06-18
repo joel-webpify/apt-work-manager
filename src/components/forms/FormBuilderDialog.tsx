@@ -281,6 +281,7 @@ export function FormBuilderDialog({
       booking: booking.enabled ? booking : undefined,
       layout,
       quoteMode,
+      theme,
     });
     onOpenChange(false);
   };
