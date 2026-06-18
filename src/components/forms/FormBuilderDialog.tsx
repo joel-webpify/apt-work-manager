@@ -303,7 +303,7 @@ export function FormBuilderDialog({
               rows={4}
               className="text-base border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
             />
-          ) : f.type === "select" ? (
+          ) : f.type === "select" || f.type === "radio" ? (
             <div className="space-y-2">
               {(f.options ?? []).map((opt) => (
                 <button
@@ -317,6 +317,46 @@ export function FormBuilderDialog({
                   {opt}
                 </button>
               ))}
+            </div>
+          ) : f.type === "yesno" ? (
+            <div className="grid grid-cols-2 gap-2">
+              {["Yes", "No"].map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setFieldValue(f.id, opt)}
+                  className={`px-4 py-3 rounded-md border-hairline text-sm transition-colors ${
+                    value === opt ? "bg-primary/10 border-primary text-foreground" : "hover:bg-surface-hover"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : f.type === "checkboxes" ? (
+            <div className="space-y-2">
+              {(f.options ?? []).map((opt) => {
+                const set = new Set(value ? value.split("||") : []);
+                const checked = set.has(opt);
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      if (checked) set.delete(opt); else set.add(opt);
+                      setFieldValue(f.id, Array.from(set).join("||"));
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-md border-hairline text-sm transition-colors flex items-center gap-3 ${
+                      checked ? "bg-primary/10 border-primary text-foreground" : "hover:bg-surface-hover"
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
+                      {checked && <Check className="w-3 h-3" />}
+                    </span>
+                    {opt}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <Input
