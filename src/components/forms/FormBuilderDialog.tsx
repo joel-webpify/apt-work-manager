@@ -665,7 +665,7 @@ export function FormBuilderDialog({
                           Required
                         </label>
                       </div>
-                      {f.type === "select" && (
+                      {hasOptions(f.type) && (
                         <div className="pl-6">
                           <Textarea
                             value={(f.options ?? []).join("\n")}
