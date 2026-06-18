@@ -696,10 +696,44 @@ export function FormBuilderDialog({
               <div className="divide-y divide-border">
                 {fields.map((f, idx) => {
                   const Icon = fieldTypeMeta[f.type].icon;
+                  const isDragging = dragId === f.id;
+                  const isOver = dragOverId === f.id && dragId && dragId !== f.id;
                   return (
-                    <div key={f.id} className="p-3 space-y-2">
+                    <div
+                      key={f.id}
+                      onDragOver={(e) => {
+                        if (!dragId) return;
+                        e.preventDefault();
+                        if (dragOverId !== f.id) setDragOverId(f.id);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverId === f.id) setDragOverId(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragId && dragId !== f.id) reorder(dragId, f.id);
+                        setDragId(null);
+                        setDragOverId(null);
+                      }}
+                      className={`p-3 space-y-2 transition-colors ${isDragging ? "opacity-40" : ""} ${isOver ? "bg-surface-hover" : ""}`}
+                    >
                       <div className="flex items-center gap-2">
-                        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                        <button
+                          type="button"
+                          draggable
+                          onDragStart={(e) => {
+                            setDragId(f.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setDragOverId(null);
+                          }}
+                          className="cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-surface text-muted-foreground"
+                          aria-label="Drag to reorder"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </button>
                         <Icon className="w-3.5 h-3.5 text-muted-foreground" />
                         <Input
                           value={f.label}
@@ -717,34 +751,7 @@ export function FormBuilderDialog({
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      {f.type !== "section" && (
-                        <div className="flex items-center gap-3 pl-6">
-                          <Input
-                            value={f.placeholder ?? ""}
-                            onChange={(e) => update(f.id, { placeholder: e.target.value })}
-                            className="h-7 text-xs flex-1"
-                            placeholder="Placeholder text"
-                          />
-                          <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                            <Checkbox checked={f.required} onCheckedChange={(v) => update(f.id, { required: !!v })} />
-                            Required
-                          </label>
-                        </div>
-                      )}
-                      {hasOptions(f.type) && (
-                        <div className="pl-6">
-                          <Textarea
-                            value={(f.options ?? []).join("\n")}
-                            onChange={(e) => update(f.id, { options: e.target.value.split("\n").filter(Boolean) })}
-                            rows={3}
-                            className="text-xs"
-                            placeholder={"One option per line"}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+...
                 {fields.length === 0 && (
                   <div className="p-6 text-center text-sm text-muted-foreground">No fields yet — add one above.</div>
                 )}
