@@ -275,6 +275,14 @@ export default function Forms() {
           }}
         />
       )}
+      <SubmissionPreviewDialog
+        open={!!previewFor}
+        onOpenChange={(o) => !o && setPreviewFor(null)}
+        submission={previewFor}
+        formName={previewFor ? forms.find((f) => f.id === previewFor.formId)?.name : undefined}
+        converted={previewFor ? convertedIds.has(previewFor.id) : false}
+        onCreateJob={handleCreateJob}
+      />
     </>
   );
 }
