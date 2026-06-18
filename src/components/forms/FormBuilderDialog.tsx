@@ -397,6 +397,54 @@ export function FormBuilderDialog({
                 {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
+          ) : f.type === "radio" ? (
+            <div className="space-y-1.5">
+              {(f.options ?? []).map((o) => (
+                <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name={f.id}
+                    checked={(fieldValues[f.id] ?? "") === o}
+                    onChange={() => setFieldValue(f.id, o)}
+                  />
+                  {o}
+                </label>
+              ))}
+            </div>
+          ) : f.type === "yesno" ? (
+            <div className="flex gap-2">
+              {["Yes", "No"].map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setFieldValue(f.id, o)}
+                  className={`flex-1 h-9 rounded-md border-hairline text-sm transition-colors ${
+                    (fieldValues[f.id] ?? "") === o ? "bg-primary/10 border-primary" : "hover:bg-surface-hover"
+                  }`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          ) : f.type === "checkboxes" ? (
+            <div className="space-y-1.5">
+              {(f.options ?? []).map((o) => {
+                const set = new Set((fieldValues[f.id] ?? "") ? (fieldValues[f.id] ?? "").split("||") : []);
+                const checked = set.has(o);
+                return (
+                  <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => {
+                        if (v) set.add(o); else set.delete(o);
+                        setFieldValue(f.id, Array.from(set).join("||"));
+                      }}
+                    />
+                    {o}
+                  </label>
+                );
+              })}
+            </div>
           ) : (
             <Input
               type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
