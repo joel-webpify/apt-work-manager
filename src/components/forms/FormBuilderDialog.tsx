@@ -1231,9 +1231,10 @@ export function FormBuilderDialog({
               </div>
             ) : (
               <div className="border-hairline rounded-lg p-5 space-y-4" style={{ background: theme.background, color: theme.text }}>
-                <div>
-                  <h3 className="text-base font-medium">{name || "Form name"}</h3>
-                  {description && <p className="text-xs opacity-70 mt-1">{description}</p>}
+                <div style={headerContainerStyle(theme)}>
+                  {theme.headerEmoji && <div className="text-2xl mb-1 leading-none">{theme.headerEmoji}</div>}
+                  <h3 className={`${headerTitleSizeClass(theme.headerSize)} font-medium leading-tight`}>{name || "Form name"}</h3>
+                  {description && <p className="text-xs opacity-80 mt-1">{description}</p>}
                 </div>
                 {submitted ? (
                   <div className="text-center space-y-2 py-6">
