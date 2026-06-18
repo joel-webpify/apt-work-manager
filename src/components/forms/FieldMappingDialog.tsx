@@ -17,7 +17,7 @@ export default function FieldMappingDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  form: { id: string; name: string; fields?: BuilderForm["fields"] };
+  form: { id: string; name: string; fields?: BuilderForm["fields"]; products?: BuilderForm["products"]; booking?: BuilderForm["booking"]; quoteMode?: BuilderForm["quoteMode"] };
   /** Extra labels from past submissions (in case the form's builder fields are empty). */
   sampleLabels?: string[];
   initial?: Record<string, MappingTarget>;
