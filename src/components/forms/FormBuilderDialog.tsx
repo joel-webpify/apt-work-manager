@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft } from "lucide-react";
 import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
 
-export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number";
+export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno";
 
 export interface BuilderField {
   id: string;
@@ -64,7 +64,12 @@ const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
   textarea: { label: "Long text", icon: AlignLeft },
   select: { label: "Dropdown", icon: ListChecks },
   number: { label: "Number", icon: Hash },
+  radio: { label: "Single choice", icon: CircleDot },
+  checkboxes: { label: "Multi-select", icon: CheckSquare },
+  yesno: { label: "Yes / No", icon: ToggleLeft },
 };
+
+const hasOptions = (t: FieldType) => t === "select" || t === "radio" || t === "checkboxes";
 
 const newField = (type: FieldType): BuilderField => ({
   id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -72,7 +77,7 @@ const newField = (type: FieldType): BuilderField => ({
   label: fieldTypeMeta[type].label,
   placeholder: "",
   required: false,
-  options: type === "select" ? ["Option 1", "Option 2"] : undefined,
+  options: hasOptions(type) ? ["Option 1", "Option 2"] : undefined,
 });
 
 const defaultBooking = (): BuilderBooking => ({
@@ -298,7 +303,7 @@ export function FormBuilderDialog({
               rows={4}
               className="text-base border-0 border-b rounded-none px-0 focus-visible:ring-0 focus-visible:border-primary"
             />
-          ) : f.type === "select" ? (
+          ) : f.type === "select" || f.type === "radio" ? (
             <div className="space-y-2">
               {(f.options ?? []).map((opt) => (
                 <button
@@ -312,6 +317,46 @@ export function FormBuilderDialog({
                   {opt}
                 </button>
               ))}
+            </div>
+          ) : f.type === "yesno" ? (
+            <div className="grid grid-cols-2 gap-2">
+              {["Yes", "No"].map((opt) => (
+                <button
+                  key={opt}
+                  type="button"
+                  onClick={() => setFieldValue(f.id, opt)}
+                  className={`px-4 py-3 rounded-md border-hairline text-sm transition-colors ${
+                    value === opt ? "bg-primary/10 border-primary text-foreground" : "hover:bg-surface-hover"
+                  }`}
+                >
+                  {opt}
+                </button>
+              ))}
+            </div>
+          ) : f.type === "checkboxes" ? (
+            <div className="space-y-2">
+              {(f.options ?? []).map((opt) => {
+                const set = new Set(value ? value.split("||") : []);
+                const checked = set.has(opt);
+                return (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => {
+                      if (checked) set.delete(opt); else set.add(opt);
+                      setFieldValue(f.id, Array.from(set).join("||"));
+                    }}
+                    className={`w-full text-left px-4 py-3 rounded-md border-hairline text-sm transition-colors flex items-center gap-3 ${
+                      checked ? "bg-primary/10 border-primary text-foreground" : "hover:bg-surface-hover"
+                    }`}
+                  >
+                    <span className={`w-4 h-4 rounded border flex items-center justify-center ${checked ? "bg-primary border-primary text-primary-foreground" : "border-input"}`}>
+                      {checked && <Check className="w-3 h-3" />}
+                    </span>
+                    {opt}
+                  </button>
+                );
+              })}
             </div>
           ) : (
             <Input
@@ -352,6 +397,54 @@ export function FormBuilderDialog({
                 {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
               </SelectContent>
             </Select>
+          ) : f.type === "radio" ? (
+            <div className="space-y-1.5">
+              {(f.options ?? []).map((o) => (
+                <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name={f.id}
+                    checked={(fieldValues[f.id] ?? "") === o}
+                    onChange={() => setFieldValue(f.id, o)}
+                  />
+                  {o}
+                </label>
+              ))}
+            </div>
+          ) : f.type === "yesno" ? (
+            <div className="flex gap-2">
+              {["Yes", "No"].map((o) => (
+                <button
+                  key={o}
+                  type="button"
+                  onClick={() => setFieldValue(f.id, o)}
+                  className={`flex-1 h-9 rounded-md border-hairline text-sm transition-colors ${
+                    (fieldValues[f.id] ?? "") === o ? "bg-primary/10 border-primary" : "hover:bg-surface-hover"
+                  }`}
+                >
+                  {o}
+                </button>
+              ))}
+            </div>
+          ) : f.type === "checkboxes" ? (
+            <div className="space-y-1.5">
+              {(f.options ?? []).map((o) => {
+                const set = new Set((fieldValues[f.id] ?? "") ? (fieldValues[f.id] ?? "").split("||") : []);
+                const checked = set.has(o);
+                return (
+                  <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => {
+                        if (v) set.add(o); else set.delete(o);
+                        setFieldValue(f.id, Array.from(set).join("||"));
+                      }}
+                    />
+                    {o}
+                  </label>
+                );
+              })}
+            </div>
           ) : (
             <Input
               type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
@@ -572,7 +665,7 @@ export function FormBuilderDialog({
                           Required
                         </label>
                       </div>
-                      {f.type === "select" && (
+                      {hasOptions(f.type) && (
                         <div className="pl-6">
                           <Textarea
                             value={(f.options ?? []).join("\n")}
