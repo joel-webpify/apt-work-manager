@@ -202,21 +202,34 @@ export default function Forms() {
           {formSubmissions.map((s) => (
             <div
               key={s.id}
-              className="grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+              role="button"
+              tabIndex={0}
+              onClick={() => setPreviewFor(s)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setPreviewFor(s); } }}
+              className="grid grid-cols-[2fr_1.5fr_1fr_1.2fr_auto] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors cursor-pointer"
             >
               <div className="font-medium">{s.contact}</div>
               <div className="text-muted-foreground">{s.service}</div>
               <div className="text-muted-foreground tabular-nums">{s.postcode}</div>
               <div className="text-muted-foreground tabular-nums">{s.date}</div>
-              {convertedIds.has(s.id) ? (
-                <Btn className="h-7" disabled>
-                  <Check className="w-3 h-3" /> Created
-                </Btn>
-              ) : (
-                <Btn className="h-7" onClick={() => handleCreateJob(s)}>
-                  Create job <ArrowRight className="w-3 h-3" />
-                </Btn>
-              )}
+              <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                <button
+                  onClick={() => setPreviewFor(s)}
+                  className="h-7 w-7 inline-flex items-center justify-center rounded-md border-hairline hover:bg-surface-hover transition-colors"
+                  title="Preview submission"
+                >
+                  <Eye className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+                {convertedIds.has(s.id) ? (
+                  <Btn className="h-7" disabled>
+                    <Check className="w-3 h-3" /> Created
+                  </Btn>
+                ) : (
+                  <Btn className="h-7" onClick={() => handleCreateJob(s)}>
+                    Create job <ArrowRight className="w-3 h-3" />
+                  </Btn>
+                )}
+              </div>
             </div>
           ))}
         </div>
