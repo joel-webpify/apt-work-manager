@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft, Rows3, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft, Rows3, ChevronDown, Palette } from "lucide-react";
 import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
+import { type BuilderTheme, defaultTheme, themePresets, themeWrapperStyle, buttonShapeClass } from "@/lib/formTheme";
 
 export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno" | "section";
 
@@ -55,6 +56,8 @@ export interface BuilderForm {
   layout?: BuilderLayout;
   /** Show an instant quote summary as the final step */
   quoteMode?: boolean;
+  /** Visual theme applied to the published form */
+  theme?: BuilderTheme;
 }
 
 const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
@@ -116,6 +119,7 @@ export function FormBuilderDialog({
   const [booking, setBooking] = useState<BuilderBooking>(initial?.booking ?? defaultBooking());
   const [layout, setLayout] = useState<BuilderLayout>(initial?.layout ?? "single");
   const [quoteMode, setQuoteMode] = useState<boolean>(initial?.quoteMode ?? false);
+  const [theme, setTheme] = useState<BuilderTheme>(initial?.theme ?? defaultTheme);
   const [pickerQuery, setPickerQuery] = useState("");
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
@@ -277,6 +281,7 @@ export function FormBuilderDialog({
       booking: booking.enabled ? booking : undefined,
       layout,
       quoteMode,
+      theme,
     });
     onOpenChange(false);
   };
@@ -686,6 +691,101 @@ export function FormBuilderDialog({
               )}
             </div>
 
+            {/* Design */}
+            <div className="border-hairline rounded-lg">
+              <div className="px-3 h-10 flex items-center justify-between border-b-hairline">
+                <div className="flex items-center gap-2">
+                  <Palette className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Design</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setTheme(defaultTheme)}
+                  className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                >
+                  Reset
+                </button>
+              </div>
+              <div className="p-3 space-y-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Preset palette</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {themePresets.map((p) => {
+                      const active = theme.accent.toLowerCase() === p.theme.accent.toLowerCase()
+                        && theme.background.toLowerCase() === p.theme.background.toLowerCase();
+                      return (
+                        <button
+                          key={p.name}
+                          type="button"
+                          onClick={() => setTheme((t) => ({ ...t, accent: p.theme.accent, background: p.theme.background, text: p.theme.text }))}
+                          className={`group flex items-center gap-1.5 pl-1 pr-2 h-7 rounded-md border text-xs transition-colors ${active ? "border-primary bg-primary/5" : "border-input hover:bg-surface-hover"}`}
+                          title={p.name}
+                        >
+                          <span className="flex">
+                            <span className="w-3.5 h-3.5 rounded-l-sm border-r border-background/40" style={{ background: p.theme.background }} />
+                            <span className="w-3.5 h-3.5 rounded-r-sm" style={{ background: p.theme.accent }} />
+                          </span>
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2">
+                  {([
+                    { key: "accent", label: "Accent" },
+                    { key: "background", label: "Background" },
+                    { key: "text", label: "Text" },
+                  ] as const).map((c) => (
+                    <div key={c.key} className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">{c.label}</Label>
+                      <div className="flex items-center gap-1.5 border-hairline rounded-md pl-1 pr-2 h-8">
+                        <input
+                          type="color"
+                          value={theme[c.key]}
+                          onChange={(e) => setTheme((t) => ({ ...t, [c.key]: e.target.value }))}
+                          className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+                          aria-label={`${c.label} color`}
+                        />
+                        <input
+                          type="text"
+                          value={theme[c.key]}
+                          onChange={(e) => setTheme((t) => ({ ...t, [c.key]: e.target.value }))}
+                          className="flex-1 min-w-0 bg-transparent text-xs tabular-nums focus:outline-none uppercase"
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Font</Label>
+                    <Select value={theme.fontFamily} onValueChange={(v: BuilderTheme["fontFamily"]) => setTheme((t) => ({ ...t, fontFamily: v }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="sans">Sans (Inter)</SelectItem>
+                        <SelectItem value="serif">Serif (Instrument)</SelectItem>
+                        <SelectItem value="mono">Mono (JetBrains)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">Buttons</Label>
+                    <Select value={theme.buttonShape} onValueChange={(v: BuilderTheme["buttonShape"]) => setTheme((t) => ({ ...t, buttonShape: v }))}>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="rounded">Rounded</SelectItem>
+                        <SelectItem value="square">Square</SelectItem>
+                        <SelectItem value="pill">Pill</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
             <div className="border-hairline rounded-lg">
               <div className="px-3 h-10 flex items-center justify-between border-b-hairline">
                 <span className="text-sm font-medium">Fields</span>
@@ -976,8 +1076,9 @@ export function FormBuilderDialog({
               )}
             </div>
 
+            <div style={themeWrapperStyle(theme)} className={`rounded-lg ${buttonShapeClass(theme.buttonShape)}`}>
             {isStepped ? (
-              <div className="bg-card border-hairline rounded-lg min-h-[480px] flex flex-col">
+              <div className="border-hairline rounded-lg min-h-[480px] flex flex-col" style={{ background: theme.background, color: theme.text }}>
                 {/* progress bar */}
                 <div className="px-6 pt-5">
                   <div className="flex items-center gap-1">
@@ -1060,10 +1161,10 @@ export function FormBuilderDialog({
                 )}
               </div>
             ) : (
-              <div className="bg-card border-hairline rounded-lg p-5 space-y-4">
+              <div className="border-hairline rounded-lg p-5 space-y-4" style={{ background: theme.background, color: theme.text }}>
                 <div>
                   <h3 className="text-base font-medium">{name || "Form name"}</h3>
-                  {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+                  {description && <p className="text-xs opacity-70 mt-1">{description}</p>}
                 </div>
                 {submitted ? (
                   <div className="text-center space-y-2 py-6">
@@ -1071,7 +1172,7 @@ export function FormBuilderDialog({
                       <Check className="w-5 h-5" />
                     </div>
                     <div className="text-sm font-medium">Thanks — we'll be in touch.</div>
-                    <p className="text-xs text-muted-foreground">Saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.</p>
+                    <p className="text-xs opacity-70">Saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.</p>
                   </div>
                 ) : (
                   <>
@@ -1084,6 +1185,7 @@ export function FormBuilderDialog({
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 
