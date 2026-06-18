@@ -751,7 +751,6 @@ export function FormBuilderDialog({
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-...
                 {fields.length === 0 && (
                   <div className="p-6 text-center text-sm text-muted-foreground">No fields yet — add one above.</div>
                 )}
