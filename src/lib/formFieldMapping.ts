@@ -48,15 +48,19 @@ export function guessTarget(label: string, schema: JobCustomField[]): MappingTar
   if (!l) return "ignore";
   const has = (...kws: string[]) => kws.some((k) => l.includes(k));
 
+  if (has("booking slot", "preferred slot", "appointment", "preferred date", "preferred time", "schedule")) return "bookingSlot";
+  if (has("selected products", "chosen products", "products", "line items", "basket", "cart")) return "products";
+  if (has("instant quote", "quote total", "estimated total", "your quote")) return "quoteTotal";
   if (has("full name", "your name", "customer", "contact name")) return "customer";
-  if (has("name") && !has("company", "business")) return "customer";
+  if (has("name") && !has("company", "business", "product")) return "customer";
   if (has("email")) return "email";
   if (has("phone", "mobile", "tel")) return "phone";
   if (has("service", "what do you need", "type of work")) return "service";
   if (has("trade")) return "trade";
   if (has("postcode", "post code", "zip")) return "postcode";
   if (has("address", "street")) return "address";
-  if (has("budget", "value", "price", "quote")) return "value";
+  if (has("budget", "price")) return "value";
+  if (has("quote value", "quote amount")) return "quoteTotal";
   if (has("message", "details", "tell us", "how can we help", "notes", "description")) return "notes";
 
   // Try matching a custom-field label
