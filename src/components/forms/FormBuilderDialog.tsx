@@ -717,18 +717,20 @@ export function FormBuilderDialog({
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <div className="flex items-center gap-3 pl-6">
-                        <Input
-                          value={f.placeholder ?? ""}
-                          onChange={(e) => update(f.id, { placeholder: e.target.value })}
-                          className="h-7 text-xs flex-1"
-                          placeholder="Placeholder text"
-                        />
-                        <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Checkbox checked={f.required} onCheckedChange={(v) => update(f.id, { required: !!v })} />
-                          Required
-                        </label>
-                      </div>
+                      {f.type !== "section" && (
+                        <div className="flex items-center gap-3 pl-6">
+                          <Input
+                            value={f.placeholder ?? ""}
+                            onChange={(e) => update(f.id, { placeholder: e.target.value })}
+                            className="h-7 text-xs flex-1"
+                            placeholder="Placeholder text"
+                          />
+                          <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Checkbox checked={f.required} onCheckedChange={(v) => update(f.id, { required: !!v })} />
+                            Required
+                          </label>
+                        </div>
+                      )}
                       {hasOptions(f.type) && (
                         <div className="pl-6">
                           <Textarea
