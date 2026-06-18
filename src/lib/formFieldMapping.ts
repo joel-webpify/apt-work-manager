@@ -141,9 +141,9 @@ export function applyMapping(
     if (target.startsWith("cf:")) {
       const id = target.slice(3);
       out.customFields[id] = typeof raw === "boolean" ? raw : String(raw);
-    } else if (target === "value") {
+    } else if (target === "value" || target === "quoteTotal") {
       const n = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/[^\d.]/g, ""));
-      if (!Number.isNaN(n)) out.core.value = n;
+      if (!Number.isNaN(n)) out.core[target] = n;
     } else {
       out.core[target as CoreJobTarget] = String(raw);
     }
