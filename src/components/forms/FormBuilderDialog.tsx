@@ -137,6 +137,18 @@ export function FormBuilderDialog({
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const reorder = (sourceId: string, targetId: string) =>
+    setFields((prev) => {
+      const from = prev.findIndex((f) => f.id === sourceId);
+      const to = prev.findIndex((f) => f.id === targetId);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
 
   const addProduct = (productId: string) => {
     if (products.some((p) => p.productId === productId)) return;
@@ -696,10 +708,44 @@ export function FormBuilderDialog({
               <div className="divide-y divide-border">
                 {fields.map((f, idx) => {
                   const Icon = fieldTypeMeta[f.type].icon;
+                  const isDragging = dragId === f.id;
+                  const isOver = dragOverId === f.id && dragId && dragId !== f.id;
                   return (
-                    <div key={f.id} className="p-3 space-y-2">
+                    <div
+                      key={f.id}
+                      onDragOver={(e) => {
+                        if (!dragId) return;
+                        e.preventDefault();
+                        if (dragOverId !== f.id) setDragOverId(f.id);
+                      }}
+                      onDragLeave={() => {
+                        if (dragOverId === f.id) setDragOverId(null);
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        if (dragId && dragId !== f.id) reorder(dragId, f.id);
+                        setDragId(null);
+                        setDragOverId(null);
+                      }}
+                      className={`p-3 space-y-2 transition-colors ${isDragging ? "opacity-40" : ""} ${isOver ? "bg-surface-hover" : ""}`}
+                    >
                       <div className="flex items-center gap-2">
-                        <GripVertical className="w-3.5 h-3.5 text-muted-foreground" />
+                        <button
+                          type="button"
+                          draggable
+                          onDragStart={(e) => {
+                            setDragId(f.id);
+                            e.dataTransfer.effectAllowed = "move";
+                          }}
+                          onDragEnd={() => {
+                            setDragId(null);
+                            setDragOverId(null);
+                          }}
+                          className="cursor-grab active:cursor-grabbing p-1 -m-1 rounded hover:bg-surface text-muted-foreground"
+                          aria-label="Drag to reorder"
+                        >
+                          <GripVertical className="w-3.5 h-3.5" />
+                        </button>
                         <Icon className="w-3.5 h-3.5 text-muted-foreground" />
                         <Input
                           value={f.label}
