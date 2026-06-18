@@ -36,6 +36,7 @@ export default function Forms() {
   const [editing, setEditing] = useState<BuilderForm | undefined>();
   const [embedFor, setEmbedFor] = useState<ListedForm | null>(null);
   const [mappingFor, setMappingFor] = useState<ListedForm | null>(null);
+  const [previewFor, setPreviewFor] = useState<FormSubmission | null>(null);
   const [convertedIds, setConvertedIds] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
   const { toast } = useToast();
