@@ -67,6 +67,7 @@ const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
   radio: { label: "Single choice", icon: CircleDot },
   checkboxes: { label: "Multi-select", icon: CheckSquare },
   yesno: { label: "Yes / No", icon: ToggleLeft },
+  section: { label: "Section heading", icon: Rows3 },
 };
 
 const hasOptions = (t: FieldType) => t === "select" || t === "radio" || t === "checkboxes";
