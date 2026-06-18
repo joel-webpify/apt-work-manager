@@ -119,6 +119,7 @@ export function FormBuilderDialog({
   const [booking, setBooking] = useState<BuilderBooking>(initial?.booking ?? defaultBooking());
   const [layout, setLayout] = useState<BuilderLayout>(initial?.layout ?? "single");
   const [quoteMode, setQuoteMode] = useState<boolean>(initial?.quoteMode ?? false);
+  const [theme, setTheme] = useState<BuilderTheme>(initial?.theme ?? defaultTheme);
   const [pickerQuery, setPickerQuery] = useState("");
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
