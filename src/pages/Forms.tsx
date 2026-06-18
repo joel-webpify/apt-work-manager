@@ -50,6 +50,11 @@ export default function Forms() {
       return t !== "ignore";
     }).length;
 
+    const quoteTotal = typeof mapped.core.quoteTotal === "number" ? mapped.core.quoteTotal : undefined;
+    const value = quoteTotal ?? (typeof mapped.core.value === "number" ? mapped.core.value : 0);
+    const slot = mapped.core.bookingSlot ? String(mapped.core.bookingSlot) : "";
+    const products = mapped.core.products ? String(mapped.core.products) : "";
+
     const job: Job = {
       id: `j-fs-${s.id}-${Date.now()}`,
       contactId: contact?.id ?? "manual",
@@ -57,18 +62,22 @@ export default function Forms() {
       service: String(mapped.core.service ?? s.service),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       trade: ((mapped.core.trade as any) ?? "General"),
-      value: typeof mapped.core.value === "number" ? mapped.core.value : 0,
+      value,
       stage: "New enquiry",
       daysInStage: 0,
       address: String(mapped.core.address ?? contact?.postcode ?? s.postcode),
       postcode: String(mapped.core.postcode ?? s.postcode).split(" ")[0],
-      notes: String(mapped.core.notes ?? `Created from form submission on ${s.date}.`),
-      quoteValue: typeof mapped.core.value === "number" ? mapped.core.value : 0,
+      notes: [
+        String(mapped.core.notes ?? `Created from form submission on ${s.date}.`),
+        products ? `Products: ${products}` : "",
+        slot ? `Preferred slot: ${slot}` : "",
+      ].filter(Boolean).join(" · "),
+      quoteValue: value,
       estimatedHours: 1,
       assignments: [],
       customFields: mapped.customFields,
       timeline: [
-        { type: "note", text: `Form submission converted to job (${s.service})`, date: s.date.split(" ")[0] + " " + s.date.split(" ")[1] },
+        { type: "note", text: `Form submission converted to job (${s.service})${slot ? ` — slot ${slot}` : ""}`, date: s.date.split(" ")[0] + " " + s.date.split(" ")[1] },
       ],
     };
     addJob(job);
