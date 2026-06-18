@@ -25,12 +25,21 @@ export default function FieldMappingDialog({
 }) {
   const [schema] = useJobFieldSchema();
 
+  const syntheticLabels = useMemo(() => {
+    const items: { label: string; hint: string }[] = [];
+    if (form.booking?.enabled) items.push({ label: form.booking.label || "Booking slot", hint: "Booking step" });
+    if (form.products && form.products.length > 0) items.push({ label: "Selected products", hint: "Products step" });
+    if (form.quoteMode) items.push({ label: "Instant quote total", hint: "Quote step" });
+    return items;
+  }, [form.booking, form.products, form.quoteMode]);
+
   const labels = useMemo(() => {
     const set = new Set<string>();
-    form.fields?.forEach((f) => set.add(f.label));
+    form.fields?.forEach((f) => f.type !== "section" && set.add(f.label));
+    syntheticLabels.forEach((s) => set.add(s.label));
     sampleLabels?.forEach((l) => set.add(l));
     return Array.from(set);
-  }, [form.fields, sampleLabels]);
+  }, [form.fields, sampleLabels, syntheticLabels]);
 
   const [mapping, setMapping] = useState<Record<string, MappingTarget>>(() => {
     const init: Record<string, MappingTarget> = {};
