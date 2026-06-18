@@ -56,6 +56,8 @@ export interface BuilderForm {
   layout?: BuilderLayout;
   /** Show an instant quote summary as the final step */
   quoteMode?: boolean;
+  /** Visual theme applied to the published form */
+  theme?: BuilderTheme;
 }
 
 const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
