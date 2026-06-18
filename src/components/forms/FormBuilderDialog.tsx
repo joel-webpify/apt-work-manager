@@ -137,6 +137,18 @@ export function FormBuilderDialog({
       [next[i], next[j]] = [next[j], next[i]];
       return next;
     });
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const reorder = (sourceId: string, targetId: string) =>
+    setFields((prev) => {
+      const from = prev.findIndex((f) => f.id === sourceId);
+      const to = prev.findIndex((f) => f.id === targetId);
+      if (from < 0 || to < 0 || from === to) return prev;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved);
+      return next;
+    });
 
   const addProduct = (productId: string) => {
     if (products.some((p) => p.productId === productId)) return;
