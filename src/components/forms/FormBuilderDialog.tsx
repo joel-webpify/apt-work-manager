@@ -119,6 +119,7 @@ export function FormBuilderDialog({
   const [pickerQuery, setPickerQuery] = useState("");
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [bookingValue, setBookingValue] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
