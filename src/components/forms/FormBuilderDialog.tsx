@@ -12,7 +12,7 @@ import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
-import { type BuilderTheme, defaultTheme, themePresets, themeWrapperStyle, buttonShapeClass } from "@/lib/formTheme";
+import { type BuilderTheme, defaultTheme, themePresets, themeWrapperStyle, buttonShapeClass, headerContainerStyle, headerTitleSizeClass } from "@/lib/formTheme";
 
 export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno" | "section";
 
