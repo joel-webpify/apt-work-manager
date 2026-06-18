@@ -17,7 +17,7 @@ export default function FieldMappingDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  form: { id: string; name: string; fields?: BuilderForm["fields"] };
+  form: { id: string; name: string; fields?: BuilderForm["fields"]; products?: BuilderForm["products"]; booking?: BuilderForm["booking"]; quoteMode?: BuilderForm["quoteMode"] };
   /** Extra labels from past submissions (in case the form's builder fields are empty). */
   sampleLabels?: string[];
   initial?: Record<string, MappingTarget>;
@@ -25,12 +25,21 @@ export default function FieldMappingDialog({
 }) {
   const [schema] = useJobFieldSchema();
 
+  const syntheticLabels = useMemo(() => {
+    const items: { label: string; hint: string }[] = [];
+    if (form.booking?.enabled) items.push({ label: form.booking.label || "Booking slot", hint: "Booking step" });
+    if (form.products && form.products.length > 0) items.push({ label: "Selected products", hint: "Products step" });
+    if (form.quoteMode) items.push({ label: "Instant quote total", hint: "Quote step" });
+    return items;
+  }, [form.booking, form.products, form.quoteMode]);
+
   const labels = useMemo(() => {
     const set = new Set<string>();
-    form.fields?.forEach((f) => set.add(f.label));
+    form.fields?.forEach((f) => f.type !== "section" && set.add(f.label));
+    syntheticLabels.forEach((s) => set.add(s.label));
     sampleLabels?.forEach((l) => set.add(l));
     return Array.from(set);
-  }, [form.fields, sampleLabels]);
+  }, [form.fields, sampleLabels, syntheticLabels]);
 
   const [mapping, setMapping] = useState<Record<string, MappingTarget>>(() => {
     const init: Record<string, MappingTarget> = {};
@@ -67,9 +76,14 @@ export default function FieldMappingDialog({
               This form has no fields yet. Open the form editor to add some.
             </div>
           ) : (
-            labels.map((label) => (
+            labels.map((label) => {
+              const hint = syntheticLabels.find((s) => s.label === label)?.hint;
+              return (
               <div key={label} className="grid grid-cols-[1fr_auto_1fr] items-center px-3 h-11 border-b-hairline last:border-0">
-                <div className="text-sm truncate">{label}</div>
+                <div className="text-sm truncate flex items-center gap-2">
+                  <span className="truncate">{label}</span>
+                  {hint && <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-surface text-muted-foreground border-hairline">{hint}</span>}
+                </div>
                 <div className="px-6 text-muted-foreground">→</div>
                 <Select value={mapping[label] ?? "ignore"} onValueChange={(v) => setMapping((m) => ({ ...m, [label]: v as MappingTarget }))}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
@@ -86,7 +100,8 @@ export default function FieldMappingDialog({
                   </SelectContent>
                 </Select>
               </div>
-            ))
+              );
+            })
           )}
         </div>
 

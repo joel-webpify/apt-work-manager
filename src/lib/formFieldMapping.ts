@@ -11,7 +11,10 @@ export type CoreJobTarget =
   | "value"
   | "notes"
   | "phone"
-  | "email";
+  | "email"
+  | "bookingSlot"
+  | "products"
+  | "quoteTotal";
 
 /** Custom-field targets use the prefix `cf:<fieldId>` so we can route arbitrary fields. */
 export type MappingTarget = CoreJobTarget | `cf:${string}` | "ignore";
@@ -32,6 +35,9 @@ export const CORE_TARGET_META: Record<CoreJobTarget, { label: string }> = {
   notes: { label: "Job notes" },
   phone: { label: "Phone" },
   email: { label: "Email" },
+  bookingSlot: { label: "Booking slot (date/time)" },
+  products: { label: "Selected products" },
+  quoteTotal: { label: "Instant quote total (£)" },
 };
 
 const PER_FORM_KEY = "form-field-mapping-v1";
@@ -42,15 +48,19 @@ export function guessTarget(label: string, schema: JobCustomField[]): MappingTar
   if (!l) return "ignore";
   const has = (...kws: string[]) => kws.some((k) => l.includes(k));
 
+  if (has("booking slot", "preferred slot", "appointment", "preferred date", "preferred time", "schedule")) return "bookingSlot";
+  if (has("selected products", "chosen products", "products", "line items", "basket", "cart")) return "products";
+  if (has("instant quote", "quote total", "estimated total", "your quote")) return "quoteTotal";
   if (has("full name", "your name", "customer", "contact name")) return "customer";
-  if (has("name") && !has("company", "business")) return "customer";
+  if (has("name") && !has("company", "business", "product")) return "customer";
   if (has("email")) return "email";
   if (has("phone", "mobile", "tel")) return "phone";
   if (has("service", "what do you need", "type of work")) return "service";
   if (has("trade")) return "trade";
   if (has("postcode", "post code", "zip")) return "postcode";
   if (has("address", "street")) return "address";
-  if (has("budget", "value", "price", "quote")) return "value";
+  if (has("budget", "price")) return "value";
+  if (has("quote value", "quote amount")) return "quoteTotal";
   if (has("message", "details", "tell us", "how can we help", "notes", "description")) return "notes";
 
   // Try matching a custom-field label
@@ -131,9 +141,9 @@ export function applyMapping(
     if (target.startsWith("cf:")) {
       const id = target.slice(3);
       out.customFields[id] = typeof raw === "boolean" ? raw : String(raw);
-    } else if (target === "value") {
+    } else if (target === "value" || target === "quoteTotal") {
       const n = typeof raw === "number" ? raw : parseFloat(String(raw).replace(/[^\d.]/g, ""));
-      if (!Number.isNaN(n)) out.core.value = n;
+      if (!Number.isNaN(n)) out.core[target] = n;
     } else {
       out.core[target as CoreJobTarget] = String(raw);
     }
