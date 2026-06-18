@@ -12,7 +12,7 @@ import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
-import { type BuilderTheme, defaultTheme, themePresets, themeWrapperStyle, buttonShapeClass } from "@/lib/formTheme";
+import { type BuilderTheme, defaultTheme, themePresets, themeWrapperStyle, buttonShapeClass, headerContainerStyle, headerTitleSizeClass } from "@/lib/formTheme";
 
 export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno" | "section";
 
@@ -124,6 +124,7 @@ export function FormBuilderDialog({
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [designOpen, setDesignOpen] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [bookingValue, setBookingValue] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
@@ -694,18 +695,33 @@ export function FormBuilderDialog({
             {/* Design */}
             <div className="border-hairline rounded-lg">
               <div className="px-3 h-10 flex items-center justify-between border-b-hairline">
-                <div className="flex items-center gap-2">
-                  <Palette className="w-3.5 h-3.5 text-muted-foreground" />
-                  <span className="text-sm font-medium">Design</span>
-                </div>
                 <button
                   type="button"
-                  onClick={() => setTheme(defaultTheme)}
-                  className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  onClick={() => setDesignOpen((v) => !v)}
+                  className="flex items-center gap-2 flex-1 text-left"
+                  aria-expanded={designOpen}
                 >
-                  Reset
+                  <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${designOpen ? "" : "-rotate-90"}`} />
+                  <Palette className="w-3.5 h-3.5 text-muted-foreground" />
+                  <span className="text-sm font-medium">Design</span>
+                  {!designOpen && (
+                    <span className="ml-2 inline-flex items-center gap-1">
+                      <span className="w-3 h-3 rounded-sm border border-background/40" style={{ background: theme.background }} />
+                      <span className="w-3 h-3 rounded-sm" style={{ background: theme.accent }} />
+                    </span>
+                  )}
                 </button>
+                {designOpen && (
+                  <button
+                    type="button"
+                    onClick={() => setTheme(defaultTheme)}
+                    className="text-[11px] text-muted-foreground hover:text-foreground underline underline-offset-2"
+                  >
+                    Reset
+                  </button>
+                )}
               </div>
+              {designOpen && (
               <div className="p-3 space-y-3">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Preset palette</Label>
@@ -783,8 +799,61 @@ export function FormBuilderDialog({
                     </Select>
                   </div>
                 </div>
+
+                {/* Header design */}
+                <div className="pt-3 border-t-hairline space-y-2">
+                  <Label className="text-xs">Header</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Style</Label>
+                      <Select value={theme.headerStyle} onValueChange={(v: BuilderTheme["headerStyle"]) => setTheme((t) => ({ ...t, headerStyle: v }))}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="plain">Plain</SelectItem>
+                          <SelectItem value="underline">Underline</SelectItem>
+                          <SelectItem value="banner">Soft banner</SelectItem>
+                          <SelectItem value="gradient">Gradient block</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Size</Label>
+                      <Select value={theme.headerSize} onValueChange={(v: BuilderTheme["headerSize"]) => setTheme((t) => ({ ...t, headerSize: v }))}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="sm">Small</SelectItem>
+                          <SelectItem value="md">Medium</SelectItem>
+                          <SelectItem value="lg">Large</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Alignment</Label>
+                      <Select value={theme.headerAlign} onValueChange={(v: BuilderTheme["headerAlign"]) => setTheme((t) => ({ ...t, headerAlign: v }))}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="left">Left</SelectItem>
+                          <SelectItem value="center">Center</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[11px] text-muted-foreground">Emoji (optional)</Label>
+                      <Input
+                        value={theme.headerEmoji ?? ""}
+                        onChange={(e) => setTheme((t) => ({ ...t, headerEmoji: e.target.value.slice(0, 4) }))}
+                        placeholder="🔧"
+                        className="h-8 text-sm"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
+              )}
             </div>
+
 
             <div className="border-hairline rounded-lg">
               <div className="px-3 h-10 flex items-center justify-between border-b-hairline">
@@ -1162,9 +1231,10 @@ export function FormBuilderDialog({
               </div>
             ) : (
               <div className="border-hairline rounded-lg p-5 space-y-4" style={{ background: theme.background, color: theme.text }}>
-                <div>
-                  <h3 className="text-base font-medium">{name || "Form name"}</h3>
-                  {description && <p className="text-xs opacity-70 mt-1">{description}</p>}
+                <div style={headerContainerStyle(theme)}>
+                  {theme.headerEmoji && <div className="text-2xl mb-1 leading-none">{theme.headerEmoji}</div>}
+                  <h3 className={`${headerTitleSizeClass(theme.headerSize)} font-medium leading-tight`}>{name || "Form name"}</h3>
+                  {description && <p className="text-xs opacity-80 mt-1">{description}</p>}
                 </div>
                 {submitted ? (
                   <div className="text-center space-y-2 py-6">
