@@ -124,6 +124,7 @@ export function FormBuilderDialog({
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [designOpen, setDesignOpen] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [bookingValue, setBookingValue] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
