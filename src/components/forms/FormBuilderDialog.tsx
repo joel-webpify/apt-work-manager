@@ -1076,8 +1076,9 @@ export function FormBuilderDialog({
               )}
             </div>
 
+            <div style={themeWrapperStyle(theme)} className={`rounded-lg ${buttonShapeClass(theme.buttonShape)}`}>
             {isStepped ? (
-              <div className="bg-card border-hairline rounded-lg min-h-[480px] flex flex-col">
+              <div className="border-hairline rounded-lg min-h-[480px] flex flex-col" style={{ background: theme.background, color: theme.text }}>
                 {/* progress bar */}
                 <div className="px-6 pt-5">
                   <div className="flex items-center gap-1">
