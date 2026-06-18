@@ -4,6 +4,12 @@ export interface BuilderTheme {
   text: string;         // hex
   fontFamily: "sans" | "serif" | "mono";
   buttonShape: "rounded" | "square" | "pill";
+  /** Header visual treatment */
+  headerStyle: "plain" | "banner" | "gradient" | "underline";
+  headerAlign: "left" | "center";
+  headerSize: "sm" | "md" | "lg";
+  /** Optional emoji/icon shown above the title */
+  headerEmoji?: string;
 }
 
 export const defaultTheme: BuilderTheme = {
@@ -12,6 +18,10 @@ export const defaultTheme: BuilderTheme = {
   text: "#0f172a",
   fontFamily: "sans",
   buttonShape: "rounded",
+  headerStyle: "plain",
+  headerAlign: "left",
+  headerSize: "md",
+  headerEmoji: "",
 };
 
 export const themePresets: { name: string; theme: BuilderTheme }[] = [
