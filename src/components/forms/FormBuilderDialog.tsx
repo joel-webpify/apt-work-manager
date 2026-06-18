@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft } from "lucide-react";
 import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
 
-export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number";
+export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno";
 
 export interface BuilderField {
   id: string;
