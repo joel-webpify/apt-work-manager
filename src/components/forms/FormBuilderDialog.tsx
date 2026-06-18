@@ -174,7 +174,7 @@ export function FormBuilderDialog({
   // Typeform-style: one field per step in wizard mode. Plus products/booking/quote.
   type StepDef = { key: string; label: string; kind: "field" | "products" | "booking" | "quote"; field?: BuilderField };
   const steps = useMemo<StepDef[]>(() => {
-    const s: StepDef[] = fields.map((f) => ({ key: `field-${f.id}`, label: f.label, kind: "field", field: f }));
+    const s: StepDef[] = fields.filter((f) => f.type !== "section").map((f) => ({ key: `field-${f.id}`, label: f.label, kind: "field", field: f }));
     if (products.length) s.push({ key: "products", label: "Choose products", kind: "products" });
     if (booking.enabled) s.push({ key: "booking", label: booking.label || "Pick a time", kind: "booking" });
     if (quoteMode) s.push({ key: "quote", label: "Your quote", kind: "quote" });
