@@ -1161,10 +1161,10 @@ export function FormBuilderDialog({
                 )}
               </div>
             ) : (
-              <div className="bg-card border-hairline rounded-lg p-5 space-y-4">
+              <div className="border-hairline rounded-lg p-5 space-y-4" style={{ background: theme.background, color: theme.text }}>
                 <div>
                   <h3 className="text-base font-medium">{name || "Form name"}</h3>
-                  {description && <p className="text-xs text-muted-foreground mt-1">{description}</p>}
+                  {description && <p className="text-xs opacity-70 mt-1">{description}</p>}
                 </div>
                 {submitted ? (
                   <div className="text-center space-y-2 py-6">
@@ -1172,7 +1172,7 @@ export function FormBuilderDialog({
                       <Check className="w-5 h-5" />
                     </div>
                     <div className="text-sm font-medium">Thanks — we'll be in touch.</div>
-                    <p className="text-xs text-muted-foreground">Saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.</p>
+                    <p className="text-xs opacity-70">Saved as a lead{bookingValue ? `, for ${bookingValue}` : ""}.</p>
                   </div>
                 ) : (
                   <>
@@ -1185,6 +1185,7 @@ export function FormBuilderDialog({
                 )}
               </div>
             )}
+            </div>
           </div>
         </div>
 
