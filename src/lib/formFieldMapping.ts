@@ -11,7 +11,10 @@ export type CoreJobTarget =
   | "value"
   | "notes"
   | "phone"
-  | "email";
+  | "email"
+  | "bookingSlot"
+  | "products"
+  | "quoteTotal";
 
 /** Custom-field targets use the prefix `cf:<fieldId>` so we can route arbitrary fields. */
 export type MappingTarget = CoreJobTarget | `cf:${string}` | "ignore";
@@ -32,6 +35,9 @@ export const CORE_TARGET_META: Record<CoreJobTarget, { label: string }> = {
   notes: { label: "Job notes" },
   phone: { label: "Phone" },
   email: { label: "Email" },
+  bookingSlot: { label: "Booking slot (date/time)" },
+  products: { label: "Selected products" },
+  quoteTotal: { label: "Instant quote total (£)" },
 };
 
 const PER_FORM_KEY = "form-field-mapping-v1";
