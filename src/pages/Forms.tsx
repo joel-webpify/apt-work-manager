@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Plus, FileText, ArrowRight, Pencil, Code2, Check, Wand2 } from "lucide-react";
+import { Plus, FileText, ArrowRight, Pencil, Code2, Check, Wand2, Eye } from "lucide-react";
+import SubmissionPreviewDialog from "@/components/forms/SubmissionPreviewDialog";
 import {
   forms as seedForms,
   formSubmissions,
