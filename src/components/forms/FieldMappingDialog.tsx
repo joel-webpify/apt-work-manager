@@ -100,7 +100,8 @@ export default function FieldMappingDialog({
                   </SelectContent>
                 </Select>
               </div>
-            ))
+              );
+            })
           )}
         </div>
 
