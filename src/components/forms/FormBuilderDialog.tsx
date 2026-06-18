@@ -7,11 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft, Rows3, ChevronDown } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft, Rows3, ChevronDown, Palette } from "lucide-react";
 import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
+import { type BuilderTheme, defaultTheme, themePresets, themeWrapperStyle, buttonShapeClass } from "@/lib/formTheme";
 
 export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno" | "section";
 
