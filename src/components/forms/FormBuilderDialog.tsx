@@ -7,13 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft } from "lucide-react";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Mail, Phone, Type, AlignLeft, ListChecks, Hash, Package, Search, CalendarClock, Calculator, ArrowLeft, ArrowRight, CornerDownLeft, Check, CircleDot, CheckSquare, ToggleLeft, Rows3, ChevronDown } from "lucide-react";
 import { products as catalog, type Job, type Trade } from "@/data/mockData";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
 import { useToast } from "@/hooks/use-toast";
 
-export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno";
+export type FieldType = "text" | "email" | "phone" | "textarea" | "select" | "number" | "radio" | "checkboxes" | "yesno" | "section";
 
 export interface BuilderField {
   id: string;
@@ -67,6 +67,7 @@ const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
   radio: { label: "Single choice", icon: CircleDot },
   checkboxes: { label: "Multi-select", icon: CheckSquare },
   yesno: { label: "Yes / No", icon: ToggleLeft },
+  section: { label: "Section heading", icon: Rows3 },
 };
 
 const hasOptions = (t: FieldType) => t === "select" || t === "radio" || t === "checkboxes";
@@ -118,6 +119,7 @@ export function FormBuilderDialog({
   const [pickerQuery, setPickerQuery] = useState("");
   const [previewQty, setPreviewQty] = useState<Record<string, number>>({});
   const [previewStep, setPreviewStep] = useState(0);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
   const [bookingValue, setBookingValue] = useState<string>("");
   const [submitted, setSubmitted] = useState(false);
@@ -172,7 +174,7 @@ export function FormBuilderDialog({
   // Typeform-style: one field per step in wizard mode. Plus products/booking/quote.
   type StepDef = { key: string; label: string; kind: "field" | "products" | "booking" | "quote"; field?: BuilderField };
   const steps = useMemo<StepDef[]>(() => {
-    const s: StepDef[] = fields.map((f) => ({ key: `field-${f.id}`, label: f.label, kind: "field", field: f }));
+    const s: StepDef[] = fields.filter((f) => f.type !== "section").map((f) => ({ key: `field-${f.id}`, label: f.label, kind: "field", field: f }));
     if (products.length) s.push({ key: "products", label: "Choose products", kind: "products" });
     if (booking.enabled) s.push({ key: "booking", label: booking.label || "Pick a time", kind: "booking" });
     if (quoteMode) s.push({ key: "quote", label: "Your quote", kind: "quote" });
@@ -376,86 +378,148 @@ export function FormBuilderDialog({
     );
   };
 
-  const renderDetails = () => (
-    <>
-      {fields.map((f) => (
-        <div key={f.id} className="space-y-1.5">
-          <Label className="text-xs">
-            {f.label} {f.required && <span className="text-destructive">*</span>}
-          </Label>
-          {f.type === "textarea" ? (
-            <Textarea
-              placeholder={f.placeholder}
-              rows={3}
-              value={fieldValues[f.id] ?? ""}
-              onChange={(e) => setFieldValue(f.id, e.target.value)}
-            />
-          ) : f.type === "select" ? (
-            <Select value={fieldValues[f.id] ?? ""} onValueChange={(v) => setFieldValue(f.id, v)}>
-              <SelectTrigger><SelectValue placeholder={f.placeholder || "Select..."} /></SelectTrigger>
-              <SelectContent>
-                {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          ) : f.type === "radio" ? (
-            <div className="space-y-1.5">
-              {(f.options ?? []).map((o) => (
-                <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="radio"
-                    name={f.id}
-                    checked={(fieldValues[f.id] ?? "") === o}
-                    onChange={() => setFieldValue(f.id, o)}
-                  />
-                  {o}
-                </label>
-              ))}
-            </div>
-          ) : f.type === "yesno" ? (
-            <div className="flex gap-2">
-              {["Yes", "No"].map((o) => (
-                <button
-                  key={o}
-                  type="button"
-                  onClick={() => setFieldValue(f.id, o)}
-                  className={`flex-1 h-9 rounded-md border-hairline text-sm transition-colors ${
-                    (fieldValues[f.id] ?? "") === o ? "bg-primary/10 border-primary" : "hover:bg-surface-hover"
-                  }`}
-                >
-                  {o}
-                </button>
-              ))}
-            </div>
-          ) : f.type === "checkboxes" ? (
-            <div className="space-y-1.5">
-              {(f.options ?? []).map((o) => {
-                const set = new Set((fieldValues[f.id] ?? "") ? (fieldValues[f.id] ?? "").split("||") : []);
-                const checked = set.has(o);
-                return (
-                  <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <Checkbox
-                      checked={checked}
-                      onCheckedChange={(v) => {
-                        if (v) set.add(o); else set.delete(o);
-                        setFieldValue(f.id, Array.from(set).join("||"));
-                      }}
-                    />
-                    {o}
-                  </label>
-                );
-              })}
-            </div>
-          ) : (
-            <Input
-              type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
-              placeholder={f.placeholder}
-              value={fieldValues[f.id] ?? ""}
-              onChange={(e) => setFieldValue(f.id, e.target.value)}
-            />
-          )}
+  const renderFieldInput = (f: BuilderField) => {
+    if (f.type === "textarea") {
+      return (
+        <Textarea
+          placeholder={f.placeholder}
+          rows={3}
+          value={fieldValues[f.id] ?? ""}
+          onChange={(e) => setFieldValue(f.id, e.target.value)}
+        />
+      );
+    }
+    if (f.type === "select") {
+      return (
+        <Select value={fieldValues[f.id] ?? ""} onValueChange={(v) => setFieldValue(f.id, v)}>
+          <SelectTrigger><SelectValue placeholder={f.placeholder || "Select..."} /></SelectTrigger>
+          <SelectContent>
+            {(f.options ?? []).map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      );
+    }
+    if (f.type === "radio") {
+      return (
+        <div className="space-y-1.5">
+          {(f.options ?? []).map((o) => (
+            <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+              <input
+                type="radio"
+                name={f.id}
+                checked={(fieldValues[f.id] ?? "") === o}
+                onChange={() => setFieldValue(f.id, o)}
+              />
+              {o}
+            </label>
+          ))}
         </div>
-      ))}
-    </>
+      );
+    }
+    if (f.type === "yesno") {
+      return (
+        <div className="flex gap-2">
+          {["Yes", "No"].map((o) => (
+            <button
+              key={o}
+              type="button"
+              onClick={() => setFieldValue(f.id, o)}
+              className={`flex-1 h-9 rounded-md border-hairline text-sm transition-colors ${
+                (fieldValues[f.id] ?? "") === o ? "bg-primary/10 border-primary" : "hover:bg-surface-hover"
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      );
+    }
+    if (f.type === "checkboxes") {
+      return (
+        <div className="space-y-1.5">
+          {(f.options ?? []).map((o) => {
+            const set = new Set((fieldValues[f.id] ?? "") ? (fieldValues[f.id] ?? "").split("||") : []);
+            const checked = set.has(o);
+            return (
+              <label key={o} className="flex items-center gap-2 text-sm cursor-pointer">
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(v) => {
+                    if (v) set.add(o); else set.delete(o);
+                    setFieldValue(f.id, Array.from(set).join("||"));
+                  }}
+                />
+                {o}
+              </label>
+            );
+          })}
+        </div>
+      );
+    }
+    return (
+      <Input
+        type={f.type === "number" ? "number" : f.type === "email" ? "email" : f.type === "phone" ? "tel" : "text"}
+        placeholder={f.placeholder}
+        value={fieldValues[f.id] ?? ""}
+        onChange={(e) => setFieldValue(f.id, e.target.value)}
+      />
+    );
+  };
+
+  const renderFieldRow = (f: BuilderField) => (
+    <div key={f.id} className="space-y-1.5">
+      <Label className="text-xs">
+        {f.label} {f.required && <span className="text-destructive">*</span>}
+      </Label>
+      {renderFieldInput(f)}
+    </div>
+  );
+
+  // Group fields into sections for the single-page layout
+  const fieldGroups = useMemo(() => {
+    const groups: { id: string; label: string | null; fields: BuilderField[] }[] = [
+      { id: "__top", label: null, fields: [] },
+    ];
+    for (const f of fields) {
+      if (f.type === "section") {
+        groups.push({ id: f.id, label: f.label || "Section", fields: [] });
+      } else {
+        groups[groups.length - 1].fields.push(f);
+      }
+    }
+    return groups.filter((g) => g.fields.length > 0 || g.label !== null);
+  }, [fields]);
+
+  const renderDetails = () => (
+    <div className="space-y-3">
+      {fieldGroups.map((g) => {
+        if (g.label === null) {
+          return (
+            <div key={g.id} className="space-y-3">
+              {g.fields.map(renderFieldRow)}
+            </div>
+          );
+        }
+        const collapsed = !!collapsedSections[g.id];
+        return (
+          <div key={g.id} className="border-hairline rounded-md overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setCollapsedSections((p) => ({ ...p, [g.id]: !p[g.id] }))}
+              className="w-full flex items-center justify-between px-3 h-9 bg-surface/60 hover:bg-surface-hover transition-colors"
+            >
+              <span className="text-xs font-medium">{g.label}</span>
+              <ChevronDown className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${collapsed ? "-rotate-90" : ""}`} />
+            </button>
+            {!collapsed && (
+              <div className="p-3 space-y-3">
+                {g.fields.map(renderFieldRow)}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 
   const renderProducts = () =>
@@ -653,18 +717,20 @@ export function FormBuilderDialog({
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
-                      <div className="flex items-center gap-3 pl-6">
-                        <Input
-                          value={f.placeholder ?? ""}
-                          onChange={(e) => update(f.id, { placeholder: e.target.value })}
-                          className="h-7 text-xs flex-1"
-                          placeholder="Placeholder text"
-                        />
-                        <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                          <Checkbox checked={f.required} onCheckedChange={(v) => update(f.id, { required: !!v })} />
-                          Required
-                        </label>
-                      </div>
+                      {f.type !== "section" && (
+                        <div className="flex items-center gap-3 pl-6">
+                          <Input
+                            value={f.placeholder ?? ""}
+                            onChange={(e) => update(f.id, { placeholder: e.target.value })}
+                            className="h-7 text-xs flex-1"
+                            placeholder="Placeholder text"
+                          />
+                          <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Checkbox checked={f.required} onCheckedChange={(v) => update(f.id, { required: !!v })} />
+                            Required
+                          </label>
+                        </div>
+                      )}
                       {hasOptions(f.type) && (
                         <div className="pl-6">
                           <Textarea
