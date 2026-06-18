@@ -64,7 +64,12 @@ const fieldTypeMeta: Record<FieldType, { label: string; icon: typeof Type }> = {
   textarea: { label: "Long text", icon: AlignLeft },
   select: { label: "Dropdown", icon: ListChecks },
   number: { label: "Number", icon: Hash },
+  radio: { label: "Single choice", icon: CircleDot },
+  checkboxes: { label: "Multi-select", icon: CheckSquare },
+  yesno: { label: "Yes / No", icon: ToggleLeft },
 };
+
+const hasOptions = (t: FieldType) => t === "select" || t === "radio" || t === "checkboxes";
 
 const newField = (type: FieldType): BuilderField => ({
   id: `f-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -72,7 +77,7 @@ const newField = (type: FieldType): BuilderField => ({
   label: fieldTypeMeta[type].label,
   placeholder: "",
   required: false,
-  options: type === "select" ? ["Option 1", "Option 2"] : undefined,
+  options: hasOptions(type) ? ["Option 1", "Option 2"] : undefined,
 });
 
 const defaultBooking = (): BuilderBooking => ({
