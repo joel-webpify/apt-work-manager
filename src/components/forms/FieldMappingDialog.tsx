@@ -76,9 +76,14 @@ export default function FieldMappingDialog({
               This form has no fields yet. Open the form editor to add some.
             </div>
           ) : (
-            labels.map((label) => (
+            labels.map((label) => {
+              const hint = syntheticLabels.find((s) => s.label === label)?.hint;
+              return (
               <div key={label} className="grid grid-cols-[1fr_auto_1fr] items-center px-3 h-11 border-b-hairline last:border-0">
-                <div className="text-sm truncate">{label}</div>
+                <div className="text-sm truncate flex items-center gap-2">
+                  <span className="truncate">{label}</span>
+                  {hint && <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-surface text-muted-foreground border-hairline">{hint}</span>}
+                </div>
                 <div className="px-6 text-muted-foreground">→</div>
                 <Select value={mapping[label] ?? "ignore"} onValueChange={(v) => setMapping((m) => ({ ...m, [label]: v as MappingTarget }))}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
