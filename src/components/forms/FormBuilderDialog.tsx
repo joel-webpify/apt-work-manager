@@ -751,6 +751,34 @@ export function FormBuilderDialog({
                           <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
+                      {f.type !== "section" && (
+                        <div className="flex items-center gap-3 pl-6">
+                          <Input
+                            value={f.placeholder ?? ""}
+                            onChange={(e) => update(f.id, { placeholder: e.target.value })}
+                            className="h-7 text-xs flex-1"
+                            placeholder="Placeholder text"
+                          />
+                          <label className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <Checkbox checked={f.required} onCheckedChange={(v) => update(f.id, { required: !!v })} />
+                            Required
+                          </label>
+                        </div>
+                      )}
+                      {hasOptions(f.type) && (
+                        <div className="pl-6">
+                          <Textarea
+                            value={(f.options ?? []).join("\n")}
+                            onChange={(e) => update(f.id, { options: e.target.value.split("\n").filter(Boolean) })}
+                            rows={3}
+                            className="text-xs"
+                            placeholder={"One option per line"}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
                 {fields.length === 0 && (
                   <div className="p-6 text-center text-sm text-muted-foreground">No fields yet — add one above.</div>
                 )}
