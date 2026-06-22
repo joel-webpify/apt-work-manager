@@ -383,6 +383,23 @@ function BoardCard({
           })}
         </div>
       )}
+      {job.milestones && job.milestones.length > 0 && (() => {
+        const done = job.milestones.filter((m) => m.done).length;
+        const total = job.milestones.length;
+        const pct = total ? (done / total) * 100 : 0;
+        const next = job.milestones.find((m) => !m.done);
+        return (
+          <div className="mt-2.5">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+              <span className="truncate pr-2">{next ? `Next: ${next.label}` : "All milestones complete"}</span>
+              <span className="tabular-nums shrink-0">{done}/{total}</span>
+            </div>
+            <div className="h-1 rounded-full bg-surface-hover overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: stageColor }} />
+            </div>
+          </div>
+        );
+      })()}
       {job.assignments && job.assignments.length > 0 && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t-hairline">
           <Users className="w-3 h-3 text-muted-foreground" />
