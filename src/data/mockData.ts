@@ -95,6 +95,8 @@ export interface Job {
   timeline: { type: "email" | "note"; text: string; date: string }[];
   /** Values for user-defined fields, keyed by field id. */
   customFields?: Record<string, string | number | boolean>;
+  /** Per-job checklist of milestones. */
+  milestones?: { id: string; label: string; done: boolean }[];
 }
 
 export const employees: Employee[] = [

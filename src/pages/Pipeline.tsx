@@ -383,6 +383,23 @@ function BoardCard({
           })}
         </div>
       )}
+      {job.milestones && job.milestones.length > 0 && (() => {
+        const done = job.milestones.filter((m) => m.done).length;
+        const total = job.milestones.length;
+        const pct = total ? (done / total) * 100 : 0;
+        const next = job.milestones.find((m) => !m.done);
+        return (
+          <div className="mt-2.5">
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+              <span className="truncate pr-2">{next ? `Next: ${next.label}` : "All milestones complete"}</span>
+              <span className="tabular-nums shrink-0">{done}/{total}</span>
+            </div>
+            <div className="h-1 rounded-full bg-surface-hover overflow-hidden">
+              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: stageColor }} />
+            </div>
+          </div>
+        );
+      })()}
       {job.assignments && job.assignments.length > 0 && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t-hairline">
           <Users className="w-3 h-3 text-muted-foreground" />
@@ -782,6 +799,8 @@ function JobDrawer({
             />
           </Section>
 
+          <MilestonesSection job={job} onUpdate={onUpdate} colorFor={colorFor} />
+
           {schema.length > 0 && (
             <Section title="Custom fields">
               <div className="space-y-2">
@@ -889,6 +908,96 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
+
+function MilestonesSection({
+  job,
+  onUpdate,
+  colorFor,
+}: {
+  job: Job;
+  onUpdate: (patch: Partial<Job>) => void;
+  colorFor: (n: string) => string;
+}) {
+  const [draft, setDraft] = useState("");
+  const milestones = job.milestones ?? [];
+  const done = milestones.filter((m) => m.done).length;
+  const total = milestones.length;
+  const pct = total ? (done / total) * 100 : 0;
+  const stageColor = colorToCss(colorFor(job.stage));
+
+  const update = (next: NonNullable<Job["milestones"]>) => onUpdate({ milestones: next });
+  const add = () => {
+    const label = draft.trim();
+    if (!label) return;
+    update([...milestones, { id: `ms-${Date.now()}`, label, done: false }]);
+    setDraft("");
+  };
+  const toggle = (id: string) => update(milestones.map((m) => (m.id === id ? { ...m, done: !m.done } : m)));
+  const remove = (id: string) => update(milestones.filter((m) => m.id !== id));
+  const applyPreset = (labels: string[]) => {
+    update(labels.map((l, i) => ({ id: `ms-${Date.now()}-${i}`, label: l, done: false })));
+  };
+
+  return (
+    <Section title="Milestones">
+      {total > 0 && (
+        <div className="mb-3">
+          <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+            <span>{done} of {total} complete</span>
+            <span className="tabular-nums">{Math.round(pct)}%</span>
+          </div>
+          <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, backgroundColor: stageColor }} />
+          </div>
+        </div>
+      )}
+      {milestones.length === 0 ? (
+        <div className="text-xs text-muted-foreground mb-3">
+          No milestones yet. Add steps to track progress, or pick a preset:
+          <div className="flex flex-wrap gap-1.5 mt-2">
+            <button onClick={() => applyPreset(["Site visit", "Quote sent", "Materials ordered", "Work scheduled", "Job complete"])} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Standard job</button>
+            <button onClick={() => applyPreset(["Survey", "Design approved", "Install day 1", "Install day 2", "Snagging"])} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Install</button>
+            <button onClick={() => applyPreset(["Arrived on site", "Work in progress", "Cleared up", "Customer sign-off"])} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Quick visit</button>
+          </div>
+        </div>
+      ) : (
+        <ul className="space-y-1 mb-3">
+          {milestones.map((m) => (
+            <li key={m.id} className="group flex items-center gap-2 text-sm">
+              <button
+                onClick={() => toggle(m.id)}
+                className={`w-4 h-4 rounded border-hairline flex items-center justify-center shrink-0 ${m.done ? "bg-foreground text-background" : "bg-background"}`}
+                aria-label={m.done ? "Mark incomplete" : "Mark complete"}
+              >
+                {m.done && <Check className="w-3 h-3" strokeWidth={3} />}
+              </button>
+              <span className={`flex-1 ${m.done ? "line-through text-muted-foreground" : ""}`}>{m.label}</span>
+              <button
+                onClick={() => remove(m.id)}
+                className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded flex items-center justify-center hover:bg-surface-hover"
+                aria-label="Remove milestone"
+              >
+                <X className="w-3 h-3 text-muted-foreground" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex gap-2">
+        <Input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder="Add a milestone…"
+          className="h-8"
+        />
+        <Button size="sm" variant="outline" className="h-8" onClick={add}>Add</Button>
+      </div>
+    </Section>
+  );
+}
+
+
 
 // Re-export seed defaults so other modules can still import if needed.
 export { seedStages, seedStageColors };
