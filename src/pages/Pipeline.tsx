@@ -799,6 +799,8 @@ function JobDrawer({
             />
           </Section>
 
+          <MilestonesSection job={job} onUpdate={onUpdate} colorFor={colorFor} />
+
           {schema.length > 0 && (
             <Section title="Custom fields">
               <div className="space-y-2">
