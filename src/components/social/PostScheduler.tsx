@@ -352,7 +352,13 @@ export function PostScheduler({ kind }: { kind: PostKind }) {
               post={p}
               onEdit={openEdit}
               actions={
-                <Btn variant="secondary" onClick={() => setStatus(p.id, "pending_approval") || toast.success("Submitted")}>
+                <Btn
+                  variant="secondary"
+                  onClick={() => {
+                    setStatus(p.id, "pending_approval");
+                    toast.success("Submitted");
+                  }}
+                >
                   Submit
                 </Btn>
               }
