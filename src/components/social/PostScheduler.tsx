@@ -329,112 +329,118 @@ export function PostScheduler({ kind }: { kind: PostKind }) {
         </Btn>
       </div>
 
-      <Tabs defaultValue="calendar" className="w-full">
-        <TabsList>
-          <TabsTrigger value="calendar">
-            <CalendarIcon className="w-3.5 h-3.5 mr-1.5" /> Calendar
-          </TabsTrigger>
-          <TabsTrigger value="drafts">Drafts ({drafts.length})</TabsTrigger>
-          <TabsTrigger value="approval">Approval ({approvals.length})</TabsTrigger>
-          <TabsTrigger value="scheduled">Scheduled ({scheduled.length})</TabsTrigger>
-          <TabsTrigger value="published">Published ({published.length})</TabsTrigger>
-        </TabsList>
+      <div className="flex gap-4 items-start">
+        <div className="flex-1 min-w-0">
+          <Tabs defaultValue="calendar" className="w-full">
+            <TabsList>
+              <TabsTrigger value="calendar">
+                <CalendarIcon className="w-3.5 h-3.5 mr-1.5" /> Calendar
+              </TabsTrigger>
+              <TabsTrigger value="drafts">Drafts ({drafts.length})</TabsTrigger>
+              <TabsTrigger value="approval">Approval ({approvals.length})</TabsTrigger>
+              <TabsTrigger value="scheduled">Scheduled ({scheduled.length})</TabsTrigger>
+              <TabsTrigger value="published">Published ({published.length})</TabsTrigger>
+            </TabsList>
 
-        <TabsContent value="calendar" className="mt-4">
-          <CalendarGrid posts={posts} onEdit={openEdit} onNew={(d) => openNew(d)} />
-        </TabsContent>
+            <TabsContent value="calendar" className="mt-4">
+              <CalendarGrid posts={posts} onEdit={openEdit} onNew={(d) => openNew(d)} />
+            </TabsContent>
 
-        <TabsContent value="drafts" className="mt-4 space-y-2">
-          {drafts.length === 0 && <EmptyState label="No drafts yet" />}
-          {drafts.map((p) => (
-            <PostRow
-              key={p.id}
-              post={p}
-              onEdit={openEdit}
-              actions={
-                <Btn
-                  variant="secondary"
-                  onClick={() => {
-                    setStatus(p.id, "pending_approval");
-                    toast.success("Submitted");
-                  }}
-                >
-                  Submit
-                </Btn>
-              }
-            />
-          ))}
-        </TabsContent>
+            <TabsContent value="drafts" className="mt-4 space-y-2">
+              {drafts.length === 0 && <EmptyState label="No drafts yet" />}
+              {drafts.map((p) => (
+                <PostRow
+                  key={p.id}
+                  post={p}
+                  onEdit={openEdit}
+                  actions={
+                    <Btn
+                      variant="secondary"
+                      onClick={() => {
+                        setStatus(p.id, "pending_approval");
+                        toast.success("Submitted");
+                      }}
+                    >
+                      Submit
+                    </Btn>
+                  }
+                />
+              ))}
+            </TabsContent>
 
-        <TabsContent value="approval" className="mt-4 space-y-2">
-          {approvals.length === 0 && <EmptyState label="Nothing awaiting approval" />}
-          {approvals.map((p) => (
-            <PostRow
-              key={p.id}
-              post={p}
-              onEdit={openEdit}
-              actions={
-                <>
-                  <button
-                    onClick={() => {
-                      setStatus(p.id, p.scheduledAt ? "scheduled" : "approved");
-                      toast.success("Approved");
-                    }}
-                    className="h-7 px-2 rounded text-xs font-medium bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] inline-flex items-center gap-1"
-                  >
-                    <Check className="w-3 h-3" /> Approve
-                  </button>
-                  <button
-                    onClick={() => {
-                      const note = prompt("Reason for rejection?") || "";
-                      setStatus(p.id, "rejected", { rejectionNote: note });
-                      toast.success("Rejected");
-                    }}
-                    className="h-7 px-2 rounded text-xs font-medium bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))] inline-flex items-center gap-1"
-                  >
-                    <X className="w-3 h-3" /> Reject
-                  </button>
-                </>
-              }
-            />
-          ))}
-        </TabsContent>
+            <TabsContent value="approval" className="mt-4 space-y-2">
+              {approvals.length === 0 && <EmptyState label="Nothing awaiting approval" />}
+              {approvals.map((p) => (
+                <PostRow
+                  key={p.id}
+                  post={p}
+                  onEdit={openEdit}
+                  actions={
+                    <>
+                      <button
+                        onClick={() => {
+                          setStatus(p.id, p.scheduledAt ? "scheduled" : "approved");
+                          toast.success("Approved");
+                        }}
+                        className="h-7 px-2 rounded text-xs font-medium bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] inline-flex items-center gap-1"
+                      >
+                        <Check className="w-3 h-3" /> Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          const note = prompt("Reason for rejection?") || "";
+                          setStatus(p.id, "rejected", { rejectionNote: note });
+                          toast.success("Rejected");
+                        }}
+                        className="h-7 px-2 rounded text-xs font-medium bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))] inline-flex items-center gap-1"
+                      >
+                        <X className="w-3 h-3" /> Reject
+                      </button>
+                    </>
+                  }
+                />
+              ))}
+            </TabsContent>
 
-        <TabsContent value="scheduled" className="mt-4 space-y-2">
-          {scheduled.length === 0 && <EmptyState label="Nothing scheduled" />}
-          {scheduled
-            .slice()
-            .sort((a, b) => (a.scheduledAt || "").localeCompare(b.scheduledAt || ""))
-            .map((p) => (
-              <PostRow
-                key={p.id}
-                post={p}
-                onEdit={openEdit}
-                actions={
-                  <Btn
-                    variant="secondary"
-                    onClick={() => {
-                      setStatus(p.id, "published", { publishedAt: new Date().toISOString() });
-                      toast.success("Marked as published");
-                    }}
-                  >
-                    Publish now
-                  </Btn>
-                }
-              />
-            ))}
-        </TabsContent>
+            <TabsContent value="scheduled" className="mt-4 space-y-2">
+              {scheduled.length === 0 && <EmptyState label="Nothing scheduled" />}
+              {scheduled
+                .slice()
+                .sort((a, b) => (a.scheduledAt || "").localeCompare(b.scheduledAt || ""))
+                .map((p) => (
+                  <PostRow
+                    key={p.id}
+                    post={p}
+                    onEdit={openEdit}
+                    actions={
+                      <Btn
+                        variant="secondary"
+                        onClick={() => {
+                          setStatus(p.id, "published", { publishedAt: new Date().toISOString() });
+                          toast.success("Marked as published");
+                        }}
+                      >
+                        Publish now
+                      </Btn>
+                    }
+                  />
+                ))}
+            </TabsContent>
 
-        <TabsContent value="published" className="mt-4 space-y-2">
-          {published.length === 0 && <EmptyState label="No published posts yet" />}
-          {published
-            .slice()
-            .sort((a, b) => (b.publishedAt || "").localeCompare(a.publishedAt || ""))
-            .map((p) => (
-              <PostRow key={p.id} post={p} onEdit={openEdit} />
-            ))}
-        </TabsContent>
-      </Tabs>
+            <TabsContent value="published" className="mt-4 space-y-2">
+              {published.length === 0 && <EmptyState label="No published posts yet" />}
+              {published
+                .slice()
+                .sort((a, b) => (b.publishedAt || "").localeCompare(a.publishedAt || ""))
+                .map((p) => (
+                  <PostRow key={p.id} post={p} onEdit={openEdit} />
+                ))}
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        <UpcomingPanel posts={posts} onEdit={openEdit} />
+      </div>
 
       <ComposePostDialog
         open={open}
@@ -445,6 +451,69 @@ export function PostScheduler({ kind }: { kind: PostKind }) {
         onSchedule={schedule}
       />
     </PageBody>
+  );
+}
+
+function fmtFullDate(iso: string) {
+  return new Date(iso).toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function UpcomingPanel({ posts, onEdit }: { posts: SocialPost[]; onEdit: (p: SocialPost) => void }) {
+  const upcoming = posts
+    .filter((p) => (p.status === "scheduled" || p.status === "approved" || p.status === "pending_approval") && p.scheduledAt)
+    .slice()
+    .sort((a, b) => (a.scheduledAt || "").localeCompare(b.scheduledAt || ""))
+    .slice(0, 8);
+
+  return (
+    <aside className="w-[320px] shrink-0 border-hairline rounded-lg bg-background sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
+      <div className="px-4 py-3 border-b-hairline flex items-center justify-between">
+        <div>
+          <div className="text-sm font-medium">Upcoming posts</div>
+          <div className="text-[11px] text-muted-foreground">Next {upcoming.length} scheduled</div>
+        </div>
+        <CalendarIcon className="w-4 h-4 text-muted-foreground" />
+      </div>
+      <div className="overflow-y-auto flex-1 divide-y-hairline">
+        {upcoming.length === 0 && (
+          <div className="p-6 text-center text-xs text-muted-foreground">
+            No upcoming posts. Create one to fill the queue.
+          </div>
+        )}
+        {upcoming.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => onEdit(p)}
+            className="w-full text-left p-3 hover:bg-surface-hover transition-colors block"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <ChannelChips channels={p.channels} />
+              <Pill tone={statusMeta[p.status].tone}>{statusMeta[p.status].label}</Pill>
+            </div>
+            <div className="aspect-video rounded-md bg-surface border-hairline mb-2 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden">
+              {p.mediaUrl ? (
+                <img src={p.mediaUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                "No media"
+              )}
+            </div>
+            <div className="text-xs line-clamp-3 leading-snug">
+              {p.content || <span className="italic text-muted-foreground">No caption</span>}
+            </div>
+            <div className="text-[11px] text-muted-foreground mt-2 flex items-center justify-between">
+              <span>{fmtFullDate(p.scheduledAt!)}</span>
+              <span>{p.author}</span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </aside>
   );
 }
 
