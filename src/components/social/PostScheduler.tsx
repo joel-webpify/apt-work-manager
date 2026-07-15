@@ -469,11 +469,11 @@ function UpcomingPanel({ posts, onEdit }: { posts: SocialPost[]; onEdit: (p: Soc
     .filter((p) => (p.status === "scheduled" || p.status === "approved" || p.status === "pending_approval") && p.scheduledAt)
     .slice()
     .sort((a, b) => (a.scheduledAt || "").localeCompare(b.scheduledAt || ""))
-    .slice(0, 8);
+    .slice(0, 12);
 
   return (
-    <aside className="w-[320px] shrink-0 border-hairline rounded-lg bg-background sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
-      <div className="px-4 py-3 border-b-hairline flex items-center justify-between">
+    <aside className="w-[280px] shrink-0 border-hairline rounded-lg bg-background sticky top-4 self-start max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
+      <div className="px-3 py-2 border-b-hairline flex items-center justify-between">
         <div>
           <div className="text-sm font-medium">Upcoming posts</div>
           <div className="text-[11px] text-muted-foreground">Next {upcoming.length} scheduled</div>
@@ -490,23 +490,23 @@ function UpcomingPanel({ posts, onEdit }: { posts: SocialPost[]; onEdit: (p: Soc
           <button
             key={p.id}
             onClick={() => onEdit(p)}
-            className="w-full text-left p-3 hover:bg-surface-hover transition-colors block"
+            className="w-full text-left p-2 hover:bg-surface-hover transition-colors block"
           >
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center justify-between mb-1.5">
               <ChannelChips channels={p.channels} />
               <Pill tone={statusMeta[p.status].tone}>{statusMeta[p.status].label}</Pill>
             </div>
-            <div className="aspect-video rounded-md bg-surface border-hairline mb-2 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden">
+            <div className="h-16 rounded-md bg-surface border-hairline mb-1.5 flex items-center justify-center text-[10px] text-muted-foreground overflow-hidden">
               {p.mediaUrl ? (
                 <img src={p.mediaUrl} alt="" className="w-full h-full object-cover" />
               ) : (
                 "No media"
               )}
             </div>
-            <div className="text-xs line-clamp-3 leading-snug">
+            <div className="text-[11px] line-clamp-2 leading-snug">
               {p.content || <span className="italic text-muted-foreground">No caption</span>}
             </div>
-            <div className="text-[11px] text-muted-foreground mt-2 flex items-center justify-between">
+            <div className="text-[10px] text-muted-foreground mt-1 flex items-center justify-between">
               <span>{fmtFullDate(p.scheduledAt!)}</span>
               <span>{p.author}</span>
             </div>
