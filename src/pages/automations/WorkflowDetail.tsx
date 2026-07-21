@@ -564,13 +564,15 @@ export default function WorkflowDetail() {
   const existing = findWorkflow(id);
   const { stageNames } = useStages();
 
-  const [draft, setDraft] = useState<Workflow>(() => {
-    if (existing) return existing;
-    const created = newWorkflow();
-    addWorkflow(created);
-    // Also update the URL silently by navigating (harmless here since we just added it)
-    return { ...created, id };
-  });
+  const [draft, setDraft] = useState<Workflow | null>(existing ?? null);
+  useEffect(() => {
+    if (existing && !draft) setDraft(existing);
+  }, [existing, draft]);
+
+  if (!existing && !draft) {
+    return <Navigate to="/automations" replace />;
+  }
+  const d = draft ?? existing!;
   const [tab, setTab] = useState<"build" | "history" | "settings">("build");
 
   const patch = (p: Partial<Workflow>) => setDraft((d) => ({ ...d, ...p }));
