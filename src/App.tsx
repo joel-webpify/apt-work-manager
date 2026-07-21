@@ -21,6 +21,7 @@ import GoogleBusiness from "./pages/marketing/GoogleBusiness";
 import SocialOrganic from "./pages/marketing/SocialOrganic";
 import SocialPaid from "./pages/marketing/SocialPaid";
 import Workflows from "./pages/automations/Workflows";
+import WorkflowDetail from "./pages/automations/WorkflowDetail";
 import Sequences from "./pages/automations/Sequences";
 
 const queryClient = new QueryClient();
@@ -50,6 +51,7 @@ const App = () => (
 
             <Route path="/automations" element={<Workflows />} />
             <Route path="/automations/sequences" element={<Sequences />} />
+            <Route path="/automations/:id" element={<WorkflowDetail />} />
 
             <Route path="/reporting" element={<Reporting />} />
             <Route path="/tracking" element={<Tracking />} />
