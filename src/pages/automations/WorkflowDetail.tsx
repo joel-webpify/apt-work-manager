@@ -564,15 +564,17 @@ export default function WorkflowDetail() {
   const existing = findWorkflow(id);
   const { stageNames } = useStages();
 
-  const [draft, setDraft] = useState<Workflow | null>(existing ?? null);
+  const [localDraft, setLocalDraft] = useState<Workflow | null>(existing ?? null);
   useEffect(() => {
-    if (existing && !draft) setDraft(existing);
-  }, [existing, draft]);
+    if (existing && !localDraft) setLocalDraft(existing);
+  }, [existing, localDraft]);
 
-  if (!existing && !draft) {
+  if (!existing && !localDraft) {
     return <Navigate to="/automations" replace />;
   }
-  const d = draft ?? existing!;
+  const draft = (localDraft ?? existing) as Workflow;
+  const setDraft = (updater: (d: Workflow) => Workflow) =>
+    setLocalDraft((prev) => updater((prev ?? existing) as Workflow));
   const [tab, setTab] = useState<"build" | "history" | "settings">("build");
 
   const patch = (p: Partial<Workflow>) => setDraft((d) => ({ ...d, ...p }));
