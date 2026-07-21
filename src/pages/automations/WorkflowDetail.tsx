@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { useNavigate, useParams, Link } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
+import { useNavigate, useParams, Link, Navigate } from "react-router-dom";
 import {
   ArrowLeft,
   Plus,
@@ -19,8 +19,6 @@ import {
   Webhook,
   Zap,
   Repeat,
-  Play,
-  Pause,
   Copy,
   History,
   Sparkles,
@@ -36,11 +34,9 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   actionMeta,
-  addWorkflow,
   deleteWorkflow,
   duplicateWorkflow,
   findWorkflow,
-  newWorkflow,
   triggerMeta,
   updateWorkflow,
   useWorkflows,
