@@ -23,6 +23,10 @@ import SocialPaid from "./pages/marketing/SocialPaid";
 import Workflows from "./pages/automations/Workflows";
 import WorkflowDetail from "./pages/automations/WorkflowDetail";
 import Sequences from "./pages/automations/Sequences";
+import Login from "./pages/Login";
+import OAuthConsent from "./pages/OAuthConsent";
+
+
 
 const queryClient = new QueryClient();
 
@@ -33,7 +37,10 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route element={<AppLayout />}>
+
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
             <Route path="/contacts" element={<Contacts />} />
