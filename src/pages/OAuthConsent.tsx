@@ -1,0 +1,110 @@
+import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+
+// Local typed wrapper for the beta supabase.auth.oauth namespace.
+type OAuthResult = { data?: any; error?: { message: string } | null };
+type OAuthApi = {
+  getAuthorizationDetails: (id: string) => Promise<OAuthResult>;
+  approveAuthorization: (id: string) => Promise<OAuthResult>;
+  denyAuthorization: (id: string) => Promise<OAuthResult>;
+};
+const oauth = (supabase.auth as unknown as { oauth: OAuthApi }).oauth;
+
+export default function OAuthConsent() {
+  const [params] = useSearchParams();
+  const authorizationId = params.get("authorization_id") ?? "";
+  const [details, setDetails] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      if (!authorizationId) return setError("Missing authorization_id");
+      const { data: sess } = await supabase.auth.getSession();
+      if (!sess.session) {
+        const next = window.location.pathname + window.location.search;
+        window.location.href = "/login?next=" + encodeURIComponent(next);
+        return;
+      }
+      const { data, error } = await oauth.getAuthorizationDetails(authorizationId);
+      if (!active) return;
+      if (error) return setError(error.message);
+      const immediate = data?.redirect_url ?? data?.redirect_to;
+      if (immediate && !data?.client) {
+        window.location.href = immediate;
+        return;
+      }
+      setDetails(data);
+    })();
+    return () => {
+      active = false;
+    };
+  }, [authorizationId]);
+
+  async function decide(approve: boolean) {
+    setBusy(true);
+    const { data, error } = approve
+      ? await oauth.approveAuthorization(authorizationId)
+      : await oauth.denyAuthorization(authorizationId);
+    if (error) {
+      setBusy(false);
+      return setError(error.message);
+    }
+    const target = data?.redirect_url ?? data?.redirect_to;
+    if (!target) {
+      setBusy(false);
+      return setError("No redirect returned by the authorization server.");
+    }
+    window.location.href = target;
+  }
+
+  if (error) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-md border-hairline rounded-lg p-6 bg-surface">
+          <h1 className="text-base font-medium mb-2">Authorization error</h1>
+          <p className="text-sm text-muted-foreground">{error}</p>
+        </div>
+      </main>
+    );
+  }
+  if (!details) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6">
+        <p className="text-sm text-muted-foreground">Loading…</p>
+      </main>
+    );
+  }
+
+  const clientName = details.client?.name ?? "an app";
+  return (
+    <main className="min-h-screen flex items-center justify-center p-6">
+      <div className="w-full max-w-md border-hairline rounded-lg p-6 bg-surface">
+        <h1 className="text-lg font-medium mb-1">Connect {clientName} to ServiceCRM</h1>
+        <p className="text-sm text-muted-foreground mb-4">
+          This lets {clientName} use ServiceCRM as you. It will be able to call the app's enabled
+          tools while you are signed in.
+        </p>
+        <div className="text-xs text-muted-foreground mb-5 space-y-1">
+          <div>
+            Signed in as <span className="text-foreground">{details.user?.email ?? "you"}</span>
+          </div>
+          {details.client?.redirect_uri && (
+            <div className="truncate">Redirect: {details.client.redirect_uri}</div>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <Button onClick={() => decide(true)} disabled={busy} className="flex-1">
+            Approve
+          </Button>
+          <Button onClick={() => decide(false)} disabled={busy} variant="outline" className="flex-1">
+            Cancel
+          </Button>
+        </div>
+      </div>
+    </main>
+  );
+}
