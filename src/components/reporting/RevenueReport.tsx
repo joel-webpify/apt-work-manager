@@ -10,7 +10,7 @@ import {
   Calendar,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
-import { CashFlowForecast } from "@/components/reporting/CashFlowForecast";
+
 import { jobs, contacts, type Job } from "@/data/mockData";
 
 /* ---------------- derived data ---------------- */
