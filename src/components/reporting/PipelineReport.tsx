@@ -120,25 +120,10 @@ export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
 
   return (
     <div className="space-y-4">
-      {/* Range toggle */}
-      <div className="flex items-center justify-between -mt-1">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Activity className="w-3.5 h-3.5" /> Live pipeline metrics
-        </div>
-        <div className="inline-flex border-hairline rounded-md p-0.5 bg-card">
-          {(["30d", "90d", "YTD", "12m"] as Range[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`h-7 px-2.5 text-xs rounded ${
-                range === r ? "bg-surface-hover text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground -mt-1">
+        <Activity className="w-3.5 h-3.5" /> Live pipeline metrics · {rangeLabels[range].toLowerCase()}
       </div>
+
 
       {/* KPI tiles */}
       <div className="grid grid-cols-4 gap-3">
