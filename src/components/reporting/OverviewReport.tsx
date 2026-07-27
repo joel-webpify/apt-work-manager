@@ -52,9 +52,10 @@ export function OverviewReport({ range, onOpenChannel }: { range: DateRange; onO
           <p className="text-xs text-muted-foreground mt-0.5">Whether the work coming in is growing or slowing.</p>
           <div className="mt-4 flex items-end gap-1 h-40">
             {trend.map((t) => (
-              <div key={t.label} className="flex-1 flex flex-col items-center gap-1 group">
-                <div className="w-full flex flex-col justify-end h-full">
+              <div key={t.label} className="flex-1 h-full flex flex-col items-center gap-1 group">
+                <div className="w-full flex-1 flex flex-col justify-end">
                   <div
+
                     className="w-full rounded-t bg-primary/80 group-hover:bg-primary transition-colors"
                     style={{ height: `${(t.revenue / maxRevenue) * 100}%` }}
                     title={`${t.label}: ${fmtGbpExact(t.revenue)} · ${t.leads} leads`}
