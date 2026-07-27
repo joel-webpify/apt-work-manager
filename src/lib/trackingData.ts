@@ -136,6 +136,26 @@ export const liveEvents: TrackedEvent[] = (() => {
   return out;
 })();
 
+const eventDescriptions: Record<string, string> = {
+  page_view: "Any page load on the tracked domain",
+  scroll_50: "Visitor scrolled halfway down the page",
+  scroll_90: "Visitor reached the bottom of the page",
+  form_view: "A tracked form entered the viewport",
+  form_start: "First field interaction on a form",
+  field_complete: "A field was filled and blurred",
+  form_abandon: "Form started but never submitted",
+  form_submit: "Successful submission — creates a lead",
+  phone_click: "Click on a tel: link or call button",
+  email_click: "Click on a mailto: link",
+  whatsapp_click: "Click on a WhatsApp chat link",
+  quote_viewed: "Customer opened a sent quote",
+  quote_accepted: "Customer accepted a quote online",
+  booking_started: "Booking/calendar flow opened",
+  video_play: "Embedded video started playing",
+  outbound_click: "Click to an external domain",
+  rage_click: "Repeated rapid clicks — UX friction signal",
+};
+
 export const eventCatalog: EventDefinition[] = eventPool.map((e) => {
   const count = Math.round(e.weight * (60 + (e.weight % 7) * 11));
   return {
@@ -210,25 +230,3 @@ export function formatAgo(minutes: number) {
   if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
-
-// eslint-disable-next-line no-var
-var eventDescriptions: Record<string, string>;
-eventDescriptions = {
-  page_view: "Any page load on the tracked domain",
-  scroll_50: "Visitor scrolled halfway down the page",
-  scroll_90: "Visitor reached the bottom of the page",
-  form_view: "A tracked form entered the viewport",
-  form_start: "First field interaction on a form",
-  field_complete: "A field was filled and blurred",
-  form_abandon: "Form started but never submitted",
-  form_submit: "Successful submission — creates a lead",
-  phone_click: "Click on a tel: link or call button",
-  email_click: "Click on a mailto: link",
-  whatsapp_click: "Click on a WhatsApp chat link",
-  quote_viewed: "Customer opened a sent quote",
-  quote_accepted: "Customer accepted a quote online",
-  booking_started: "Booking/calendar flow opened",
-  video_play: "Embedded video started playing",
-  outbound_click: "Click to an external domain",
-  rage_click: "Repeated rapid clicks — UX friction signal",
-};
