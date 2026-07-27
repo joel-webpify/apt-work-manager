@@ -21,6 +21,8 @@ import {
   deviceSplit,
   geoSplit,
   funnelSteps,
+  formBehaviourByChannel,
+  fieldDropoff,
   formatAgo,
   type EventCategory,
 } from "@/lib/trackingData";
@@ -50,11 +52,8 @@ const methods = [
 ];
 
 const categoryTone: Record<EventCategory, "neutral" | "info" | "success" | "warning" | "danger"> = {
-  page: "neutral",
+  session: "neutral",
   form: "info",
-  engagement: "warning",
-  commerce: "success",
-  custom: "danger",
 };
 
 const tabs = [
@@ -133,7 +132,7 @@ function LiveTab() {
     [query, cat],
   );
 
-  const cats: (EventCategory | "all")[] = ["all", "page", "form", "engagement", "commerce", "custom"];
+  const cats: (EventCategory | "all")[] = ["all", "session", "form"];
 
   return (
     <>
