@@ -52,11 +52,6 @@ const funnelDef: { key: string; label: string; stages: PipelineStage[] }[] = [
 const fmt = (n: number) => `£${n.toLocaleString()}`;
 const pct = (n: number) => `${n.toFixed(1)}%`;
 
-function bottleneckScore(stage: PipelineStage, count: number, avgDays: number) {
-  // Higher score = more attention needed. Combines volume + time.
-  const t = stuckThresholds[stage] || 5;
-  return count * Math.max(1, avgDays / t);
-}
 
 /* ---------------- main ---------------- */
 
