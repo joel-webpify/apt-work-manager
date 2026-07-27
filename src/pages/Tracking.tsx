@@ -4,28 +4,12 @@ import {
   Activity,
   Code,
   Globe,
-  MonitorSmartphone,
-  MapPin,
   Search,
   Tag,
   Filter,
   Layers,
-  TrendingUp,
 } from "lucide-react";
-import {
-  liveEvents,
-  eventCatalog,
-  trafficByDay,
-  topPages,
-  channelBreakdown,
-  deviceSplit,
-  geoSplit,
-  funnelSteps,
-  formBehaviourByChannel,
-  fieldDropoff,
-  formatAgo,
-  type EventCategory,
-} from "@/lib/trackingData";
+import { liveEvents, eventCatalog, formatAgo, type EventCategory } from "@/lib/trackingData";
 
 const methods = [
   {
