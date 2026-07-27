@@ -6,8 +6,9 @@ import { CustomersReport } from "@/components/reporting/CustomersReport";
 import { EmailMarketingReport } from "@/components/reporting/EmailMarketingReport";
 import { RevenueReport } from "@/components/reporting/RevenueReport";
 import { PipelineReport } from "@/components/reporting/PipelineReport";
+import { WebsiteReport } from "@/components/reporting/WebsiteReport";
 
-const tabs = ["Revenue", "Pipeline", "Marketing", "Customers", "Google Ads"] as const;
+const tabs = ["Revenue", "Pipeline", "Website", "Marketing", "Customers", "Google Ads"] as const;
 type Tab = typeof tabs[number];
 
 export default function Reporting() {
@@ -63,6 +64,7 @@ export default function Reporting() {
 
         {tab === "Revenue" && <RevenueReport />}
         {tab === "Pipeline" && <PipelineReport />}
+        {tab === "Website" && <WebsiteReport />}
         {tab === "Marketing" && <EmailMarketingReport />}
         {tab === "Customers" && <CustomersReport />}
         {tab === "Google Ads" && <GoogleAds />}
