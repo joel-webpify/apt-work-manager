@@ -1,7 +1,7 @@
 // Mock analytics/tracking data for the Tracking module.
 // Deterministic pseudo-random so the UI is stable between renders.
 
-export type EventCategory = "page" | "form" | "engagement" | "commerce" | "custom";
+export type EventCategory = "session" | "form";
 
 export interface TrackedEvent {
   id: string;
@@ -64,23 +64,11 @@ const sources: { source: string; medium: string; campaign?: string }[] = [
 ];
 
 const eventPool: { event: string; category: EventCategory; weight: number; value?: number }[] = [
-  { event: "page_view", category: "page", weight: 30 },
-  { event: "scroll_50", category: "engagement", weight: 12 },
-  { event: "scroll_90", category: "engagement", weight: 7 },
-  { event: "form_view", category: "form", weight: 9 },
-  { event: "form_start", category: "form", weight: 7 },
-  { event: "field_complete", category: "form", weight: 6 },
-  { event: "form_abandon", category: "form", weight: 3 },
-  { event: "form_submit", category: "form", weight: 4, value: 180 },
-  { event: "phone_click", category: "engagement", weight: 4, value: 140 },
-  { event: "email_click", category: "engagement", weight: 3, value: 90 },
-  { event: "whatsapp_click", category: "engagement", weight: 2, value: 120 },
-  { event: "quote_viewed", category: "commerce", weight: 3 },
-  { event: "quote_accepted", category: "commerce", weight: 1, value: 640 },
-  { event: "booking_started", category: "commerce", weight: 2 },
-  { event: "video_play", category: "engagement", weight: 2 },
-  { event: "outbound_click", category: "custom", weight: 2 },
-  { event: "rage_click", category: "custom", weight: 1 },
+  { event: "session_start", category: "session", weight: 30 },
+  { event: "form_view", category: "form", weight: 16 },
+  { event: "form_start", category: "form", weight: 10 },
+  { event: "field_complete", category: "form", weight: 22 },
+  { event: "form_submit", category: "form", weight: 5, value: 180 },
 ];
 
 const devices: TrackedEvent["device"][] = ["mobile", "mobile", "desktop", "desktop", "tablet"];
@@ -137,23 +125,11 @@ export const liveEvents: TrackedEvent[] = (() => {
 })();
 
 const eventDescriptions: Record<string, string> = {
-  page_view: "Any page load on the tracked domain",
-  scroll_50: "Visitor scrolled halfway down the page",
-  scroll_90: "Visitor reached the bottom of the page",
+  session_start: "A new visit begins — captures channel, device and location",
   form_view: "A tracked form entered the viewport",
   form_start: "First field interaction on a form",
   field_complete: "A field was filled and blurred",
-  form_abandon: "Form started but never submitted",
   form_submit: "Successful submission — creates a lead",
-  phone_click: "Click on a tel: link or call button",
-  email_click: "Click on a mailto: link",
-  whatsapp_click: "Click on a WhatsApp chat link",
-  quote_viewed: "Customer opened a sent quote",
-  quote_accepted: "Customer accepted a quote online",
-  booking_started: "Booking/calendar flow opened",
-  video_play: "Embedded video started playing",
-  outbound_click: "Click to an external domain",
-  rage_click: "Repeated rapid clicks — UX friction signal",
 };
 
 export const eventCatalog: EventDefinition[] = eventPool.map((e) => {
