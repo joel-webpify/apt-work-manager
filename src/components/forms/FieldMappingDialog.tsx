@@ -59,21 +59,21 @@ export default function FieldMappingDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Field mapping — {form.name}</DialogTitle>
+          <DialogTitle>Where answers are saved — {form.name}</DialogTitle>
           <DialogDescription>
-            Choose where each form field lands when you click "Create job". Smart defaults are applied to every form; per-form overrides win.
+            We've matched each question to the right place on the job automatically. Change anything that looks wrong, or leave it as it is.
           </DialogDescription>
         </DialogHeader>
 
         <div className="border-hairline rounded-lg overflow-hidden">
           <div className="grid grid-cols-[1fr_auto_1fr] items-center px-3 h-9 text-xs text-muted-foreground font-medium bg-surface/40 border-b-hairline">
-            <div>Form field</div>
+            <div>Question on the form</div>
             <div className="px-6">→</div>
-            <div>Job field</div>
+            <div>Saved to</div>
           </div>
           {labels.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
-              This form has no fields yet. Open the form editor to add some.
+              This form has no questions yet. Open the form editor to add some.
             </div>
           ) : (
             labels.map((label) => {
@@ -88,12 +88,12 @@ export default function FieldMappingDialog({
                 <Select value={mapping[label] ?? "ignore"} onValueChange={(v) => setMapping((m) => ({ ...m, [label]: v as MappingTarget }))}>
                   <SelectTrigger className="h-8 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ignore">— Don't import</SelectItem>
-                    <SelectGroupLabel>Core job fields</SelectGroupLabel>
+                    <SelectItem value="ignore">— Don't save this</SelectItem>
+                    <SelectGroupLabel>Standard job details</SelectGroupLabel>
                     {(Object.keys(CORE_TARGET_META) as (keyof typeof CORE_TARGET_META)[]).map((k) => (
                       <SelectItem key={k} value={k}>{CORE_TARGET_META[k].label}</SelectItem>
                     ))}
-                    {schema.length > 0 && <SelectGroupLabel>Custom fields</SelectGroupLabel>}
+                    {schema.length > 0 && <SelectGroupLabel>Your own fields</SelectGroupLabel>}
                     {schema.map((f) => (
                       <SelectItem key={f.id} value={`cf:${f.id}`}>{f.label}</SelectItem>
                     ))}
@@ -107,11 +107,11 @@ export default function FieldMappingDialog({
 
         <DialogFooter className="justify-between">
           <Button variant="ghost" size="sm" onClick={autoFill} className="text-muted-foreground">
-            <Wand2 className="w-3.5 h-3.5" /> Auto-map by label
+            <Wand2 className="w-3.5 h-3.5" /> Match automatically
           </Button>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button onClick={() => { onSave(form.id, mapping); onOpenChange(false); }}>Save mapping</Button>
+            <Button onClick={() => { onSave(form.id, mapping); onOpenChange(false); }}>Save</Button>
           </div>
         </DialogFooter>
       </DialogContent>

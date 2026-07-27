@@ -223,7 +223,7 @@ export function RevenueReport() {
       <div className="border-hairline rounded-lg bg-card p-5">
         <div className="flex items-center justify-between mb-1">
           <div>
-            <div className="text-sm font-medium">Monthly revenue & forecast</div>
+            <div className="text-sm font-medium">Money in each month, and what is coming</div>
             <div className="text-xs text-muted-foreground">
               Won revenue per month · forecast based on 3-month trend + WIP
             </div>
@@ -272,9 +272,9 @@ export function RevenueReport() {
         </div>
         <div className="mt-4 pt-3 border-t-hairline grid grid-cols-4 gap-4 text-xs">
           <Stat label="MoM growth" value={`${momGrowth >= 0 ? "+" : ""}${momGrowth.toFixed(1)}%`} positive={momGrowth >= 0} />
-          <Stat label="6-mo total" value={fmtGbp(months.reduce((a, m) => a + m.v, 0))} />
-          <Stat label="Forecast May" value={fmtGbp(forecastNext)} />
-          <Stat label="Pipeline value" value={fmtGbp(pipelineRevenue + wipRevenue)} muted />
+          <Stat label="Last 6 months" value={fmtGbp(months.reduce((a, m) => a + m.v, 0))} />
+          <Stat label="Expected in May" value={fmtGbp(forecastNext)} />
+          <Stat label="Work in the pipeline" value={fmtGbp(pipelineRevenue + wipRevenue)} muted />
         </div>
       </div>
 
@@ -282,7 +282,7 @@ export function RevenueReport() {
       <div className="grid grid-cols-3 gap-3">
         <div className="border-hairline rounded-lg bg-card p-5">
           <div className="text-sm font-medium mb-1">Revenue by service</div>
-          <div className="text-xs text-muted-foreground mb-4">{serviceMix.length} categories</div>
+          <div className="text-xs text-muted-foreground mb-4">Which services bring in the most money</div>
           <div className="space-y-3">
             {serviceMix.map((s, i) => (
               <div key={s.name}>
@@ -311,7 +311,7 @@ export function RevenueReport() {
 
         <div className="border-hairline rounded-lg bg-card p-5">
           <div className="text-sm font-medium mb-1">Residential vs Commercial</div>
-          <div className="text-xs text-muted-foreground mb-4">Won revenue split</div>
+          <div className="text-xs text-muted-foreground mb-4">Split of the work you have won</div>
           <SegmentDonut data={segmentMix} />
           <div className="space-y-2 mt-4">
             {segmentMix.map((s, i) => (
@@ -359,7 +359,7 @@ export function RevenueReport() {
 
           <div className="flex items-center justify-between mb-1">
             <div>
-              <div className="text-sm font-medium">Accounts receivable aging</div>
+              <div className="text-sm font-medium">Money you are still owed</div>
               <div className="text-xs text-muted-foreground">{fmtGbp(totalOutstanding)} outstanding across {jobs.filter((j) => j.stage === "Invoiced").length + 1} invoices</div>
             </div>
             <Pill tone={totalOutstanding > 1500 ? "warning" : "success"}>
@@ -405,7 +405,7 @@ export function RevenueReport() {
       {/* Top customers */}
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
         <div className="px-4 h-11 flex items-center justify-between border-b-hairline">
-          <span className="text-sm font-medium">Top revenue customers</span>
+          <span className="text-sm font-medium">Customers who spend the most</span>
           <span className="text-xs text-muted-foreground">Period to date</span>
         </div>
         <div className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/40">

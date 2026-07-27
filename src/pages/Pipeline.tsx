@@ -122,7 +122,7 @@ export default function Pipeline() {
   };
   const runLifecycle = (jobId: string, newStage: string) => {
     const r = onJobStageChange(jobId, newStage);
-    if (r) topToast({ title: "Lifecycle automation", description: r.message });
+    if (r) topToast({ title: "Automatic update", description: r.message });
   };
 
   const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {

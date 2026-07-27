@@ -176,7 +176,7 @@ export function PipelineReport() {
       <div className="grid grid-cols-5 gap-3">
         <div className="col-span-3 border-hairline rounded-lg bg-card p-5">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-sm font-medium">Conversion funnel</div>
+            <div className="text-sm font-medium">From enquiry to paid job</div>
             <span className="text-xs text-muted-foreground">Click a stage to view jobs</span>
           </div>
           <div className="space-y-2.5">
@@ -251,8 +251,8 @@ export function PipelineReport() {
       {/* Stage performance table */}
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
         <div className="px-5 py-3.5 border-b-hairline flex items-center justify-between">
-          <div className="text-sm font-medium">Stage performance</div>
-          <span className="text-xs text-muted-foreground">Avg days vs threshold</span>
+          <div className="text-sm font-medium">How long jobs sit at each stage</div>
+          <span className="text-xs text-muted-foreground">Average days, and when that is too long</span>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-surface/50">
@@ -340,7 +340,7 @@ export function PipelineReport() {
         <div className="px-5 py-3.5 border-b-hairline flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-3.5 h-3.5 text-[hsl(var(--warning))]" />
-            <span className="text-sm font-medium">Stuck jobs requiring action</span>
+            <span className="text-sm font-medium">Jobs that need chasing</span>
             <Pill tone="warning">{m.stuck.length}</Pill>
           </div>
           <button className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">

@@ -117,7 +117,7 @@ export function LeadVelocityCard() {
                 ? "—"
                 : `${velocity.changePct > 0 ? "+" : ""}${velocity.changePct.toFixed(0)}%`}
             </span>
-            <span className="text-[11px] text-muted-foreground">WoW</span>
+            <span className="text-[11px] text-muted-foreground">vs last week</span>
           </div>
           <div className="text-[11px] text-muted-foreground mt-0.5">
             {velocity.thisWeek} new {velocity.thisWeek === 1 ? "enquiry" : "enquiries"} vs {velocity.lastWeek} last week

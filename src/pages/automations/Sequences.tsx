@@ -2,20 +2,20 @@ import { Repeat, Plus } from "lucide-react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 
 const mockSequences = [
-  { name: "New lead nurture (5 steps)", audience: "Segment: New leads", status: "active" as const, sent: "312 sent" },
-  { name: "Post-job review request (2 steps)", audience: "Trigger: Job won", status: "active" as const, sent: "48 sent" },
-  { name: "Reactivation (4 steps)", audience: "Segment: Cold > 90d", status: "draft" as const, sent: "—" },
+  { name: "Warm up new enquiries (5 emails)", audience: "New enquiries", status: "active" as const, sent: "312 sent" },
+  { name: "Ask for a review after the job (2 emails)", audience: "When a job is won", status: "active" as const, sent: "48 sent" },
+  { name: "Win back quiet customers (4 emails)", audience: "Quiet for 90+ days", status: "draft" as const, sent: "—" },
 ];
 
 export default function Sequences() {
   return (
     <>
       <PageHeader
-        title="Email sequences"
-        description="Multi-step drip campaigns. Also editable inside the Email module."
+        title="Email follow-ups"
+        description="A series of emails that go out automatically, spaced out over days or weeks."
         actions={
           <Btn variant="primary">
-            <Plus className="w-3.5 h-3.5" /> New sequence
+            <Plus className="w-3.5 h-3.5" /> New follow-up
           </Btn>
         }
       />
@@ -23,9 +23,9 @@ export default function Sequences() {
         <div className="border-hairline rounded-lg bg-surface overflow-hidden">
           <div className="grid grid-cols-[1fr_240px_120px_120px] px-4 h-9 border-b-hairline text-xs text-muted-foreground items-center">
             <div>Name</div>
-            <div>Audience</div>
+            <div>Who gets it</div>
             <div>Status</div>
-            <div className="text-right">Activity</div>
+            <div className="text-right">Sent so far</div>
           </div>
           {mockSequences.map((s) => (
             <div

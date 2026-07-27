@@ -39,11 +39,11 @@ export default function Workflows() {
   return (
     <>
       <PageHeader
-        title="Workflows"
-        description="Cross-module automations triggered by activity."
+        title="Automations"
+        description="Let the system do the repetitive jobs for you — follow-ups, reminders and updates."
         actions={
           <Btn variant="primary" onClick={create}>
-            <Plus className="w-3.5 h-3.5" /> New workflow
+            <Plus className="w-3.5 h-3.5" /> New automation
           </Btn>
         }
       />
@@ -51,15 +51,15 @@ export default function Workflows() {
         {/* KPIs */}
         <div className="grid grid-cols-3 gap-3 mb-4 max-w-2xl">
           <div className="border-hairline rounded-lg bg-card p-3">
-            <div className="text-xs text-muted-foreground">Total</div>
+            <div className="text-xs text-muted-foreground">Automations</div>
             <div className="text-xl font-medium">{workflows.length}</div>
           </div>
           <div className="border-hairline rounded-lg bg-card p-3">
-            <div className="text-xs text-muted-foreground">Active</div>
+            <div className="text-xs text-muted-foreground">Switched on</div>
             <div className="text-xl font-medium">{activeCount}</div>
           </div>
           <div className="border-hairline rounded-lg bg-card p-3">
-            <div className="text-xs text-muted-foreground">Runs (all-time)</div>
+            <div className="text-xs text-muted-foreground">Times they have run</div>
             <div className="text-xl font-medium">{totalRuns}</div>
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function Workflows() {
             <div>Trigger</div>
             <div>Steps</div>
             <div>Status</div>
-            <div className="text-right">Runs</div>
+            <div className="text-right">Times run</div>
             <div />
           </div>
           {filtered.map((w) => {
