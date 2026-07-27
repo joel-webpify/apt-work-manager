@@ -7,10 +7,10 @@ import {
   Wallet,
   Target,
   AlertCircle,
-  CheckCircle2,
   Calendar,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
+import { CashFlowForecast } from "@/components/reporting/CashFlowForecast";
 import { jobs, contacts, type Job } from "@/data/mockData";
 
 /* ---------------- derived data ---------------- */
@@ -155,7 +155,6 @@ export function RevenueReport() {
 
   const monthMax = Math.max(...months.map((m) => m.v), forecastNext);
   const collectionRate = (paidRevenue / (paidRevenue + invoicedOutstanding)) * 100 || 0;
-  const grossMargin = 62; // industry-typical, illustrative
 
   const momGrowth = useMemo(() => {
     const cur = months[months.length - 1].v;
@@ -400,17 +399,10 @@ export function RevenueReport() {
           </div>
         </div>
 
-        <div className="col-span-2 border-hairline rounded-lg bg-card p-5">
-          <div className="text-sm font-medium mb-1">Revenue health</div>
-          <div className="text-xs text-muted-foreground mb-4">Key ratios</div>
-          <div className="space-y-3">
-            <HealthRow label="Collection rate" value={`${collectionRate.toFixed(0)}%`} target=">90%" ok={collectionRate >= 90} />
-            <HealthRow label="Gross margin" value={`${grossMargin}%`} target=">55%" ok={grossMargin >= 55} />
-            <HealthRow label="Days sales outstanding" value="18d" target="<30d" ok />
-            <HealthRow label="Repeat revenue" value="42%" target=">35%" ok />
-            <HealthRow label="Concentration risk" value="Top 3 = 58%" target="<60%" ok />
-          </div>
+        <div className="col-span-2">
+          <CashFlowForecast />
         </div>
+
       </div>
 
       {/* Top customers */}
@@ -532,24 +524,6 @@ function SegmentDonut({ data }: { data: { name: string; value: number; share: nu
   );
 }
 
-function HealthRow({ label, value, target, ok }: { label: string; value: string; target: string; ok: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2 min-w-0">
-        {ok ? (
-          <CheckCircle2 className="w-3.5 h-3.5 text-[hsl(var(--success))] flex-shrink-0" />
-        ) : (
-          <AlertCircle className="w-3.5 h-3.5 text-[hsl(var(--warning))] flex-shrink-0" />
-        )}
-        <div className="min-w-0">
-          <div className="text-sm truncate">{label}</div>
-          <div className="text-[10px] text-muted-foreground">Target {target}</div>
-        </div>
-      </div>
-      <span className="text-sm font-medium tabular-nums">{value}</span>
-    </div>
-  );
-}
 
 function PipelineCard({
   label, value, sub, tone,
