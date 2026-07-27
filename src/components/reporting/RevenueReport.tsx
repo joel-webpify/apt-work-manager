@@ -400,17 +400,10 @@ export function RevenueReport() {
           </div>
         </div>
 
-        <div className="col-span-2 border-hairline rounded-lg bg-card p-5">
-          <div className="text-sm font-medium mb-1">Revenue health</div>
-          <div className="text-xs text-muted-foreground mb-4">Key ratios</div>
-          <div className="space-y-3">
-            <HealthRow label="Collection rate" value={`${collectionRate.toFixed(0)}%`} target=">90%" ok={collectionRate >= 90} />
-            <HealthRow label="Gross margin" value={`${grossMargin}%`} target=">55%" ok={grossMargin >= 55} />
-            <HealthRow label="Days sales outstanding" value="18d" target="<30d" ok />
-            <HealthRow label="Repeat revenue" value="42%" target=">35%" ok />
-            <HealthRow label="Concentration risk" value="Top 3 = 58%" target="<60%" ok />
-          </div>
+        <div className="col-span-2">
+          <CashFlowForecast />
         </div>
+
       </div>
 
       {/* Top customers */}
