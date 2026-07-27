@@ -12,6 +12,8 @@ import {
   Filter,
 } from "lucide-react";
 import { Pill, StatusDot } from "@/components/layout/PageShell";
+import { LeadVelocityCard } from "@/components/reporting/LeadVelocityCard";
+
 import {
   jobs as allJobs,
   contacts,
