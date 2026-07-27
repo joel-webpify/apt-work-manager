@@ -162,7 +162,7 @@ export function WebsiteReport() {
 
       <div className="grid grid-cols-[1.6fr_1fr] gap-4">
         <Card title="Form behaviour by channel" icon={Layers}>
-          <div className="grid grid-cols-[1.2fr_repeat(5,0.75fr)_0.8fr] px-4 h-8 items-center text-[11px] text-muted-foreground font-medium border-b-hairline bg-surface/50">
+          <div className="grid grid-cols-[1.1fr_0.7fr_0.6fr_0.6fr_0.6fr_0.95fr_0.8fr] px-4 h-8 items-center text-[11px] text-muted-foreground font-medium border-b-hairline bg-surface/50">
             <div>Channel</div>
             <div className="text-right">Sessions</div>
             <div className="text-right">Views</div>
@@ -176,7 +176,7 @@ export function WebsiteReport() {
             return (
               <div
                 key={c.channel}
-                className="grid grid-cols-[1.2fr_repeat(5,0.75fr)_0.8fr] px-4 h-9 items-center text-xs border-b-hairline last:border-b-0 hover:bg-surface-hover"
+                className="grid grid-cols-[1.1fr_0.7fr_0.6fr_0.6fr_0.6fr_0.95fr_0.8fr] px-4 h-9 items-center text-xs border-b-hairline last:border-b-0 hover:bg-surface-hover"
               >
                 <div className="truncate">{c.channel}</div>
                 <div className="text-right tabular-nums text-muted-foreground">{c.sessions}</div>
