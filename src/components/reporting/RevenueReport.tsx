@@ -7,7 +7,6 @@ import {
   Wallet,
   Target,
   AlertCircle,
-  CheckCircle2,
   Calendar,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
@@ -156,7 +155,6 @@ export function RevenueReport() {
 
   const monthMax = Math.max(...months.map((m) => m.v), forecastNext);
   const collectionRate = (paidRevenue / (paidRevenue + invoicedOutstanding)) * 100 || 0;
-  const grossMargin = 62; // industry-typical, illustrative
 
   const momGrowth = useMemo(() => {
     const cur = months[months.length - 1].v;
