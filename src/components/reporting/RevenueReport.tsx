@@ -353,9 +353,10 @@ export function RevenueReport() {
         </div>
       </div>
 
-      {/* AR aging + Cash flow health */}
-      <div className="grid grid-cols-5 gap-3">
-        <div className="col-span-3 border-hairline rounded-lg bg-card p-5">
+      {/* AR aging */}
+      <div>
+        <div className="border-hairline rounded-lg bg-card p-5">
+
           <div className="flex items-center justify-between mb-1">
             <div>
               <div className="text-sm font-medium">Accounts receivable aging</div>
