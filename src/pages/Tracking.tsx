@@ -213,7 +213,7 @@ function LiveTab() {
   );
 }
 
-}
+
 
 /* ---------------- Event catalog ---------------- */
 
