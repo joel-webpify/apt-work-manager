@@ -55,8 +55,8 @@ const pct = (n: number) => `${n.toFixed(1)}%`;
 
 /* ---------------- main ---------------- */
 
-export function PipelineReport() {
-  const [range, setRange] = useState<Range>("30d");
+export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
+
   const [drawer, setDrawer] = useState<{ title: string; subtitle: string; jobs: Job[] } | null>(null);
 
   // For now mock data is a single snapshot, so range is a presentation control
