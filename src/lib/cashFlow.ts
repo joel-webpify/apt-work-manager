@@ -217,3 +217,57 @@ export function buildLeadVelocity(weeks = 8, now: Date = new Date()): LeadVeloci
     history: [...buckets].reverse(),
   };
 }
+
+export interface LeadDay {
+  date: Date;
+  /** Mon, Tue… */
+  weekday: string;
+  count: number;
+  value: number;
+  isToday: boolean;
+  isWeekend: boolean;
+}
+
+/**
+ * Daily split of new enquiries, oldest → newest. Uses the same synthetic
+ * enquiry age as `buildLeadVelocity` so both views agree.
+ */
+export function buildLeadDays(days = 14, now: Date = new Date()): LeadDay[] {
+  const stageOffset: Record<string, number> = {
+    "New enquiry": 0,
+    "Quote sent": 4,
+    "Job booked": 9,
+    "In progress": 14,
+    Completed: 20,
+    Invoiced: 25,
+    Paid: 30,
+  };
+
+  const counts = new Array(days).fill(0) as number[];
+  const values = new Array(days).fill(0) as number[];
+  getJobs().forEach((job) => {
+    const ageDays = job.daysInStage + (stageOffset[job.stage] ?? 0);
+    if (ageDays < days) {
+      counts[ageDays] += 1;
+      values[ageDays] += job.value ?? 0;
+    }
+  });
+
+  const weekdays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const out: LeadDay[] = [];
+  for (let back = days - 1; back >= 0; back--) {
+    const d = new Date(now);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(d.getDate() - back);
+    out.push({
+      date: d,
+      weekday: weekdays[d.getDay()],
+      count: counts[back],
+      value: values[back],
+      isToday: back === 0,
+      isWeekend: d.getDay() === 0 || d.getDay() === 6,
+    });
+  }
+  return out;
+}
+

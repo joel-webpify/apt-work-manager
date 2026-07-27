@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { buildLeadVelocity } from "@/lib/cashFlow";
+import { buildLeadVelocity, buildLeadDays } from "@/lib/cashFlow";
 
 export function LeadVelocityCard() {
   const [window, setWindow] = useState<4 | 8>(8);
+  const [view, setView] = useState<"week" | "day">("week");
+
   const velocity = useMemo(() => buildLeadVelocity(window), [window]);
+  const days = useMemo(() => buildLeadDays(view === "day" ? (window === 4 ? 14 : 28) : 14), [view, window]);
 
   const sparkMax = Math.max(...velocity.history, 1);
   const total = velocity.history.reduce((a, b) => a + b, 0);
@@ -19,6 +22,15 @@ export function LeadVelocityCard() {
     const back = velocity.history.length - 1 - i;
     return { count, label: back === 0 ? "This week" : back === 1 ? "Last week" : `${back} wks ago` };
   });
+
+  const dayMax = Math.max(...days.map((d) => d.count), 1);
+  const busiestWeekday = useMemo(() => {
+    const map = new Map<string, number>();
+    days.forEach((d) => map.set(d.weekday, (map.get(d.weekday) || 0) + d.count));
+    const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
+    return sorted[0]?.[1] ? sorted[0] : null;
+  }, [days]);
+  const quietDays = days.filter((d) => d.count === 0).length;
 
   return (
     <div className="border-hairline rounded-lg bg-card p-5 flex flex-col">
@@ -81,30 +93,104 @@ export function LeadVelocityCard() {
         </div>
       </div>
 
-      {/* Weekly rows */}
-      <div className="mt-4 flex-1 space-y-1.5">
-        {[...weeks].reverse().map((w) => (
-          <div key={w.label} className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">{w.label}</span>
-            <div className="flex-1 h-2 rounded-full bg-surface overflow-hidden">
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${(w.count / sparkMax) * 100}%`,
-                  backgroundColor: w.label === "This week" ? velColor : "hsl(var(--primary) / 0.55)",
-                }}
-              />
-            </div>
-            <span className="text-xs font-medium tabular-nums w-6 text-right">{w.count}</span>
+      {/* View toggle */}
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
+          {view === "week" ? "By week" : `By day · last ${days.length} days`}
+        </span>
+        <div className="flex gap-1 p-0.5 bg-surface rounded-md">
+          {(["week", "day"] as const).map((v) => (
+            <button
+              key={v}
+              onClick={() => setView(v)}
+              className={`h-5 px-2 text-[11px] rounded transition-colors ${
+                view === v ? "bg-card shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {v === "week" ? "Weekly" : "Daily"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Breakdown */}
+      <div className="mt-3 flex-1">
+        {view === "week" ? (
+          <div className="space-y-1.5">
+            {[...weeks].reverse().map((w) => (
+              <div key={w.label} className="flex items-center gap-2">
+                <span className="text-xs text-muted-foreground w-20 flex-shrink-0">{w.label}</span>
+                <div className="flex-1 h-2 rounded-full bg-surface overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(w.count / sparkMax) * 100}%`,
+                      backgroundColor: w.label === "This week" ? velColor : "hsl(var(--primary) / 0.55)",
+                    }}
+                  />
+                </div>
+                <span className="text-xs font-medium tabular-nums w-6 text-right">{w.count}</span>
+              </div>
+            ))}
           </div>
-        ))}
+        ) : (
+          <div className="flex items-end gap-[3px] h-24">
+            {days.map((d) => (
+              <div
+                key={d.date.toISOString()}
+                className="flex-1 flex flex-col items-center justify-end gap-1 group"
+                title={`${d.weekday} ${d.date.getDate()}/${d.date.getMonth() + 1} · ${d.count} ${
+                  d.count === 1 ? "enquiry" : "enquiries"
+                }${d.value ? ` · £${Math.round(d.value).toLocaleString("en-GB")}` : ""}`}
+              >
+                <span className="text-[9px] tabular-nums text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                  {d.count}
+                </span>
+                <div
+                  className="w-full rounded-sm transition-opacity group-hover:opacity-80"
+                  style={{
+                    height: `${Math.max((d.count / dayMax) * 100, 4)}%`,
+                    backgroundColor: d.isToday
+                      ? velColor
+                      : d.count === 0
+                        ? "hsl(var(--muted-foreground) / 0.15)"
+                        : d.isWeekend
+                          ? "hsl(var(--primary) / 0.3)"
+                          : "hsl(var(--primary) / 0.6)",
+                  }}
+                />
+                <span
+                  className={`text-[9px] leading-none ${
+                    d.isToday ? "font-medium text-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  {days.length > 14 ? (d.date.getDay() === 1 ? d.date.getDate() : "") : d.weekday[0]}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="mt-3 pt-3 border-t-hairline text-[11px] text-muted-foreground">
-        Averaging <span className="text-foreground font-medium">{avg.toFixed(1)} enquiries / week</span>
-        {velocity.thisWeek < avg
-          ? " — this week is running below trend."
-          : " — this week is at or above trend."}
+        {view === "week" ? (
+          <>
+            Averaging <span className="text-foreground font-medium">{avg.toFixed(1)} enquiries / week</span>
+            {velocity.thisWeek < avg ? " — this week is running below trend." : " — this week is at or above trend."}
+          </>
+        ) : (
+          <>
+            {busiestWeekday ? (
+              <>
+                <span className="text-foreground font-medium">{busiestWeekday[0]}s</span> bring the most enquiries (
+                {busiestWeekday[1]} in the period)
+              </>
+            ) : (
+              <>No enquiries in this period</>
+            )}
+            {quietDays > 0 && <> · {quietDays} quiet days with none</>}.
+          </>
+        )}
       </div>
     </div>
   );
