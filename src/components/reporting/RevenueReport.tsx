@@ -12,6 +12,7 @@ import {
 import { Pill } from "@/components/layout/PageShell";
 
 import { jobs, contacts, type Job } from "@/data/mockData";
+import { rangeLabels, type DateRange } from "@/lib/reportingData";
 
 /* ---------------- derived data ---------------- */
 
