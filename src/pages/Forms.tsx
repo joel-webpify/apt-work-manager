@@ -137,7 +137,7 @@ export default function Forms() {
                   <button
                     onClick={() => setMappingFor(f)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-surface"
-                    title="Field mapping"
+                    title="Where answers are saved"
                   >
                     <Wand2 className="w-3.5 h-3.5 text-muted-foreground" />
                   </button>
@@ -271,7 +271,7 @@ export default function Forms() {
           initial={overrides[mappingFor.id]}
           onSave={(formId, mapping) => {
             setFormMapping(formId, mapping);
-            toast({ title: "Mapping saved", description: `Updated field mapping for ${mappingFor.name}.` });
+            toast({ title: "Saved", description: `Updated where answers from ${mappingFor.name} are saved.` });
           }}
         />
       )}

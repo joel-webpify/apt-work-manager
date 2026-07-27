@@ -367,10 +367,10 @@ function ActionListEditor({
                       >
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="contact.tag">Contact tag</SelectItem>
+                          <SelectItem value="contact.tag">Contact label</SelectItem>
                           <SelectItem value="contact.lifecycle">Lifecycle stage</SelectItem>
-                          <SelectItem value="contact.source">Lead source</SelectItem>
-                          <SelectItem value="contact.totalSpend">Total spend</SelectItem>
+                          <SelectItem value="contact.source">Where they came from</SelectItem>
+                          <SelectItem value="contact.totalSpend">Total they have spent</SelectItem>
                           <SelectItem value="job.value">Job value (£)</SelectItem>
                           <SelectItem value="job.stage">Job stage</SelectItem>
                           <SelectItem value="quote.status">Quote status</SelectItem>
@@ -384,13 +384,13 @@ function ActionListEditor({
                       >
                         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="equals">equals</SelectItem>
-                          <SelectItem value="not_equals">not equals</SelectItem>
+                          <SelectItem value="equals">is</SelectItem>
+                          <SelectItem value="not_equals">is not</SelectItem>
                           <SelectItem value="contains">contains</SelectItem>
-                          <SelectItem value="greater_than">&gt;</SelectItem>
-                          <SelectItem value="less_than">&lt;</SelectItem>
-                          <SelectItem value="is_set">is set</SelectItem>
-                          <SelectItem value="is_empty">is empty</SelectItem>
+                          <SelectItem value="greater_than">is more than</SelectItem>
+                          <SelectItem value="less_than">is less than</SelectItem>
+                          <SelectItem value="is_set">has a value</SelectItem>
+                          <SelectItem value="is_empty">is blank</SelectItem>
                         </SelectContent>
                       </Select>
                       <Input
@@ -439,7 +439,7 @@ function ActionListEditor({
       })}
       {actions.length === 0 && (
         <div className="p-6 text-center text-sm text-muted-foreground border-hairline border-dashed rounded-lg">
-          No steps yet — add your first action below.
+          Nothing happens yet — add your first step below.
         </div>
       )}
       <AddActionMenu onAdd={add} allowBranch={depth < 2} />
@@ -470,7 +470,7 @@ function AddActionMenu({
     <Select onValueChange={(v) => onAdd(v as WorkflowActionType)} value="">
       <SelectTrigger className={compact ? "h-8 text-xs w-[180px]" : "h-9 text-xs w-[200px]"}>
         <Plus className="w-3.5 h-3.5 mr-1" />
-        <SelectValue placeholder="Add step" />
+        <SelectValue placeholder="Add a step" />
       </SelectTrigger>
       <SelectContent>
         {Object.entries(groups).map(([grp, types]) => (
@@ -596,7 +596,7 @@ export default function WorkflowDetail() {
     }
   };
   const onDelete = () => {
-    if (!confirm("Delete this workflow?")) return;
+    if (!confirm("Delete this automation?")) return;
     deleteWorkflow(draft.id);
     navigate("/automations");
   };
@@ -611,7 +611,7 @@ export default function WorkflowDetail() {
         actions={
           <div className="flex items-center gap-2">
             <Link to="/automations" className="h-8 px-2 rounded-md hover:bg-surface-hover inline-flex items-center gap-1 text-sm text-muted-foreground">
-              <ArrowLeft className="w-3.5 h-3.5" /> All workflows
+              <ArrowLeft className="w-3.5 h-3.5" /> All automations
             </Link>
             <div className="flex items-center gap-2 pl-2 border-l-hairline">
               <span className="text-xs text-muted-foreground">{draft.active ? "Active" : "Paused"}</span>
@@ -626,8 +626,8 @@ export default function WorkflowDetail() {
       <PageBody>
         <div className="flex border-b-hairline mb-4 -mt-2">
           {([
-            { id: "build", label: "Build", icon: Zap },
-            { id: "history", label: "Run history", icon: History },
+            { id: "build", label: "Set it up", icon: Zap },
+            { id: "history", label: "What it\u2019s done", icon: History },
             { id: "settings", label: "Settings", icon: Sparkles },
           ] as const).map((t) => (
             <button
@@ -649,20 +649,20 @@ export default function WorkflowDetail() {
             <div className="space-y-6">
               {/* Basics */}
               <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">Details</div>
+                <div className="text-xs uppercase tracking-wide text-muted-foreground">Name it</div>
                 <Input
                   value={draft.name}
                   onChange={(e) => patch({ name: e.target.value })}
                   onBlur={() => save(true)}
                   className="h-9 text-sm font-medium"
-                  placeholder="Workflow name"
+                  placeholder="Give this automation a name"
                 />
                 <Textarea
                   value={draft.description ?? ""}
                   onChange={(e) => patch({ description: e.target.value })}
                   onBlur={() => save(true)}
                   className="text-xs min-h-[60px]"
-                  placeholder="Describe what this workflow does…"
+                  placeholder="What is this automation for? (optional)"
                 />
               </section>
 
@@ -673,7 +673,7 @@ export default function WorkflowDetail() {
                     <Zap className="w-4 h-4 text-amber-500" />
                   </div>
                   <div className="flex-1">
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Trigger</div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Step 1</div>
                     <div className="text-sm font-medium">When this happens…</div>
                   </div>
                 </div>
@@ -774,34 +774,34 @@ export default function WorkflowDetail() {
               <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Filters</div>
-                    <div className="text-sm font-medium">Only run when… (optional)</div>
+                    <div className="text-xs uppercase tracking-wide text-muted-foreground">Step 2 — optional</div>
+                    <div className="text-sm font-medium">Only if…</div>
                   </div>
                   <button
                     onClick={() => patch({ conditions: [...draft.conditions, newCondition()] })}
                     className="h-8 px-2 rounded-md hover:bg-surface-hover text-xs inline-flex items-center gap-1 text-primary"
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add filter
+                    <Plus className="w-3.5 h-3.5" /> Add a rule
                   </button>
                 </div>
                 {draft.conditions.length === 0 ? (
-                  <div className="text-xs text-muted-foreground italic">No filters — runs on every trigger event.</div>
+                  <div className="text-xs text-muted-foreground italic">No rules — this runs every time.</div>
                 ) : (
                   <div className="space-y-2">
                     {draft.conditions.map((c, i) => (
                       <div key={c.id} className="grid grid-cols-[60px_1fr_110px_1fr_auto] gap-2 items-center">
-                        <span className="text-xs text-muted-foreground text-center">{i === 0 ? "IF" : "AND"}</span>
+                        <span className="text-xs text-muted-foreground text-center">{i === 0 ? "Only if" : "and"}</span>
                         <Select
                           value={c.field}
                           onValueChange={(v) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, field: v } : x) })}
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="contact.tag">Contact tag</SelectItem>
-                            <SelectItem value="contact.lifecycle">Lifecycle</SelectItem>
-                            <SelectItem value="contact.source">Lead source</SelectItem>
-                            <SelectItem value="contact.totalSpend">Total spend</SelectItem>
-                            <SelectItem value="job.value">Job value</SelectItem>
+                            <SelectItem value="contact.tag">Contact label</SelectItem>
+                            <SelectItem value="contact.lifecycle">Customer stage</SelectItem>
+                            <SelectItem value="contact.source">Where they came from</SelectItem>
+                            <SelectItem value="contact.totalSpend">Total they have spent</SelectItem>
+                            <SelectItem value="job.value">Job value (£)</SelectItem>
                             <SelectItem value="job.stage">Job stage</SelectItem>
                           </SelectContent>
                         </Select>
@@ -811,13 +811,13 @@ export default function WorkflowDetail() {
                         >
                           <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="equals">equals</SelectItem>
-                            <SelectItem value="not_equals">not equals</SelectItem>
+                            <SelectItem value="equals">is</SelectItem>
+                            <SelectItem value="not_equals">is not</SelectItem>
                             <SelectItem value="contains">contains</SelectItem>
-                            <SelectItem value="greater_than">&gt;</SelectItem>
-                            <SelectItem value="less_than">&lt;</SelectItem>
-                            <SelectItem value="is_set">is set</SelectItem>
-                            <SelectItem value="is_empty">is empty</SelectItem>
+                            <SelectItem value="greater_than">is more than</SelectItem>
+                            <SelectItem value="less_than">is less than</SelectItem>
+                            <SelectItem value="is_set">has a value</SelectItem>
+                            <SelectItem value="is_empty">is blank</SelectItem>
                           </SelectContent>
                         </Select>
                         <Input
@@ -841,8 +841,8 @@ export default function WorkflowDetail() {
               {/* Actions */}
               <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
                 <div>
-                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Actions</div>
-                  <div className="text-sm font-medium">Do the following…</div>
+                  <div className="text-xs uppercase tracking-wide text-muted-foreground">Step 3</div>
+                  <div className="text-sm font-medium">Then do this…</div>
                 </div>
                 <ActionListEditor
                   actions={draft.actions}
@@ -854,14 +854,14 @@ export default function WorkflowDetail() {
 
             {/* Live flow preview */}
             <aside className="lg:sticky lg:top-4 h-fit space-y-2">
-              <div className="text-xs uppercase tracking-wide text-muted-foreground px-1">Flow preview</div>
+              <div className="text-xs uppercase tracking-wide text-muted-foreground px-1">How it will run</div>
               <div className="border-hairline rounded-lg bg-surface/40 p-3 space-y-1.5">
                 <div className="flex items-center gap-2 p-2 rounded-lg bg-card border-hairline">
                   <div className="w-6 h-6 rounded flex items-center justify-center bg-amber-500/10">
                     <Zap className="w-3.5 h-3.5 text-amber-500" />
                   </div>
                   <div className="text-xs truncate flex-1">
-                    <div className="font-medium">Trigger</div>
+                    <div className="font-medium">When this happens</div>
                     <div className="text-muted-foreground truncate">{tmeta.label}</div>
                   </div>
                 </div>
@@ -871,14 +871,14 @@ export default function WorkflowDetail() {
                       <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
                     </div>
                     <div className="text-xs truncate flex-1">
-                      <div className="font-medium">Filters</div>
-                      <div className="text-muted-foreground">{draft.conditions.length} condition{draft.conditions.length === 1 ? "" : "s"}</div>
+                      <div className="font-medium">Only if</div>
+                      <div className="text-muted-foreground">{draft.conditions.length} rule{draft.conditions.length === 1 ? "" : "s"}</div>
                     </div>
                   </div>
                 )}
                 <FlowActions actions={draft.actions} />
                 {draft.actions.length === 0 && (
-                  <div className="text-xs text-muted-foreground italic px-2 py-3 text-center">No actions yet.</div>
+                  <div className="text-xs text-muted-foreground italic px-2 py-3 text-center">No steps yet.</div>
                 )}
               </div>
             </aside>
@@ -888,13 +888,13 @@ export default function WorkflowDetail() {
         {tab === "history" && (
           <div className="border-hairline rounded-lg bg-card overflow-hidden max-w-3xl">
             <div className="grid grid-cols-[1fr_160px_120px] px-4 h-9 border-b-hairline text-xs text-muted-foreground items-center">
-              <div>Contact / summary</div>
+              <div>Who / what happened</div>
               <div>Started</div>
               <div>Status</div>
             </div>
             {(draft.runs ?? []).length === 0 ? (
               <div className="p-10 text-center text-sm text-muted-foreground">
-                No runs yet. Once this workflow is active and its trigger fires, runs will appear here.
+                Nothing yet. Once this automation is switched on, everything it does will be listed here.
               </div>
             ) : (
               (draft.runs ?? []).map((r) => (
@@ -918,36 +918,36 @@ export default function WorkflowDetail() {
         {tab === "settings" && (
           <div className="max-w-2xl space-y-4">
             <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
-              <div className="text-sm font-medium">Enrollment</div>
+              <div className="text-sm font-medium">How often it runs</div>
               <label className="flex items-center gap-3 text-sm">
                 <Switch
                   checked={(draft.triggerConfig?.reEnroll as string) === "true"}
                   onCheckedChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, reEnroll: v ? "true" : "false" } })}
                 />
-                Allow re-enrollment (contact can enter this workflow more than once)
+                Let the same person go through this more than once
               </label>
               <label className="flex items-center gap-3 text-sm">
                 <Switch
                   checked={(draft.triggerConfig?.skipWeekends as string) === "true"}
                   onCheckedChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, skipWeekends: v ? "true" : "false" } })}
                 />
-                Only send communications on business days
+                Only send emails and messages on working days
               </label>
             </section>
             <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
-              <div className="text-sm font-medium">Goal (optional)</div>
-              <p className="text-xs text-muted-foreground">If a contact hits the goal, they exit the workflow early.</p>
+              <div className="text-sm font-medium">Stop early when… (optional)</div>
+              <p className="text-xs text-muted-foreground">If this happens, the person stops receiving the rest of the steps.</p>
               <Select
                 value={(draft.triggerConfig?.goal as string) ?? "none"}
                 onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, goal: v } })}
               >
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No goal</SelectItem>
-                  <SelectItem value="quote_accepted">Quote accepted</SelectItem>
-                  <SelectItem value="invoice_paid">Invoice paid</SelectItem>
-                  <SelectItem value="job_created">Job created</SelectItem>
-                  <SelectItem value="tag_added">Tag added</SelectItem>
+                  <SelectItem value="none">Never stop early</SelectItem>
+                  <SelectItem value="quote_accepted">They accept a quote</SelectItem>
+                  <SelectItem value="invoice_paid">They pay an invoice</SelectItem>
+                  <SelectItem value="job_created">A job is created for them</SelectItem>
+                  <SelectItem value="tag_added">A label is added to them</SelectItem>
                 </SelectContent>
               </Select>
             </section>

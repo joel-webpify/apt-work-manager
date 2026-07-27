@@ -117,8 +117,8 @@ export function CustomersReport() {
       {/* Top customers table — clickable */}
       <div className="border-hairline rounded-lg bg-card">
         <div className="px-4 h-11 flex items-center border-b-hairline">
-          <span className="text-sm font-medium">Top customers by LTV</span>
-          <span className="ml-2 text-xs text-muted-foreground">— click a row to view history</span>
+          <span className="text-sm font-medium">Your best customers</span>
+          <span className="ml-2 text-xs text-muted-foreground">— by total spent. Click a row to see their history.</span>
         </div>
         <div className="px-4 h-9 grid grid-cols-[2fr_1fr_1fr_80px_100px] items-center gap-3 border-b-hairline text-xs text-muted-foreground">
           <span>Customer</span>

@@ -171,7 +171,7 @@ export default function Contacts() {
                 />
               </div>
               <SortHeader label="Name" active={sortKey === "name"} dir={sortDir} onClick={() => toggleSort("name")} />
-              <div>Lifecycle</div>
+              <div>Status</div>
               <div>Tags</div>
               <SortHeader label="Last activity" active={sortKey === "lastJob"} dir={sortDir} onClick={() => toggleSort("lastJob")} />
               <SortHeader label="Total spend" active={sortKey === "totalSpend"} dir={sortDir} onClick={() => toggleSort("totalSpend")} align="right" />

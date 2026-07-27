@@ -125,11 +125,27 @@ export const liveEvents: TrackedEvent[] = (() => {
 })();
 
 const eventDescriptions: Record<string, string> = {
-  session_start: "A new visit begins — captures channel, device and location",
-  form_view: "A tracked form entered the viewport",
-  form_start: "First field interaction on a form",
-  field_complete: "A field was filled and blurred",
-  form_submit: "Successful submission — creates a lead",
+  session_start: "Someone arrived on your website. We record where they came from, what device they used and roughly where they are.",
+  form_view: "One of your forms appeared on their screen.",
+  form_start: "They clicked into the form and began typing.",
+  field_complete: "They finished answering one question in the form.",
+  form_submit: "They sent the form — this creates a new enquiry for you.",
+};
+
+/** Plain-English names shown in the UI. The technical key stays as secondary text. */
+export const eventLabels: Record<string, string> = {
+  session_start: "Visited your site",
+  form_view: "Saw a form",
+  form_start: "Started filling it in",
+  field_complete: "Answered a question",
+  form_submit: "Sent the form",
+};
+
+export const eventLabel = (name: string) => eventLabels[name] ?? name;
+
+export const categoryLabels: Record<EventCategory, string> = {
+  session: "Visit",
+  form: "Form",
 };
 
 export const eventCatalog: EventDefinition[] = eventPool.map((e) => {
@@ -192,11 +208,11 @@ export const geoSplit = [
 ];
 
 export const funnelSteps = [
-  { step: "Session start", count: 4525 },
-  { step: "Form view", count: 2140 },
-  { step: "Form start", count: 1180 },
-  { step: "Field complete", count: 862 },
-  { step: "Form submit", count: 412 },
+  { step: "Visited your site", count: 4525 },
+  { step: "Saw a form", count: 2140 },
+  { step: "Started filling it in", count: 1180 },
+  { step: "Got most of the way", count: 862 },
+  { step: "Sent the form", count: 412 },
 ];
 
 /** Form behaviour split by acquisition channel. */

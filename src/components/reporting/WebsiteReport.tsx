@@ -25,13 +25,13 @@ export function WebsiteReport() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-4 gap-3">
-        <Kpi label="Sessions (14d)" value="4,525" delta="+9.2%" />
-        <Kpi label="Unique visitors" value="3,318" delta="+6.8%" />
-        <Kpi label="Avg. session" value="1m 47s" delta="+11s" />
-        <Kpi label="Bounce rate" value="38.4%" delta="-2.1pt" tone="success" />
+        <Kpi label="Visits (last 14 days)" value="4,525" delta="+9.2% vs previous 14 days" />
+        <Kpi label="Different people" value="3,318" delta="+6.8% vs previous 14 days" />
+        <Kpi label="Average time on site" value="1m 47s" delta="+11s vs previous 14 days" />
+        <Kpi label="Left after one page" value="38.4%" delta="2.1 points better" tone="success" />
       </div>
 
-      <Card title="Sessions over time" icon={Activity}>
+      <Card title="Visits over time" icon={Activity} takeaway="Green shows how many of those visits turned into an enquiry.">
         <div className="px-4 py-4">
           <div className="flex items-end gap-1.5 h-32">
             {trafficByDay.map((d, i) => (
@@ -45,29 +45,29 @@ export function WebsiteReport() {
                   style={{ height: `${(d.conversions / max) * 100}%` }}
                 />
                 <div className="absolute -top-1 left-1/2 -translate-x-1/2 -translate-y-full opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap rounded bg-foreground text-background text-[10px] px-1.5 py-1">
-                  {d.sessions} sessions · {d.conversions} conv.
+                  {d.sessions} visits · {d.conversions} forms sent
                 </div>
               </div>
             ))}
           </div>
           <div className="flex items-center gap-4 mt-3 text-[11px] text-muted-foreground">
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-sm bg-primary/70" /> Sessions
+              <span className="w-2 h-2 rounded-sm bg-primary/70" /> Visits
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-sm bg-[hsl(var(--success)/0.5)]" /> Conversions
+              <span className="w-2 h-2 rounded-sm bg-[hsl(var(--success)/0.5)]" /> Forms sent
             </span>
           </div>
         </div>
       </Card>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card title="Top pages" icon={Globe}>
+        <Card title="Most-visited pages" icon={Globe} takeaway="The pages doing the most work for you right now.">
           <div className="grid grid-cols-[2fr_0.7fr_0.7fr_0.7fr] px-4 h-8 items-center text-[11px] text-muted-foreground font-medium border-b-hairline bg-surface/50">
             <div>Page</div>
             <div className="text-right">Views</div>
-            <div className="text-right">Bounce</div>
-            <div className="text-right">Conv.</div>
+            <div className="text-right">Left straight away</div>
+            <div className="text-right">Enquiries</div>
           </div>
           {topPages.map((p) => (
             <div
@@ -82,14 +82,14 @@ export function WebsiteReport() {
           ))}
         </Card>
 
-        <Card title="Channels" icon={TrendingUp}>
+        <Card title="Where visitors come from" icon={TrendingUp} takeaway="Which marketing brings the most people — and the most money.">
           <div className="p-4 space-y-3">
             {channelBreakdown.map((c) => (
               <div key={c.channel}>
                 <div className="flex items-center justify-between text-xs mb-1">
                   <span>{c.channel}</span>
                   <span className="text-muted-foreground tabular-nums">
-                    {c.sessions} · {c.conversions} conv · £{c.revenue.toLocaleString()}
+                    {c.sessions} visits · {c.conversions} enquiries · £{c.revenue.toLocaleString()}
                   </span>
                 </div>
                 <div className="h-1.5 rounded-full bg-surface overflow-hidden">
@@ -105,7 +105,7 @@ export function WebsiteReport() {
       </div>
 
       <div className="grid grid-cols-3 gap-4">
-        <Card title="Devices" icon={MonitorSmartphone}>
+        <Card title="Phone vs computer" icon={MonitorSmartphone} takeaway="Most people browse on their phone, so forms need to be short.">
           <div className="p-4 space-y-3">
             {deviceSplit.map((d) => (
               <div key={d.device}>
@@ -123,20 +123,20 @@ export function WebsiteReport() {
           </div>
         </Card>
 
-        <Card title="Top locations" icon={MapPin}>
+        <Card title="Where they are" icon={MapPin} takeaway="The towns and areas your enquiries come from.">
           <div className="p-4 space-y-2">
             {geoSplit.map((g) => (
               <div key={g.place} className="flex items-center justify-between text-xs">
                 <span>{g.place}</span>
                 <span className="text-muted-foreground tabular-nums">
-                  {g.sessions} · {g.conversions} conv
+                  {g.sessions} visits · {g.conversions} enquiries
                 </span>
               </div>
             ))}
           </div>
         </Card>
 
-        <Card title="Conversion funnel" icon={Layers}>
+        <Card title="From visit to enquiry" icon={Layers} takeaway="How many people make it through each step.">
           <div className="p-4 space-y-2">
             {funnelSteps.map((s, i) => {
               const pct = (s.count / topFunnel) * 100;
@@ -161,15 +161,15 @@ export function WebsiteReport() {
       </div>
 
       <div className="grid grid-cols-[1.6fr_1fr] gap-4">
-        <Card title="Form behaviour by channel" icon={Layers}>
+        <Card title="How each channel does on your forms" icon={Layers} takeaway="Some channels send lots of visits but few enquiries — that is where to look first.">
           <div className="grid grid-cols-[1.1fr_0.7fr_0.6fr_0.6fr_0.6fr_0.95fr_0.8fr] px-4 h-8 items-center text-[11px] text-muted-foreground font-medium border-b-hairline bg-surface/50">
-            <div>Channel</div>
-            <div className="text-right">Sessions</div>
-            <div className="text-right">Views</div>
-            <div className="text-right">Starts</div>
-            <div className="text-right">Submits</div>
-            <div className="text-right">View→submit</div>
-            <div className="text-right">Avg. time</div>
+            <div>Came from</div>
+            <div className="text-right">Visits</div>
+            <div className="text-right">Saw form</div>
+            <div className="text-right">Started</div>
+            <div className="text-right">Sent it</div>
+            <div className="text-right">Sent after seeing</div>
+            <div className="text-right">Time to send</div>
           </div>
           {formBehaviourByChannel.map((c) => {
             const rate = (c.submits / c.formViews) * 100;
@@ -194,7 +194,7 @@ export function WebsiteReport() {
           })}
         </Card>
 
-        <Card title="Field completion & drop-off" icon={Activity}>
+        <Card title="Where people give up on the form" icon={Activity} takeaway="The questions people abandon. Removing or simplifying them wins you more enquiries.">
           <div className="p-4 space-y-3">
             {fieldDropoff.map((f) => {
               const pct = (f.completes / fieldDropoff[0].completes) * 100;
@@ -203,7 +203,7 @@ export function WebsiteReport() {
                   <div className="flex items-center justify-between text-xs mb-1">
                     <span>{f.field}</span>
                     <span className="text-muted-foreground tabular-nums">
-                      {f.completes} · {f.dropoff}% drop
+                      {f.completes} answered · {f.dropoff}% gave up here
                     </span>
                   </div>
                   <div className="h-1.5 rounded-full bg-surface overflow-hidden flex">
@@ -250,17 +250,22 @@ function Kpi({
 function Card({
   title,
   icon: Icon,
+  takeaway,
   children,
 }: {
   title: string;
   icon: React.ElementType;
+  takeaway?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="border-hairline rounded-lg bg-card">
-      <div className="px-4 h-11 flex items-center gap-1.5 border-b-hairline">
-        <Icon className="w-3.5 h-3.5 text-muted-foreground" />
-        <span className="text-sm font-medium">{title}</span>
+      <div className="px-4 py-2.5 border-b-hairline">
+        <div className="flex items-center gap-1.5">
+          <Icon className="w-3.5 h-3.5 text-muted-foreground" />
+          <span className="text-sm font-medium">{title}</span>
+        </div>
+        {takeaway && <p className="text-xs text-muted-foreground mt-0.5">{takeaway}</p>}
       </div>
       {children}
     </div>

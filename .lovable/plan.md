@@ -1,56 +1,53 @@
 ## Goal
 
-Replace the static "Revenue health" ratio card in Reporting → Revenue with an **interactive cash flow forecast**, topped by a **lead velocity** indicator as the forward-looking growth signal.
+Make the system feel obvious to a non-technical service business (trades, installers, local services) without removing any capability. Navigation structure, routes and features stay exactly as they are. This is a language, defaults and progressive-disclosure pass.
 
-## What replaces it
+## Principles
 
-The card sits in the right column (`col-span-2`) next to AR aging.
+1. Name things the way a business owner talks: "enquiry", "job", "customer", "reminder" — not "lead object", "entity", "payload".
+2. Every screen answers "what is this for?" in one line before it shows controls.
+3. Show the 3 things people use every time; put the rest behind an "Advanced" disclosure that is closed by default.
+4. Pick a good default instead of asking a question the user can't answer.
 
-```text
-┌──────────────────────────────┐
-│ Cash flow forecast    [4w|8w]│
-│ £6,120 expected in            │
-│                               │
-│ Lead velocity  +18% WoW  ▲    │
-│ 13 new enquiries this week    │
-│ ───────────────────────────── │
-│ Week of 3 Aug   £1,840  ▓▓░   │
-│   • INV-1104 Baker  £420  →   │
-│   • Job booked Hall £600  →   │
-│ Week of 10 Aug  £2,310  ▓▓▓░  │
-│ ...                           │
-│ ───────────────────────────── │
-│ Net position end of period    │
-└──────────────────────────────┘
-```
+## Where to apply it
 
-### Cash flow forecast
-- Buckets expected cash inflow by week for the next 4 or 8 weeks (toggle).
-- Sources of expected inflow, derived from existing stores:
-  - Sent/overdue invoices → expected on due date (overdue ones weighted by collection likelihood).
-  - Jobs in "Completed"/"Invoiced" → expected on invoice due date.
-  - Jobs in "Job booked"/"In progress" → expected value on scheduled date + payment lag.
-  - Quotes in "Sent" → weighted by acceptance rate, shown as a lighter "at risk" portion of each bar.
-- Each week row expands to list the individual invoices/jobs making up the amount, with confidence (confirmed vs expected).
-- Footer shows total expected in over the window and the largest single week.
+**Sidebar labels** (`src/components/layout/Sidebar.tsx`) — copy only, same order and links:
+- "Social — Organic" / "Social — Paid" → "Social posts" / "Social ads"
+- "Automations → Workflows / Sequences" → "Automations → Automations / Email follow-ups"
+- "Tracking" → "Website tracking"
+- Group heading "Analytics" → "Reports"
 
-### Lead velocity
-- Compact strip at the top: week-over-week % change in new enquiries (contacts/jobs created this week vs last), with direction arrow, colored via success/warning tokens, and a small 8-week sparkline.
-- Tooltip/subline gives the raw counts so the % is readable.
+**Tracking** (`src/pages/Tracking.tsx`, `src/lib/trackingData.ts`)
+- Show friendly event names in the UI with the technical key as small secondary text: "Visited a page" (`session_start`), "Saw a form" (`form_view`), "Started filling it in" (`form_start`), "Completed a field" (`field_complete`), "Sent the form" (`form_submit`).
+- Install tab: lead with "Copy this snippet and paste it into your website before `</head>`" plus a one-line "Not sure? Send this to whoever manages your website" and a copy-to-email/copy-link action. Keep the code block, drop the surrounding technical explanation.
+- Event catalog: describe each event in a sentence rather than a schema.
 
-### Interactivity
-- 4w / 8w window toggle.
-- Click a week row to expand its line items.
-- Click a line item to open the linked invoice or job (navigates to `/quotes` or `/pipeline` with the record focused, matching how other reporting rows link out).
-- Hovering a bar highlights the corresponding rows.
+**Automations** (`src/pages/automations/WorkflowDetail.tsx`)
+- Header the three parts as "When this happens" / "Only if" / "Then do this" instead of Trigger / Filters / Actions.
+- Move `Webhook`, re-enrollment rules and goal settings into a closed "Advanced" section; keep email, wait, tag, task, job and stage actions up front.
+- Default new automations to "run once per contact" so the user never has to reason about re-enrollment.
+
+**Forms** (`src/pages/Forms.tsx`, `FieldMappingDialog.tsx`)
+- "Field mapping" → "Where answers are saved", with one-line helper text and auto-matching applied by default so the dialog usually just needs confirming.
+
+**Reporting** (`src/pages/Reporting.tsx` and report components)
+- Expand abbreviations in labels: "WoW" → "vs last week", "View→submit" → "Filled in after seeing the form".
+- Add a single plain-English takeaway line at the top of each report card (e.g. "Enquiries are up 12% on last week") so the numbers are interpreted for the user.
+- Keep tab names as-is; rename the "Website" tab content headings to everyday terms ("Where visitors come from", "Most-visited pages", "Where people give up on the form").
+
+**Global consistency**
+- One vocabulary sheet applied everywhere: enquiry, customer, job, quote, invoice, automation, follow-up, form.
+- Empty states get "what this is + one button" instead of a blank panel.
+- Tooltips only for genuinely unavoidable terms (UTM, webhook).
 
 ## Technical notes
 
-- Edit `src/components/reporting/RevenueReport.tsx`: remove the "Revenue health" block and the now-unused `HealthRow` component; add a new `CashFlowForecast` component in `src/components/reporting/CashFlowForecast.tsx` to keep the file manageable.
-- Data comes from the existing stores — `invoicesStore`, `jobsStore`, `quotesStore`, plus `contacts` from `mockData` for enquiry dates. No backend work; forecast math lives in a small pure helper (`src/lib/cashFlow.ts`) so it's testable.
-- Where mock data lacks real dates (created-at for contacts, scheduled dates for some jobs), derive deterministic pseudo-dates from existing fields such as `daysInStage` rather than random values, so the chart is stable across renders.
-- Styling reuses existing tokens and the `Pill` / bar patterns already in the report — no new colors, no new dependencies.
+Changes are confined to presentation: label strings, helper copy, default values on new-record creation, and wrapping existing advanced controls in the existing collapsible primitive. Data models, stores (`workflowsStore`, `socialPostsStore`, `trackingData`), routes and business logic are untouched, so nothing breaks and no migration is needed. Technical event keys stay intact in the data layer and are still visible as secondary text where developers need them.
 
-## Out of scope
+## Suggested order
 
-The other Revenue tab cards (headline KPIs, MoM chart, service/segment/source mixes, AR aging, top customers) stay as-is.
+1. Vocabulary pass across sidebar + page titles (fast, highest visible impact)
+2. Tracking events + install tab
+3. Automations builder wording + Advanced grouping + defaults
+4. Reporting labels and takeaway lines
+5. Forms mapping wording and auto-match default

@@ -9,28 +9,28 @@ import {
   Filter,
   Layers,
 } from "lucide-react";
-import { liveEvents, eventCatalog, formatAgo, type EventCategory } from "@/lib/trackingData";
+import { liveEvents, eventCatalog, formatAgo, eventLabel, categoryLabels, type EventCategory } from "@/lib/trackingData";
 
 const methods = [
   {
     id: "js",
     icon: Code,
-    name: "JavaScript snippet",
-    description: "Paste a small script into the <head> of your website. Works with any platform.",
+    name: "Code snippet",
+    description: "Add one line of code to your website. Works with any website builder.",
     installed: true,
   },
   {
     id: "wp",
     icon: Globe,
     name: "WordPress plugin",
-    description: "Install our official plugin from the WordPress directory. One-click setup.",
+    description: "If your site runs on WordPress, install our plugin — no code needed.",
     installed: false,
   },
   {
     id: "gtm",
     icon: Tag,
     name: "Google Tag Manager",
-    description: "Import our GTM container template. Recommended if you already use GTM.",
+    description: "Already using Google Tag Manager? Import our ready-made setup.",
     installed: false,
   },
 ];
@@ -41,9 +41,9 @@ const categoryTone: Record<EventCategory, "neutral" | "info" | "success" | "warn
 };
 
 const tabs = [
-  { id: "live", label: "Live events", icon: Activity },
-  { id: "catalog", label: "Event catalog", icon: Layers },
-  { id: "install", label: "Install", icon: Code },
+  { id: "live", label: "Live activity", icon: Activity },
+  { id: "catalog", label: "What we track", icon: Layers },
+  { id: "install", label: "Set up tracking", icon: Code },
 ] as const;
 
 type Tab = (typeof tabs)[number]["id"];
@@ -54,12 +54,12 @@ export default function Tracking() {
   return (
     <>
       <PageHeader
-        title="Tracking"
-        description="Capture every visit, event and attribution signal from your website"
+        title="Website tracking"
+        description="See who visits your website and how they get on with your forms"
         actions={
           <>
             <Btn>Export</Btn>
-            <Btn variant="primary">Add event</Btn>
+            <Btn variant="primary">Add something to track</Btn>
           </>
         }
       />
@@ -119,10 +119,10 @@ function LiveTab() {
   return (
     <>
       <div className="grid grid-cols-4 gap-3 mb-4">
-        <Kpi label="Events (24h)" value="4,812" delta="+12.4%" />
-        <Kpi label="Active visitors" value="37" delta="live" tone="success" />
-        <Kpi label="Conversion events" value="164" delta="+8.1%" />
-        <Kpi label="Tracked pages" value="42" delta="3 new" />
+        <Kpi label="Things happened (last 24h)" value="4,812" delta="+12.4% vs yesterday" />
+        <Kpi label="People on your site now" value="37" delta="live" tone="success" />
+        <Kpi label="Forms sent" value="164" delta="+8.1% vs last period" />
+        <Kpi label="Pages being tracked" value="42" delta="3 new" />
       </div>
 
       <div className="border-hairline rounded-lg bg-card">
@@ -133,7 +133,7 @@ function LiveTab() {
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search events, pages, sources…"
+                placeholder="Search by page, source or town…"
                 className="h-8 w-64 rounded-md border-hairline bg-surface pl-7 pr-2.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
               />
             </div>
@@ -143,11 +143,11 @@ function LiveTab() {
                 <button
                   key={c}
                   onClick={() => setCat(c)}
-                  className={`h-6 px-2 rounded text-[11px] font-medium capitalize transition-colors ${
+                  className={`h-6 px-2 rounded text-[11px] font-medium transition-colors ${
                     cat === c ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-surface-hover"
                   }`}
                 >
-                  {c}
+                  {c === "all" ? "Everything" : categoryLabels[c]}
                 </button>
               ))}
             </div>
@@ -159,11 +159,11 @@ function LiveTab() {
         </div>
 
         <div className="grid grid-cols-[1.3fr_1.7fr_1.2fr_1fr_0.9fr_0.6fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
-          <div>Event</div>
+          <div>What happened</div>
           <div>Page</div>
-          <div>Source / medium</div>
+          <div>Came from</div>
           <div>Device</div>
-          <div>Location</div>
+          <div>Where</div>
           <div className="text-right">When</div>
         </div>
 
@@ -175,8 +175,8 @@ function LiveTab() {
                 className="w-full grid grid-cols-[1.3fr_1.7fr_1.2fr_1fr_0.9fr_0.6fr] px-4 h-10 items-center text-sm text-left hover:bg-surface-hover"
               >
                 <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="font-mono text-xs truncate">{e.event}</span>
-                  <Pill tone={categoryTone[e.category]}>{e.category}</Pill>
+                  <span className="text-xs truncate">{eventLabel(e.event)}</span>
+                  <Pill tone={categoryTone[e.category]}>{categoryLabels[e.category]}</Pill>
                 </div>
                 <div className="text-muted-foreground truncate text-xs">{e.page}</div>
                 <div className="text-muted-foreground truncate text-xs">
@@ -192,20 +192,20 @@ function LiveTab() {
               </button>
               {openId === e.id && (
                 <div className="px-4 pb-3 pt-1 bg-surface/40 grid grid-cols-4 gap-3">
-                  <Detail label="Visitor" value={`${e.visitorId} · ${e.isNew ? "new" : "returning"}`} />
-                  <Detail label="Campaign" value={e.campaign ?? "—"} />
-                  <Detail label="OS / browser" value={`${e.os} · ${e.browser}`} />
+                  <Detail label="Visitor" value={`${e.isNew ? "First time here" : "Been here before"} · ${e.visitorId}`} />
+                  <Detail label="Campaign" value={e.campaign ?? "No campaign"} />
+                  <Detail label="Device" value={`${e.os} · ${e.browser}`} />
                   <Detail label="Country" value={e.country} />
-                  <Detail label="Value" value={e.value ? `£${e.value}` : "—"} />
-                  <Detail label="Landing page" value={e.page} />
-                  <Detail label="Category" value={e.category} />
-                  <Detail label="Timestamp" value={formatAgo(e.minutesAgo)} />
+                  <Detail label="Estimated value" value={e.value ? `£${e.value}` : "—"} />
+                  <Detail label="Page" value={e.page} />
+                  <Detail label="Event name (technical)" value={e.event} />
+                  <Detail label="When" value={formatAgo(e.minutesAgo)} />
                 </div>
               )}
             </div>
           ))}
           {rows.length === 0 && (
-            <div className="px-4 py-10 text-center text-xs text-muted-foreground">No events match your filters.</div>
+            <div className="px-4 py-10 text-center text-xs text-muted-foreground">Nothing matches that search — try clearing the filters.</div>
           )}
         </div>
       </div>
@@ -225,30 +225,36 @@ function CatalogTab() {
   return (
     <div className="border-hairline rounded-lg bg-card">
       <div className="px-4 h-11 flex items-center justify-between border-b-hairline">
-        <span className="text-sm font-medium">Event catalog</span>
+        <div>
+          <span className="text-sm font-medium">What we track</span>
+          <p className="text-xs text-muted-foreground">Turn anything off you don't want recorded.</p>
+        </div>
         <span className="text-xs text-muted-foreground">
-          {events.filter((e) => e.enabled).length} of {events.length} enabled
+          {events.filter((e) => e.enabled).length} of {events.length} turned on
         </span>
       </div>
       <div className="grid grid-cols-[1.2fr_2fr_0.8fr_0.7fr_0.6fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
-        <div>Event</div>
-        <div>Description</div>
-        <div>Category</div>
-        <div className="text-right">7d count</div>
+        <div>What happened</div>
+        <div>What it means</div>
+        <div>Type</div>
+        <div className="text-right">Last 7 days</div>
         <div className="text-right">Status</div>
       </div>
       {events.map((e) => (
         <div
           key={e.name}
-          className="grid grid-cols-[1.2fr_2fr_0.8fr_0.7fr_0.6fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover"
+          className="grid grid-cols-[1.2fr_2fr_0.8fr_0.7fr_0.6fr] px-4 h-14 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover"
         >
-          <div className="flex items-center gap-1.5 min-w-0">
-            <span className="font-mono text-xs truncate">{e.name}</span>
-            {e.conversion && <Pill tone="success">conv</Pill>}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-xs truncate">{eventLabel(e.name)}</span>
+              {e.conversion && <Pill tone="success">enquiry</Pill>}
+            </div>
+            <div className="font-mono text-[10px] text-muted-foreground truncate">{e.name}</div>
           </div>
           <div className="text-xs text-muted-foreground truncate">{e.description}</div>
           <div>
-            <Pill tone={categoryTone[e.category]}>{e.category}</Pill>
+            <Pill tone={categoryTone[e.category]}>{categoryLabels[e.category]}</Pill>
           </div>
           <div className="text-right tabular-nums text-xs text-muted-foreground">{e.count7d}</div>
           <div className="flex justify-end">
@@ -260,7 +266,7 @@ function CatalogTab() {
                   : "bg-surface text-muted-foreground hover:bg-surface-hover"
               }`}
             >
-              {e.enabled ? "Tracking" : "Paused"}
+              {e.enabled ? "On" : "Off"}
             </button>
           </div>
         </div>
@@ -272,36 +278,63 @@ function CatalogTab() {
 /* ---------------- Install ---------------- */
 
 function InstallTab() {
+  const snippet = '<script src="//track.servicecrm.io/t.js"></script>';
   return (
-    <div className="grid grid-cols-3 gap-3">
-      {methods.map((m) => (
-        <div key={m.id} className="border-hairline rounded-lg bg-card p-5">
-          <div className="flex items-start justify-between mb-3">
-            <div className="w-9 h-9 rounded-md bg-surface flex items-center justify-center">
-              <m.icon className="w-4 h-4 text-muted-foreground" strokeWidth={1.75} />
-            </div>
-            <Pill tone={m.installed ? "success" : "neutral"}>
-              {m.installed ? "Installed" : "Not installed"}
-            </Pill>
-          </div>
-          <div className="text-sm font-medium">{m.name}</div>
-          <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{m.description}</p>
-          {m.id === "js" ? (
-            <>
-              <div className="mt-3 bg-surface rounded-md p-2.5 text-xs font-mono text-muted-foreground border-hairline overflow-hidden">
-                &lt;script src="//track.servicecrm.io/t.js"&gt;&lt;/script&gt;
-              </div>
-              <div className="mt-2">
-                <Btn className="w-full justify-center">Copy snippet</Btn>
-              </div>
-            </>
-          ) : (
-            <div className="mt-3">
-              <Btn className="w-full justify-center">{m.installed ? "Manage" : "Install"}</Btn>
-            </div>
-          )}
+    <div className="space-y-4">
+      <div className="border-hairline rounded-lg bg-card p-5">
+        <div className="text-sm font-medium">Copy this and paste it into your website</div>
+        <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+          It goes just before the closing &lt;/head&gt; tag on every page. Once it's there, tracking starts
+          straight away — there's nothing else to set up.
+        </p>
+        <div className="mt-3 bg-surface rounded-md p-3 text-xs font-mono text-muted-foreground border-hairline overflow-x-auto">
+          {snippet}
         </div>
-      ))}
+        <div className="mt-3 flex items-center gap-2">
+          <Btn variant="primary" onClick={() => navigator.clipboard?.writeText(snippet)}>
+            Copy code
+          </Btn>
+          <Btn
+            onClick={() =>
+              (window.location.href = `mailto:?subject=${encodeURIComponent(
+                "Please add this to our website",
+              )}&body=${encodeURIComponent(
+                "Hi,\n\nPlease add the line below just before the </head> tag on every page of our website:\n\n" +
+                  snippet +
+                  "\n\nThanks!",
+              )}`)
+            }
+          >
+            Email it to my web person
+          </Btn>
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-3">
+          Not sure what this means? Send it to whoever looks after your website — they'll know what to do.
+        </p>
+      </div>
+
+      <div>
+        <div className="text-xs text-muted-foreground mb-2">Or use one of these instead</div>
+        <div className="grid grid-cols-3 gap-3">
+          {methods.map((m) => (
+            <div key={m.id} className="border-hairline rounded-lg bg-card p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-9 h-9 rounded-md bg-surface flex items-center justify-center">
+                  <m.icon className="w-4 h-4 text-muted-foreground" strokeWidth={1.75} />
+                </div>
+                <Pill tone={m.installed ? "success" : "neutral"}>
+                  {m.installed ? "Set up" : "Not set up"}
+                </Pill>
+              </div>
+              <div className="text-sm font-medium">{m.name}</div>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{m.description}</p>
+              <div className="mt-3">
+                <Btn className="w-full justify-center">{m.installed ? "Manage" : "Set up"}</Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

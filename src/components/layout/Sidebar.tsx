@@ -47,8 +47,8 @@ const groups: Group[] = [
     items: [
       { to: "/marketing", label: "Overview", icon: Radar, end: true },
       { to: "/marketing/gbp", label: "Google Business", icon: Store },
-      { to: "/marketing/social-organic", label: "Social — Organic", icon: Share2 },
-      { to: "/marketing/social-paid", label: "Social — Paid", icon: Target },
+      { to: "/marketing/social-organic", label: "Social posts", icon: Share2 },
+      { to: "/marketing/social-paid", label: "Social ads", icon: Target },
       { to: "/marketing/email", label: "Email", icon: Mail },
       { to: "/marketing/ads", label: "Google Ads", icon: Megaphone },
     ],
@@ -57,16 +57,16 @@ const groups: Group[] = [
     id: "automations",
     label: "Automations",
     items: [
-      { to: "/automations", label: "Workflows", icon: Workflow, end: true },
-      { to: "/automations/sequences", label: "Sequences", icon: Repeat },
+      { to: "/automations", label: "Automations", icon: Workflow, end: true },
+      { to: "/automations/sequences", label: "Email follow-ups", icon: Repeat },
     ],
   },
   {
     id: "analytics",
-    label: "Analytics",
+    label: "Reports",
     items: [
-      { to: "/reporting", label: "Reporting", icon: BarChart3 },
-      { to: "/tracking", label: "Tracking", icon: Activity },
+      { to: "/reporting", label: "Reports", icon: BarChart3 },
+      { to: "/tracking", label: "Website tracking", icon: Activity },
     ],
   },
   {
