@@ -526,24 +526,6 @@ function SegmentDonut({ data }: { data: { name: string; value: number; share: nu
   );
 }
 
-function HealthRow({ label, value, target, ok }: { label: string; value: string; target: string; ok: boolean }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2 min-w-0">
-        {ok ? (
-          <CheckCircle2 className="w-3.5 h-3.5 text-[hsl(var(--success))] flex-shrink-0" />
-        ) : (
-          <AlertCircle className="w-3.5 h-3.5 text-[hsl(var(--warning))] flex-shrink-0" />
-        )}
-        <div className="min-w-0">
-          <div className="text-sm truncate">{label}</div>
-          <div className="text-[10px] text-muted-foreground">Target {target}</div>
-        </div>
-      </div>
-      <span className="text-sm font-medium tabular-nums">{value}</span>
-    </div>
-  );
-}
 
 function PipelineCard({
   label, value, sub, tone,
