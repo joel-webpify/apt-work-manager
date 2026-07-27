@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Pill, StatusDot } from "@/components/layout/PageShell";
 import { LeadVelocityCard } from "@/components/reporting/LeadVelocityCard";
+import { rangeLabels, type DateRange } from "@/lib/reportingData";
 
 import {
   jobs as allJobs,
@@ -25,7 +26,6 @@ import {
 
 /* ---------------- types & config ---------------- */
 
-type Range = "30d" | "90d" | "YTD" | "12m";
 
 // Stuck thresholds — how long a job sits before we flag it
 const stuckThresholds: Record<PipelineStage, number> = {
@@ -55,8 +55,8 @@ const pct = (n: number) => `${n.toFixed(1)}%`;
 
 /* ---------------- main ---------------- */
 
-export function PipelineReport() {
-  const [range, setRange] = useState<Range>("30d");
+export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
+
   const [drawer, setDrawer] = useState<{ title: string; subtitle: string; jobs: Job[] } | null>(null);
 
   // For now mock data is a single snapshot, so range is a presentation control
@@ -120,25 +120,10 @@ export function PipelineReport() {
 
   return (
     <div className="space-y-4">
-      {/* Range toggle */}
-      <div className="flex items-center justify-between -mt-1">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Activity className="w-3.5 h-3.5" /> Live pipeline metrics
-        </div>
-        <div className="inline-flex border-hairline rounded-md p-0.5 bg-card">
-          {(["30d", "90d", "YTD", "12m"] as Range[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`h-7 px-2.5 text-xs rounded ${
-                range === r ? "bg-surface-hover text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground -mt-1">
+        <Activity className="w-3.5 h-3.5" /> Live pipeline metrics · {rangeLabels[range].toLowerCase()}
       </div>
+
 
       {/* KPI tiles */}
       <div className="grid grid-cols-4 gap-3">

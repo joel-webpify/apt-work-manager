@@ -12,6 +12,7 @@ import {
 import { Pill } from "@/components/layout/PageShell";
 
 import { jobs, contacts, type Job } from "@/data/mockData";
+import { rangeLabels, type DateRange } from "@/lib/reportingData";
 
 /* ---------------- derived data ---------------- */
 
@@ -142,17 +143,7 @@ function fmtGbp(v: number, opts: { compact?: boolean } = {}) {
 
 /* ---------------- component ---------------- */
 
-type Range = "30d" | "90d" | "ytd" | "12m";
-const rangeLabels: Record<Range, string> = {
-  "30d": "Last 30 days",
-  "90d": "Last 90 days",
-  ytd: "Year to date",
-  "12m": "Last 12 months",
-};
-
-export function RevenueReport() {
-  const [range, setRange] = useState<Range>("90d");
-
+export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
   const monthMax = Math.max(...months.map((m) => m.v), forecastNext);
   const collectionRate = (paidRevenue / (paidRevenue + invoicedOutstanding)) * 100 || 0;
 
@@ -164,26 +155,11 @@ export function RevenueReport() {
 
   return (
     <div className="space-y-4">
-      {/* Range toggle */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Calendar className="w-3.5 h-3.5" />
-          <span>Showing {rangeLabels[range].toLowerCase()}</span>
-        </div>
-        <div className="flex gap-1 p-0.5 bg-surface rounded-md">
-          {(["30d", "90d", "ytd", "12m"] as Range[]).map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={`h-6 px-2.5 text-xs rounded transition-colors ${
-                range === r ? "bg-card shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {r === "30d" ? "30d" : r === "90d" ? "90d" : r === "ytd" ? "YTD" : "12m"}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Calendar className="w-3.5 h-3.5" />
+        <span>Showing {rangeLabels[range].toLowerCase()}</span>
       </div>
+
 
       {/* Headline KPIs */}
       <div className="grid grid-cols-4 gap-3">
