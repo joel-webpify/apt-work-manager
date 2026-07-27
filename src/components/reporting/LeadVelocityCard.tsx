@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
-import { TrendingUp, TrendingDown, Minus } from "lucide-react";
-import { buildLeadVelocity, buildLeadDays } from "@/lib/cashFlow";
+import { TrendingUp, TrendingDown, Minus, X } from "lucide-react";
+import { buildLeadVelocity, buildLeadDays, type LeadDay } from "@/lib/cashFlow";
+
+const WEEKDAY_ORDER = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function LeadVelocityCard() {
   const [window, setWindow] = useState<4 | 8>(8);
-  const [view, setView] = useState<"week" | "day">("week");
+  /** Weeks back from now: 0 = this week. null = all weeks combined. */
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const velocity = useMemo(() => buildLeadVelocity(window), [window]);
-  const days = useMemo(() => buildLeadDays(view === "day" ? (window === 4 ? 14 : 28) : 14), [view, window]);
+  const allDays = useMemo(() => buildLeadDays(window * 7), [window]);
 
   const sparkMax = Math.max(...velocity.history, 1);
   const total = velocity.history.reduce((a, b) => a + b, 0);
@@ -17,20 +20,62 @@ export function LeadVelocityCard() {
   const velColor =
     dir > 0 ? "hsl(var(--success))" : dir < 0 ? "hsl(var(--destructive))" : "hsl(var(--muted-foreground))";
 
-  // Oldest → newest, labelled relative to now
-  const weeks = velocity.history.map((count, i) => {
-    const back = velocity.history.length - 1 - i;
-    return { count, label: back === 0 ? "This week" : back === 1 ? "Last week" : `${back} wks ago` };
-  });
+  // Newest → oldest weeks, each with the days it contains (oldest → newest).
+  const weekRows = useMemo(() => {
+    // allDays is oldest → newest; last 7 entries are "this week".
+    return velocity.history
+      .slice()
+      .reverse()
+      .map((count, back) => {
+        const end = allDays.length - back * 7;
+        const days = allDays.slice(Math.max(end - 7, 0), end);
+        return {
+          back,
+          count,
+          days,
+          label: back === 0 ? "This week" : back === 1 ? "Last week" : `${back} wks ago`,
+        };
+      });
+  }, [velocity.history, allDays]);
 
-  const dayMax = Math.max(...days.map((d) => d.count), 1);
-  const busiestWeekday = useMemo(() => {
-    const map = new Map<string, number>();
-    days.forEach((d) => map.set(d.weekday, (map.get(d.weekday) || 0) + d.count));
-    const sorted = Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
-    return sorted[0]?.[1] ? sorted[0] : null;
-  }, [days]);
-  const quietDays = days.filter((d) => d.count === 0).length;
+  const selected = selectedWeek === null ? null : weekRows.find((w) => w.back === selectedWeek) || null;
+
+  // Daily series: either the selected week's days, or weekday totals across all weeks.
+  const daily: { key: string; label: string; sub?: string; count: number; value: number; highlight: boolean; weekend: boolean }[] =
+    useMemo(() => {
+      if (selected) {
+        return selected.days.map((d: LeadDay) => ({
+          key: d.date.toISOString(),
+          label: d.weekday,
+          sub: `${d.date.getDate()}/${d.date.getMonth() + 1}`,
+          count: d.count,
+          value: d.value,
+          highlight: d.isToday,
+          weekend: d.isWeekend,
+        }));
+      }
+      const map = new Map<string, { count: number; value: number }>();
+      WEEKDAY_ORDER.forEach((w) => map.set(w, { count: 0, value: 0 }));
+      allDays.forEach((d) => {
+        const cur = map.get(d.weekday)!;
+        cur.count += d.count;
+        cur.value += d.value;
+      });
+      const best = Math.max(...Array.from(map.values()).map((v) => v.count), 0);
+      return WEEKDAY_ORDER.map((w) => ({
+        key: w,
+        label: w,
+        count: map.get(w)!.count,
+        value: map.get(w)!.value,
+        highlight: best > 0 && map.get(w)!.count === best,
+        weekend: w === "Sat" || w === "Sun",
+      }));
+    }, [selected, allDays]);
+
+  const dayMax = Math.max(...daily.map((d) => d.count), 1);
+  const dailyTotal = daily.reduce((a, d) => a + d.count, 0);
+  const topDay = daily.reduce((a, d) => (d.count > a.count ? d : a), daily[0]);
+  const quietDays = daily.filter((d) => d.count === 0).length;
 
   return (
     <div className="border-hairline rounded-lg bg-card p-5 flex flex-col">
@@ -43,7 +88,7 @@ export function LeadVelocityCard() {
           {([4, 8] as const).map((w) => (
             <button
               key={w}
-              onClick={() => setWindow(w)}
+              onClick={() => { setWindow(w); setSelectedWeek(null); }}
               className={`px-2 h-6 text-[11px] transition-colors ${
                 window === w
                   ? "bg-primary text-primary-foreground font-medium"
@@ -93,102 +138,100 @@ export function LeadVelocityCard() {
         </div>
       </div>
 
-      {/* View toggle */}
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
-          {view === "week" ? "By week" : `By day · last ${days.length} days`}
-        </span>
-        <div className="flex gap-1 p-0.5 bg-surface rounded-md">
-          {(["week", "day"] as const).map((v) => (
+      {/* Weekly rows — click to drill into a single week */}
+      <div className="mt-4 space-y-1">
+        {weekRows.map((w) => {
+          const active = selectedWeek === w.back;
+          return (
             <button
-              key={v}
-              onClick={() => setView(v)}
-              className={`h-5 px-2 text-[11px] rounded transition-colors ${
-                view === v ? "bg-card shadow-sm font-medium" : "text-muted-foreground hover:text-foreground"
+              key={w.back}
+              onClick={() => setSelectedWeek(active ? null : w.back)}
+              className={`w-full flex items-center gap-2 px-1 -mx-1 py-1 rounded transition-colors ${
+                active ? "bg-surface" : "hover:bg-surface-hover/60"
               }`}
             >
-              {v === "week" ? "Weekly" : "Daily"}
+              <span className={`text-xs w-20 flex-shrink-0 text-left ${active ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                {w.label}
+              </span>
+              <div className="flex-1 h-2 rounded-full bg-surface overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${(w.count / sparkMax) * 100}%`,
+                    backgroundColor: w.back === 0 ? velColor : "hsl(var(--primary) / 0.55)",
+                    opacity: selectedWeek === null || active ? 1 : 0.35,
+                  }}
+                />
+              </div>
+              <span className="text-xs font-medium tabular-nums w-6 text-right">{w.count}</span>
             </button>
+          );
+        })}
+      </div>
+
+      {/* Daily breakdown */}
+      <div className="mt-4 pt-3 border-t-hairline flex-1">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
+            {selected ? `${selected.label} · per day` : "All weeks · per weekday"}
+          </span>
+          {selected ? (
+            <button
+              onClick={() => setSelectedWeek(null)}
+              className="inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X className="w-3 h-3" /> All weeks
+            </button>
+          ) : (
+            <span className="text-[11px] text-muted-foreground">Click a week to drill in</span>
+          )}
+        </div>
+
+        <div className="flex items-end gap-1.5 h-24">
+          {daily.map((d) => (
+            <div
+              key={d.key}
+              className="flex-1 flex flex-col items-center justify-end gap-1 group"
+              title={`${d.label}${d.sub ? ` ${d.sub}` : ""} · ${d.count} ${d.count === 1 ? "enquiry" : "enquiries"}${
+                d.value ? ` · £${Math.round(d.value).toLocaleString("en-GB")}` : ""
+              }`}
+            >
+              <span className="text-[9px] tabular-nums text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
+                {d.count}
+              </span>
+              <div
+                className="w-full max-w-8 rounded-sm transition-opacity group-hover:opacity-80"
+                style={{
+                  height: `${Math.max((d.count / dayMax) * 100, 4)}%`,
+                  backgroundColor: d.count === 0
+                    ? "hsl(var(--muted-foreground) / 0.15)"
+                    : d.highlight
+                      ? velColor
+                      : d.weekend
+                        ? "hsl(var(--primary) / 0.3)"
+                        : "hsl(var(--primary) / 0.6)",
+                }}
+              />
+              <span className={`text-[9px] leading-none ${d.highlight ? "text-foreground font-medium" : "text-muted-foreground"}`}>
+                {d.label.slice(0, selected ? 1 : 3)}
+              </span>
+              {d.sub && <span className="text-[8px] leading-none text-muted-foreground tabular-nums">{d.sub}</span>}
+            </div>
           ))}
         </div>
       </div>
 
-      {/* Breakdown */}
-      <div className="mt-3 flex-1">
-        {view === "week" ? (
-          <div className="space-y-1.5">
-            {[...weeks].reverse().map((w) => (
-              <div key={w.label} className="flex items-center gap-2">
-                <span className="text-xs text-muted-foreground w-20 flex-shrink-0">{w.label}</span>
-                <div className="flex-1 h-2 rounded-full bg-surface overflow-hidden">
-                  <div
-                    className="h-full rounded-full"
-                    style={{
-                      width: `${(w.count / sparkMax) * 100}%`,
-                      backgroundColor: w.label === "This week" ? velColor : "hsl(var(--primary) / 0.55)",
-                    }}
-                  />
-                </div>
-                <span className="text-xs font-medium tabular-nums w-6 text-right">{w.count}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex items-end gap-[3px] h-24">
-            {days.map((d) => (
-              <div
-                key={d.date.toISOString()}
-                className="flex-1 flex flex-col items-center justify-end gap-1 group"
-                title={`${d.weekday} ${d.date.getDate()}/${d.date.getMonth() + 1} · ${d.count} ${
-                  d.count === 1 ? "enquiry" : "enquiries"
-                }${d.value ? ` · £${Math.round(d.value).toLocaleString("en-GB")}` : ""}`}
-              >
-                <span className="text-[9px] tabular-nums text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                  {d.count}
-                </span>
-                <div
-                  className="w-full rounded-sm transition-opacity group-hover:opacity-80"
-                  style={{
-                    height: `${Math.max((d.count / dayMax) * 100, 4)}%`,
-                    backgroundColor: d.isToday
-                      ? velColor
-                      : d.count === 0
-                        ? "hsl(var(--muted-foreground) / 0.15)"
-                        : d.isWeekend
-                          ? "hsl(var(--primary) / 0.3)"
-                          : "hsl(var(--primary) / 0.6)",
-                  }}
-                />
-                <span
-                  className={`text-[9px] leading-none ${
-                    d.isToday ? "font-medium text-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  {days.length > 14 ? (d.date.getDay() === 1 ? d.date.getDate() : "") : d.weekday[0]}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
       <div className="mt-3 pt-3 border-t-hairline text-[11px] text-muted-foreground">
-        {view === "week" ? (
+        {selected ? (
           <>
-            Averaging <span className="text-foreground font-medium">{avg.toFixed(1)} enquiries / week</span>
-            {velocity.thisWeek < avg ? " — this week is running below trend." : " — this week is at or above trend."}
+            <span className="text-foreground font-medium">{dailyTotal} enquiries</span> in {selected.label.toLowerCase()}
+            {topDay && topDay.count > 0 && <> · busiest on {topDay.label} {topDay.sub} ({topDay.count})</>}
+            {quietDays > 0 && <> · {quietDays} quiet days</>}.
           </>
         ) : (
           <>
-            {busiestWeekday ? (
-              <>
-                <span className="text-foreground font-medium">{busiestWeekday[0]}s</span> bring the most enquiries (
-                {busiestWeekday[1]} in the period)
-              </>
-            ) : (
-              <>No enquiries in this period</>
-            )}
-            {quietDays > 0 && <> · {quietDays} quiet days with none</>}.
+            Averaging <span className="text-foreground font-medium">{avg.toFixed(1)} enquiries / week</span>
+            {topDay && topDay.count > 0 && <> · {topDay.label}s are the strongest day ({topDay.count})</>}.
           </>
         )}
       </div>
