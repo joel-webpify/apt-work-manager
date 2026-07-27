@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Pill, StatusDot } from "@/components/layout/PageShell";
 import { LeadVelocityCard } from "@/components/reporting/LeadVelocityCard";
+import { rangeLabels, type DateRange } from "@/lib/reportingData";
 
 import {
   jobs as allJobs,
@@ -25,7 +26,6 @@ import {
 
 /* ---------------- types & config ---------------- */
 
-type Range = "30d" | "90d" | "YTD" | "12m";
 
 // Stuck thresholds — how long a job sits before we flag it
 const stuckThresholds: Record<PipelineStage, number> = {
