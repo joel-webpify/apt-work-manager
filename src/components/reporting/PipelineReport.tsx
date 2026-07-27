@@ -332,38 +332,10 @@ export function PipelineReport() {
           </div>
         </div>
 
-        <div className="col-span-2 border-hairline rounded-lg bg-card p-5">
-          <div className="text-sm font-medium mb-1">Top bottlenecks</div>
-          <div className="text-xs text-muted-foreground mb-4">Where jobs are getting stuck</div>
-          <div className="space-y-2">
-            {m.byStage
-              .map((s) => ({ ...s, score: bottleneckScore(s.stage, s.count, s.avgDays) }))
-              .filter((s) => s.stage !== "Paid" && s.count > 0)
-              .sort((a, b) => b.score - a.score)
-              .slice(0, 4)
-              .map((s) => {
-                const ratio = s.avgDays / stuckThresholds[s.stage];
-                return (
-                  <button
-                    key={s.stage}
-                    onClick={() => openDrawerForStage(s.stage)}
-                    className="w-full text-left p-2.5 rounded-md border-hairline hover:bg-surface-hover transition-colors"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusDot color={stageColors[s.stage]} />
-                      <span className="text-sm font-medium">{s.stage}</span>
-                      <Pill tone={ratio >= 1 ? "danger" : "warning"}>
-                        {ratio >= 1 ? "Critical" : "Watch"}
-                      </Pill>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">
-                      {s.count} jobs · avg {s.avgDays.toFixed(1)}d (threshold {stuckThresholds[s.stage]}d)
-                    </div>
-                  </button>
-                );
-              })}
-          </div>
+        <div className="col-span-2">
+          <LeadVelocityCard />
         </div>
+
       </div>
 
       {/* Stuck jobs table */}
