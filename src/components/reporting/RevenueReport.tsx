@@ -399,12 +399,8 @@ export function RevenueReport() {
             </div>
           </div>
         </div>
-
-        <div className="col-span-2">
-          <CashFlowForecast />
-        </div>
-
       </div>
+
 
       {/* Top customers */}
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
