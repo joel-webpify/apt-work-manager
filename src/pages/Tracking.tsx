@@ -21,6 +21,8 @@ import {
   deviceSplit,
   geoSplit,
   funnelSteps,
+  formBehaviourByChannel,
+  fieldDropoff,
   formatAgo,
   type EventCategory,
 } from "@/lib/trackingData";
@@ -50,11 +52,8 @@ const methods = [
 ];
 
 const categoryTone: Record<EventCategory, "neutral" | "info" | "success" | "warning" | "danger"> = {
-  page: "neutral",
+  session: "neutral",
   form: "info",
-  engagement: "warning",
-  commerce: "success",
-  custom: "danger",
 };
 
 const tabs = [
@@ -133,7 +132,7 @@ function LiveTab() {
     [query, cat],
   );
 
-  const cats: (EventCategory | "all")[] = ["all", "page", "form", "engagement", "commerce", "custom"];
+  const cats: (EventCategory | "all")[] = ["all", "session", "form"];
 
   return (
     <>
@@ -369,6 +368,66 @@ function WebTab() {
                   </div>
                   <div className="h-1.5 rounded-full bg-surface overflow-hidden">
                     <div className="h-full rounded-full bg-[hsl(var(--success)/0.6)]" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-[1.6fr_1fr] gap-4">
+        <Card title="Form behaviour by channel" icon={Layers}>
+          <div className="grid grid-cols-[1.2fr_repeat(5,0.75fr)_0.8fr] px-4 h-8 items-center text-[11px] text-muted-foreground font-medium border-b-hairline bg-surface/50">
+            <div>Channel</div>
+            <div className="text-right">Sessions</div>
+            <div className="text-right">Views</div>
+            <div className="text-right">Starts</div>
+            <div className="text-right">Submits</div>
+            <div className="text-right">View→submit</div>
+            <div className="text-right">Avg. time</div>
+          </div>
+          {formBehaviourByChannel.map((c) => {
+            const rate = (c.submits / c.formViews) * 100;
+            return (
+              <div
+                key={c.channel}
+                className="grid grid-cols-[1.2fr_repeat(5,0.75fr)_0.8fr] px-4 h-9 items-center text-xs border-b-hairline last:border-b-0 hover:bg-surface-hover"
+              >
+                <div className="truncate">{c.channel}</div>
+                <div className="text-right tabular-nums text-muted-foreground">{c.sessions}</div>
+                <div className="text-right tabular-nums text-muted-foreground">{c.formViews}</div>
+                <div className="text-right tabular-nums text-muted-foreground">{c.formStarts}</div>
+                <div className="text-right tabular-nums font-medium">{c.submits}</div>
+                <div className="text-right tabular-nums">
+                  <span className={rate >= 15 ? "text-[hsl(var(--success))]" : "text-muted-foreground"}>
+                    {rate.toFixed(1)}%
+                  </span>
+                </div>
+                <div className="text-right tabular-nums text-muted-foreground">{c.avgTimeToSubmit}</div>
+              </div>
+            );
+          })}
+        </Card>
+
+        <Card title="Field completion & drop-off" icon={Activity}>
+          <div className="p-4 space-y-3">
+            {fieldDropoff.map((f) => {
+              const pct = (f.completes / fieldDropoff[0].completes) * 100;
+              return (
+                <div key={f.field}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span>{f.field}</span>
+                    <span className="text-muted-foreground tabular-nums">
+                      {f.completes} · {f.dropoff}% drop
+                    </span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-surface overflow-hidden flex">
+                    <div className="h-full rounded-l-full bg-primary/70" style={{ width: `${pct}%` }} />
+                    <div
+                      className="h-full bg-[hsl(var(--danger,var(--destructive))/0.5)]"
+                      style={{ width: `${(f.dropoff / 100) * pct}%` }}
+                    />
                   </div>
                 </div>
               );
