@@ -138,9 +138,9 @@ export const eventCatalog: EventDefinition[] = eventPool.map((e) => {
     name: e.event,
     category: e.category,
     description: eventDescriptions[e.event] ?? "Custom tracked interaction",
-    enabled: e.event !== "rage_click",
+    enabled: true,
     count7d: count,
-    conversion: ["form_submit", "phone_click", "quote_accepted", "whatsapp_click"].includes(e.event),
+    conversion: e.event === "form_submit",
   };
 });
 
@@ -192,11 +192,43 @@ export const geoSplit = [
 ];
 
 export const funnelSteps = [
-  { step: "Page view", count: 4525 },
+  { step: "Session start", count: 4525 },
   { step: "Form view", count: 2140 },
   { step: "Form start", count: 1180 },
+  { step: "Field complete", count: 862 },
   { step: "Form submit", count: 412 },
-  { step: "Quote accepted", count: 168 },
+];
+
+/** Form behaviour split by acquisition channel. */
+export interface ChannelFormBehaviour {
+  channel: string;
+  sessions: number;
+  formViews: number;
+  formStarts: number;
+  fieldCompletes: number;
+  submits: number;
+  avgFieldsCompleted: number;
+  avgTimeToSubmit: string;
+}
+
+export const formBehaviourByChannel: ChannelFormBehaviour[] = [
+  { channel: "Google Ads", sessions: 1420, formViews: 812, formStarts: 468, fieldCompletes: 1690, submits: 168, avgFieldsCompleted: 3.6, avgTimeToSubmit: "1m 42s" },
+  { channel: "Organic search", sessions: 1180, formViews: 604, formStarts: 322, fieldCompletes: 1108, submits: 104, avgFieldsCompleted: 3.4, avgTimeToSubmit: "2m 05s" },
+  { channel: "Google Business", sessions: 640, formViews: 386, formStarts: 248, fieldCompletes: 946, submits: 92, avgFieldsCompleted: 3.8, avgTimeToSubmit: "1m 28s" },
+  { channel: "Paid social", sessions: 520, formViews: 214, formStarts: 96, fieldCompletes: 268, submits: 27, avgFieldsCompleted: 2.8, avgTimeToSubmit: "2m 34s" },
+  { channel: "Direct", sessions: 470, formViews: 198, formStarts: 112, fieldCompletes: 392, submits: 38, avgFieldsCompleted: 3.5, avgTimeToSubmit: "1m 51s" },
+  { channel: "Email", sessions: 260, formViews: 142, formStarts: 88, fieldCompletes: 318, submits: 31, avgFieldsCompleted: 3.6, avgTimeToSubmit: "1m 33s" },
+];
+
+/** Where people stop filling in — based on field_complete events per field. */
+export const fieldDropoff = [
+  { field: "Name", completes: 1180, dropoff: 4 },
+  { field: "Email", completes: 1132, dropoff: 9 },
+  { field: "Phone", completes: 1030, dropoff: 21 },
+  { field: "Postcode", completes: 814, dropoff: 12 },
+  { field: "Service", completes: 716, dropoff: 8 },
+  { field: "Property size", completes: 658, dropoff: 18 },
+  { field: "Message", completes: 540, dropoff: 24 },
 ];
 
 export function formatAgo(minutes: number) {
