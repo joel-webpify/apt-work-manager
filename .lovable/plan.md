@@ -1,50 +1,30 @@
-## Goal
+# Bring Service Flow's revenue sections into Reports → Revenue
 
-Turn Reports from six loosely related dashboards into one coherent section: a single date range, an Overview that answers "how is the business doing", and marketing reporting that covers every channel — not just Google Ads and email.
+Add two cards from the Service Flow project's revenue report into this project's Revenue tab, keeping the current plain-English wording and the shared date range.
 
-## New tab structure
+## What gets added
 
-Combine where the story is shared, split where the channel deserves depth:
+A new row placed under "Revenue by service / Residential vs Commercial / Revenue by source", split 3/2:
 
-```text
-Reports
-  Overview     new — whole-business snapshot
-  Revenue      existing (money in, forecast, service mix)
-  Pipeline     existing (stages, velocity, stuck jobs)
-  Marketing    combined channel hub + per-channel drill-down
-  Website      existing web/form behaviour
-  Customers    existing
-```
+**1. Revenue by area (left, wider)**
+- Won revenue grouped by postcode district (BS8, BS1, BA2, …), top 6 shown as ranked bars.
+- Sub-line: number of areas and total won revenue.
+- Takeaway line: "BS8 is your strongest area with £X in won revenue."
 
-Marketing becomes a hub with a channel switcher inside it:
-`All channels · Google Ads & LSA · Social ads · Social posts · Google Business · Email`.
-"All channels" is a comparison table + spend/leads chart; picking a channel swaps in that channel's detail view (the existing Google Ads and Email reports move in here unchanged in substance).
+**2. Repeat vs new customers (right)**
+- One slim split bar showing repeat share vs one-off share.
+- Two tiles: repeat revenue and one-off revenue, each with % of revenue and customer count.
+- Two footer rows: average spend per repeat customer, average spend per one-off customer.
 
-## Global date range
+Repeat = a customer with more than one won job; one-off = exactly one.
 
-A range control lives in the page header next to the weekly-digest toggle: `Last 30 days · Last 90 days · Year to date · Last 12 months`. Selected range is held in Reports page state, passed to every report, and reflected in the URL alongside the tab so a view can be shared. Existing per-card range toggles are removed so nothing contradicts the header.
+## Wording
 
-## Overview tab (new)
-
-- Six headline tiles: revenue won, jobs booked, new leads, marketing spend, blended cost per lead, website visits — each with a "vs previous period" delta.
-- Where leads came from: one bar/donut split across all channels.
-- Channel scorecard: one row per channel — spend, leads, cost per lead, jobs won, revenue, return on spend — with the best and worst performer called out in plain English.
-- Trend strip: leads and revenue over the selected range.
-- Three plain-English takeaways generated from the data (e.g. "Google Business sent you the cheapest leads this period").
-
-## Channel coverage to add
-
-- **Google Ads + LSA** — existing report, moved under Marketing.
-- **Social ads** — spend, impressions, clicks, leads, cost per lead, revenue by campaign; per-platform split.
-- **Social posts (organic)** — posts published, reach, engagement rate, link clicks, best-performing posts; sourced from the existing social posts store where possible, topped up with mock metrics.
-- **Google Business Profile** — profile views, searches, calls, direction requests, website clicks, new reviews and average rating, trend over the range.
-- **Email** — existing report, moved under Marketing.
+Card titles kept plain-English to match the rest of this project: "Where your work comes from (by area)" and "Repeat vs new customers", with the existing helper sentence "How much of your revenue comes from customers who booked more than once".
 
 ## Technical notes
 
-- New `src/lib/reportingData.ts`: a `DateRange` type, a shared channel dataset (spend/leads/revenue per channel per period), and helper functions for period comparison so every tab derives numbers from one place instead of local mock arrays.
-- New components: `ReportRangePicker`, `OverviewReport`, `MarketingHubReport`, `SocialAdsReport`, `SocialOrganicReport`, `GoogleBusinessReport`.
-- `src/pages/Reporting.tsx` owns tab + range state, syncs both to search params, renders the range picker, and passes `range` down.
-- Existing reports (`RevenueReport`, `PipelineReport`, `WebsiteReport`, `CustomersReport`, `GoogleAdsReport`, `EmailMarketingReport`) gain a `range` prop and drop their internal range toggles; their internals otherwise stay intact.
-- All data remains front-end mock data, consistent with the rest of the app — no backend work in this step.
-- Existing `/reporting?tab=google ads` and `?tab=marketing` links redirect to the Marketing tab with the right channel selected.
+- Single file change: `src/components/reporting/RevenueReport.tsx`.
+- Data derives from the existing `jobs` and `contacts` mock data — `job.postcode` (falling back to the contact's postcode) and `contactId` grouping over the existing `wonStages` filter. No new data files or backend work.
+- Adds small local helpers (`MiniRow`) and the `Repeat` / `MapPin` icons; reuses existing `Pill`, `fmtGbp`, and the hairline/card token classes so styling matches.
+- Existing cards (KPIs, monthly trend, money owed, top customers, pipeline tiles) stay as they are.
