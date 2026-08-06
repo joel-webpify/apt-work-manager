@@ -8,6 +8,8 @@ import {
   Target,
   AlertCircle,
   Calendar,
+  Repeat,
+  MapPin,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
 
@@ -133,6 +135,53 @@ const topCustomers = (() => {
   });
   return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 })();
+
+// Revenue by area — won jobs grouped by postcode district
+const postcodeRevenue = (() => {
+  const byContact = new Map(contacts.map((c) => [c.id, c.postcode]));
+  const map = new Map<string, { revenue: number; jobs: number }>();
+  jobs.filter((j) => wonStages.includes(j.stage)).forEach((j) => {
+    const raw = j.postcode || byContact.get(j.contactId) || "";
+    const pc = raw.split(" ")[0].toUpperCase() || "Unknown";
+    const cur = map.get(pc) || { revenue: 0, jobs: 0 };
+    cur.revenue += j.value;
+    cur.jobs += 1;
+    map.set(pc, cur);
+  });
+  return Array.from(map.entries())
+    .map(([name, v]) => ({ name, revenue: v.revenue, jobs: v.jobs }))
+    .sort((a, b) => b.revenue - a.revenue);
+})();
+const topPostcodes = postcodeRevenue.slice(0, 6);
+const postcodeTotal = postcodeRevenue.reduce((a, x) => a + x.revenue, 0);
+const postcodeMax = Math.max(...postcodeRevenue.map((x) => x.revenue), 1);
+
+// Repeat vs one-off customer revenue (from won jobs)
+const repeatMix = (() => {
+  const map = new Map<string, { revenue: number; jobs: number }>();
+  jobs.filter((j) => wonStages.includes(j.stage)).forEach((j) => {
+    const cur = map.get(j.contactId) || { revenue: 0, jobs: 0 };
+    cur.revenue += j.value;
+    cur.jobs += 1;
+    map.set(j.contactId, cur);
+  });
+  const all = Array.from(map.values());
+  const repeat = all.filter((c) => c.jobs > 1);
+  const oneOff = all.filter((c) => c.jobs <= 1);
+  const repeatRevenue = repeat.reduce((a, c) => a + c.revenue, 0);
+  const oneOffRevenue = oneOff.reduce((a, c) => a + c.revenue, 0);
+  const total = repeatRevenue + oneOffRevenue || 1;
+  return {
+    repeatRevenue,
+    oneOffRevenue,
+    repeatCustomers: repeat.length,
+    oneOffCustomers: oneOff.length,
+    repeatShare: (repeatRevenue / total) * 100,
+    avgRepeat: repeat.length ? repeatRevenue / repeat.length : 0,
+    avgOneOff: oneOff.length ? oneOffRevenue / oneOff.length : 0,
+  };
+})();
+
 
 /* ---------------- formatters ---------------- */
 
@@ -329,6 +378,100 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
         </div>
       </div>
 
+      {/* Area + Repeat vs new */}
+      <div className="grid grid-cols-5 gap-3">
+        <div className="col-span-3 border-hairline rounded-lg bg-card p-5">
+          <div className="flex items-center justify-between mb-1">
+            <div>
+              <div className="text-sm font-medium">Where your work comes from (by area)</div>
+              <div className="text-xs text-muted-foreground">
+                {postcodeRevenue.length} areas · {fmtGbp(postcodeTotal)} won revenue
+              </div>
+            </div>
+            <Pill tone="neutral">Won jobs</Pill>
+          </div>
+          <div className="space-y-3 mt-5">
+            {topPostcodes.map((p, i) => (
+              <div key={p.name}>
+                <div className="flex justify-between text-xs mb-1">
+                  <span className="font-medium">{p.name}</span>
+                  <span className="tabular-nums">
+                    {fmtGbp(p.revenue)}{" "}
+                    <span className="text-muted-foreground">
+                      ({p.jobs} job{p.jobs === 1 ? "" : "s"})
+                    </span>
+                  </span>
+                </div>
+                <div className="h-1.5 bg-surface rounded-full overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${(p.revenue / postcodeMax) * 100}%`,
+                      backgroundColor: i === 0 ? "hsl(var(--primary))" : `hsl(var(--primary) / ${0.9 - i * 0.12})`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mt-4 pt-3 border-t-hairline flex items-start gap-2 text-xs">
+            <MapPin className="w-3.5 h-3.5 text-muted-foreground mt-0.5 flex-shrink-0" />
+            <div className="text-muted-foreground">
+              <span className="text-foreground font-medium">{topPostcodes[0]?.name || "—"}</span> is your strongest area with{" "}
+              <span className="text-foreground font-medium">{fmtGbp(topPostcodes[0]?.revenue || 0)}</span> in won revenue.
+            </div>
+          </div>
+        </div>
+
+        <div className="col-span-2 border-hairline rounded-lg bg-card p-5">
+          <div className="flex items-center gap-2 mb-1">
+            <Repeat className="w-3.5 h-3.5 text-muted-foreground" />
+            <div className="text-sm font-medium">Repeat vs new customers</div>
+          </div>
+          <div className="text-xs text-muted-foreground mb-4">
+            How much of your revenue comes from customers who booked more than once
+          </div>
+
+          <div className="flex h-3 rounded-full overflow-hidden bg-surface">
+            <div className="bg-primary" style={{ width: `${repeatMix.repeatShare}%` }} />
+            <div className="bg-[hsl(var(--info))]/35" style={{ width: `${100 - repeatMix.repeatShare}%` }} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="rounded-md bg-surface/60 border-hairline p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-2 h-2 rounded-sm bg-primary" />
+                Repeat customers
+              </div>
+              <div className="text-xl font-medium tabular-nums tracking-tight mt-1">
+                {fmtGbp(repeatMix.repeatRevenue)}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                {repeatMix.repeatShare.toFixed(0)}% of revenue · {repeatMix.repeatCustomers} customers
+              </div>
+            </div>
+            <div className="rounded-md bg-surface/60 border-hairline p-3">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className="w-2 h-2 rounded-sm bg-[hsl(var(--info))]/35" />
+                One-off customers
+              </div>
+              <div className="text-xl font-medium tabular-nums tracking-tight mt-1">
+                {fmtGbp(repeatMix.oneOffRevenue)}
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                {(100 - repeatMix.repeatShare).toFixed(0)}% of revenue · {repeatMix.oneOffCustomers} customers
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t-hairline space-y-2">
+            <MiniRow label="Average spend · repeat customer" value={fmtGbp(repeatMix.avgRepeat)} />
+            <MiniRow label="Average spend · one-off customer" value={fmtGbp(repeatMix.avgOneOff)} />
+          </div>
+        </div>
+      </div>
+
+
       {/* AR aging */}
       <div>
         <div className="border-hairline rounded-lg bg-card p-5">
@@ -452,6 +595,15 @@ function Stat({ label, value, muted, positive }: { label: string; value: string;
     <div>
       <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
       <div className={`text-sm font-medium tabular-nums mt-0.5 ${color}`}>{value}</div>
+    </div>
+  );
+}
+
+function MiniRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums font-medium">{value}</span>
     </div>
   );
 }
