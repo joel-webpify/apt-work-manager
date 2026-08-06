@@ -136,6 +136,53 @@ const topCustomers = (() => {
   return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
 })();
 
+// Revenue by area — won jobs grouped by postcode district
+const postcodeRevenue = (() => {
+  const byContact = new Map(contacts.map((c) => [c.id, c.postcode]));
+  const map = new Map<string, { revenue: number; jobs: number }>();
+  jobs.filter((j) => wonStages.includes(j.stage)).forEach((j) => {
+    const raw = j.postcode || byContact.get(j.contactId) || "";
+    const pc = raw.split(" ")[0].toUpperCase() || "Unknown";
+    const cur = map.get(pc) || { revenue: 0, jobs: 0 };
+    cur.revenue += j.value;
+    cur.jobs += 1;
+    map.set(pc, cur);
+  });
+  return Array.from(map.entries())
+    .map(([name, v]) => ({ name, revenue: v.revenue, jobs: v.jobs }))
+    .sort((a, b) => b.revenue - a.revenue);
+})();
+const topPostcodes = postcodeRevenue.slice(0, 6);
+const postcodeTotal = postcodeRevenue.reduce((a, x) => a + x.revenue, 0);
+const postcodeMax = Math.max(...postcodeRevenue.map((x) => x.revenue), 1);
+
+// Repeat vs one-off customer revenue (from won jobs)
+const repeatMix = (() => {
+  const map = new Map<string, { revenue: number; jobs: number }>();
+  jobs.filter((j) => wonStages.includes(j.stage)).forEach((j) => {
+    const cur = map.get(j.contactId) || { revenue: 0, jobs: 0 };
+    cur.revenue += j.value;
+    cur.jobs += 1;
+    map.set(j.contactId, cur);
+  });
+  const all = Array.from(map.values());
+  const repeat = all.filter((c) => c.jobs > 1);
+  const oneOff = all.filter((c) => c.jobs <= 1);
+  const repeatRevenue = repeat.reduce((a, c) => a + c.revenue, 0);
+  const oneOffRevenue = oneOff.reduce((a, c) => a + c.revenue, 0);
+  const total = repeatRevenue + oneOffRevenue || 1;
+  return {
+    repeatRevenue,
+    oneOffRevenue,
+    repeatCustomers: repeat.length,
+    oneOffCustomers: oneOff.length,
+    repeatShare: (repeatRevenue / total) * 100,
+    avgRepeat: repeat.length ? repeatRevenue / repeat.length : 0,
+    avgOneOff: oneOff.length ? oneOffRevenue / oneOff.length : 0,
+  };
+})();
+
+
 /* ---------------- formatters ---------------- */
 
 function fmtGbp(v: number, opts: { compact?: boolean } = {}) {
