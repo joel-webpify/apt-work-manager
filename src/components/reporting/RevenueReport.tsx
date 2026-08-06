@@ -6,7 +6,6 @@ import {
   Receipt,
   Wallet,
   Target,
-  AlertCircle,
   Calendar,
   Repeat,
   MapPin,
