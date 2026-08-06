@@ -599,6 +599,15 @@ function Stat({ label, value, muted, positive }: { label: string; value: string;
   );
 }
 
+function MiniRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="tabular-nums font-medium">{value}</span>
+    </div>
+  );
+}
+
 function LegendDot({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
   return (
     <span className="flex items-center gap-1.5 text-muted-foreground">
