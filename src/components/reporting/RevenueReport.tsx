@@ -451,55 +451,6 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
       </div>
 
 
-      {/* AR aging */}
-      <div>
-        <div className="border-hairline rounded-lg bg-card p-5">
-
-          <div className="flex items-center justify-between mb-1">
-            <div>
-              <div className="text-sm font-medium">Money you are still owed</div>
-              <div className="text-xs text-muted-foreground">{fmtGbp(totalOutstanding)} outstanding across {jobs.filter((j) => j.stage === "Invoiced").length + 1} invoices</div>
-            </div>
-            <Pill tone={totalOutstanding > 1500 ? "warning" : "success"}>
-              {totalOutstanding > 1500 ? "Action needed" : "Healthy"}
-            </Pill>
-          </div>
-          <div className="flex items-end gap-3 h-32 mt-5">
-            {aging.map((a) => {
-              const max = Math.max(...aging.map((x) => x.value), 1);
-              const h = (a.value / max) * 100;
-              const color =
-                a.tone === "success" ? "hsl(var(--success))"
-                : a.tone === "info" ? "hsl(var(--info))"
-                : a.tone === "warning" ? "hsl(var(--warning))"
-                : "hsl(var(--destructive))";
-              return (
-                <div key={a.label} className="flex-1 flex flex-col items-center gap-2 group">
-                  <div className="text-[10px] tabular-nums text-muted-foreground">
-                    {fmtGbp(a.value, { compact: true })}
-                  </div>
-                  <div className="w-full flex items-end justify-center h-full">
-                    <div
-                      className="w-full max-w-16 rounded-t transition-opacity group-hover:opacity-80"
-                      style={{ height: `${Math.max(h, 4)}%`, backgroundColor: color }}
-                    />
-                  </div>
-                  <span className="text-[11px] text-muted-foreground">{a.label}</span>
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-4 pt-3 border-t-hairline flex items-start gap-2 text-xs">
-            <AlertCircle className="w-3.5 h-3.5 text-[hsl(var(--warning))] mt-0.5 flex-shrink-0" />
-            <div className="text-muted-foreground">
-              <span className="text-foreground font-medium">£{aging[2].value + aging[3].value} is over 30 days old.</span>{" "}
-              Send a reminder today — every week of delay reduces collection probability by ~9%.
-            </div>
-          </div>
-        </div>
-      </div>
-
-
       {/* Top customers */}
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
         <div className="px-4 h-11 flex items-center justify-between border-b-hairline">
