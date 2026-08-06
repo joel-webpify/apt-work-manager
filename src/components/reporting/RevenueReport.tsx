@@ -101,26 +101,6 @@ const sourceMix = (() => {
     .sort((a, b) => b.value - a.value);
 })();
 
-// AR aging — derived from invoiced jobs' daysInStage
-const aging = (() => {
-  const buckets = { current: 0, "1-30": 0, "31-60": 0, "60+": 0 } as Record<string, number>;
-  jobs.filter((j) => j.stage === "Invoiced").forEach((j) => {
-    if (j.daysInStage <= 7) buckets.current += j.value;
-    else if (j.daysInStage <= 30) buckets["1-30"] += j.value;
-    else if (j.daysInStage <= 60) buckets["31-60"] += j.value;
-    else buckets["60+"] += j.value;
-  });
-  // pad with synthetic older debt for a realistic shape
-  buckets["31-60"] += 480;
-  return [
-    { label: "Current", value: buckets.current, tone: "success" as const },
-    { label: "1–30 days", value: buckets["1-30"], tone: "info" as const },
-    { label: "31–60 days", value: buckets["31-60"], tone: "warning" as const },
-    { label: "60+ days", value: buckets["60+"], tone: "destructive" as const },
-  ];
-})();
-const totalOutstanding = aging.reduce((a, b) => a + b.value, 0);
-
 // Top customers by paid + invoiced revenue
 const topCustomers = (() => {
   const map = new Map<string, { name: string; revenue: number; jobs: number; type: string }>();
