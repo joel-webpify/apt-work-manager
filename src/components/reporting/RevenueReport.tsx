@@ -209,7 +209,7 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
         <Kpi
           icon={<Receipt className="w-3.5 h-3.5" />}
           label="Outstanding"
-          value={fmtGbp(totalOutstanding)}
+          value={fmtGbp(invoicedOutstanding)}
           trend={-8.1}
           trendGood={false}
           sub={`${jobs.filter((j) => j.stage === "Invoiced").length} open invoices`}
