@@ -8,6 +8,8 @@ import {
   Target,
   AlertCircle,
   Calendar,
+  Repeat,
+  MapPin,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
 
