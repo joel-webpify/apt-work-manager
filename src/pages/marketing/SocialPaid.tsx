@@ -1,5 +1,5 @@
-import { PostScheduler } from "@/components/social/PostScheduler";
+import { AdsManager } from "@/components/social/ads/AdsManager";
 
 export default function SocialPaid() {
-  return <PostScheduler kind="paid" />;
+  return <AdsManager />;
 }
