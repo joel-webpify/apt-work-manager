@@ -50,7 +50,18 @@ function toDateInput(iso?: string) {
   return new Date(iso).toISOString().slice(0, 10);
 }
 
-export function CreateAdWizard({
+export function CreateAdWizard(props: {
+  open: boolean;
+  campaign: Campaign | null;
+  onClose: () => void;
+  onSaveDraft: (c: Campaign) => void;
+  onPublish: (c: Campaign) => void;
+}) {
+  if (!props.campaign) return null;
+  return <WizardInner key={props.campaign.id} {...props} campaign={props.campaign} />;
+}
+
+function WizardInner({
   open,
   campaign,
   onClose,
@@ -58,26 +69,16 @@ export function CreateAdWizard({
   onPublish,
 }: {
   open: boolean;
-  campaign: Campaign | null;
+  campaign: Campaign;
   onClose: () => void;
   onSaveDraft: (c: Campaign) => void;
   onPublish: (c: Campaign) => void;
 }) {
   const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<Campaign | null>(campaign);
-
-  // reset when a different campaign is opened
-  const key = campaign?.id ?? "none";
-  const [lastKey, setLastKey] = useState(key);
-  if (key !== lastKey) {
-    setLastKey(key);
-    setDraft(campaign);
-    setStep(0);
-  }
-
-  if (!draft) return null;
+  const [draft, setDraft] = useState<Campaign>(campaign);
 
   const adSet = draft.adSets[0];
+
   const ad = adSet.ads[0];
   const meta = objectiveMeta(draft.objective);
 
