@@ -24,6 +24,11 @@ export interface SocialPost {
   updatedAt: string;
   approver?: string;
   rejectionNote?: string;
+  // organic composer extras
+  firstComment?: string;
+  link?: string;
+  altText?: string;
+  locationTag?: string;
   // paid-only
   budget?: number;
   objective?: string;
@@ -32,6 +37,53 @@ export interface SocialPost {
 }
 
 const KEY = "social-posts-v1";
+
+/** Real platform caption limits (characters). */
+export const channelLimits: Record<SocialChannel, number> = {
+  facebook: 63206,
+  instagram: 2200,
+  linkedin: 3000,
+  tiktok: 2200,
+  x: 280,
+};
+
+/** Whether the platform requires at least one photo/video. */
+export const channelRequiresMedia: Record<SocialChannel, boolean> = {
+  facebook: false,
+  instagram: true,
+  linkedin: false,
+  tiktok: true,
+  x: false,
+};
+
+/** Typical best-performing posting windows per platform. */
+export const channelBestTimes: Record<SocialChannel, { label: string; hour: number; minute: number }[]> = {
+  facebook: [
+    { label: "9:00 – lunchtime scroll build-up", hour: 9, minute: 0 },
+    { label: "13:00 – lunch break", hour: 13, minute: 0 },
+    { label: "19:00 – evening peak", hour: 19, minute: 0 },
+  ],
+  instagram: [
+    { label: "11:00 – late morning peak", hour: 11, minute: 0 },
+    { label: "17:30 – after work", hour: 17, minute: 30 },
+    { label: "20:00 – evening browse", hour: 20, minute: 0 },
+  ],
+  linkedin: [
+    { label: "08:00 – before work", hour: 8, minute: 0 },
+    { label: "12:00 – midday", hour: 12, minute: 0 },
+    { label: "16:30 – end of day", hour: 16, minute: 30 },
+  ],
+  tiktok: [
+    { label: "12:00 – lunch", hour: 12, minute: 0 },
+    { label: "18:00 – commute home", hour: 18, minute: 0 },
+    { label: "21:00 – late night", hour: 21, minute: 0 },
+  ],
+  x: [
+    { label: "08:30 – morning news", hour: 8, minute: 30 },
+    { label: "12:30 – midday", hour: 12, minute: 30 },
+    { label: "17:00 – after work", hour: 17, minute: 0 },
+  ],
+};
 
 const now = new Date();
 const iso = (d: Date) => d.toISOString();
