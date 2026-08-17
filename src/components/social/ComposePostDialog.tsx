@@ -16,6 +16,7 @@ import {
   MapPin,
   MessageSquare,
   Music2,
+  Sparkles,
   Twitter,
   Wand2,
   X,
