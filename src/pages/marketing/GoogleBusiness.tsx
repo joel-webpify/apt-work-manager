@@ -13,9 +13,12 @@ import {
   Plus,
   Trash2,
   Sparkles,
+  Grid3x3,
 } from "lucide-react";
 import { PageBody, Btn, Pill } from "@/components/layout/PageShell";
+import { RankGridTab } from "@/components/marketing/RankGridTab";
 import { GoogleBusinessReport } from "@/components/reporting/GoogleBusinessReport";
+
 import {
   useGbp,
   saveProfile,
@@ -33,8 +36,10 @@ const tabs = [
   { id: "profile", label: "Business info", icon: Store },
   { id: "reviews", label: "Reviews", icon: Star },
   { id: "posts", label: "Posts & offers", icon: Megaphone },
+  { id: "rank", label: "Map ranking", icon: Grid3x3 },
   { id: "insights", label: "Insights", icon: BarChart3 },
 ] as const;
+
 
 type TabId = typeof tabs[number]["id"];
 
