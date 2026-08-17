@@ -301,9 +301,12 @@ export function ComposePostDialog({
                 </div>
               </div>
               <div className="mt-2.5">
-                <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mb-1.5">
+                <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mb-1">
                   <Wand2 className="w-3 h-3" /> Best times {shown ? `for ${shown}` : ""}
                 </div>
+                {shown && (
+                  <p className="text-[11px] text-muted-foreground mb-1.5">{bestTimeReasons[shown]}</p>
+                )}
                 <div className="flex flex-wrap gap-1.5">
                   {bestTimes.map((t) => (
                     <button
