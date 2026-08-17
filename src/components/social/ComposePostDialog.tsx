@@ -163,6 +163,13 @@ export function ComposePostDialog({
             </Step>
 
             <Step n={2} title="What are you posting?">
+              <AiCaptionPanel
+                input={{ ...ai, location: draft.locationTag }}
+                onInputChange={(patch) => setAi((a) => ({ ...a, ...patch }))}
+                tightestLimit={tightestLimit}
+                onUseCaption={(text) => set({ content: text })}
+                onUseHashtags={(tags) => set({ firstComment: tags })}
+              />
               <Textarea
                 className="min-h-[130px]"
                 placeholder="Share the job you just finished, a happy customer, or an offer…"
