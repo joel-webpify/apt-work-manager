@@ -16,6 +16,7 @@ import {
   MapPin,
   MessageSquare,
   Music2,
+  Sparkles,
   Twitter,
   Wand2,
   X,
@@ -28,6 +29,8 @@ import {
   type SocialPost,
 } from "@/lib/socialPostsStore";
 import { OrganicPostPreview } from "./OrganicPostPreview";
+import { AiCaptionPanel } from "./AiCaptionPanel";
+import { bestTimeReasons, describePhoto, type SuggestInput } from "@/lib/socialAiSuggest";
 import { cn } from "@/lib/utils";
 
 const channelDefs: { id: SocialChannel; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
@@ -76,6 +79,7 @@ export function ComposePostDialog({
 }) {
   const [draft, setDraft] = useState<SocialPost | null>(post);
   const [previewChannel, setPreviewChannel] = useState<SocialChannel | null>(null);
+  const [ai, setAi] = useState<SuggestInput>({ topic: "finished-job", tone: "friendly" });
 
   useEffect(() => {
     setDraft(post);
@@ -160,6 +164,13 @@ export function ComposePostDialog({
             </Step>
 
             <Step n={2} title="What are you posting?">
+              <AiCaptionPanel
+                input={{ ...ai, location: draft.locationTag }}
+                onInputChange={(patch) => setAi((a) => ({ ...a, ...patch }))}
+                tightestLimit={tightestLimit}
+                onUseCaption={(text) => set({ content: text })}
+                onUseHashtags={(tags) => set({ firstComment: tags })}
+              />
               <Textarea
                 className="min-h-[130px]"
                 placeholder="Share the job you just finished, a happy customer, or an offer…"
@@ -204,13 +215,35 @@ export function ComposePostDialog({
                   />
                 </div>
                 <div>
-                  <Label className="text-xs text-muted-foreground">Alt text (describes the photo)</Label>
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-muted-foreground">Alt text (describes the photo)</Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const { altText, opener } = describePhoto({ ...ai, location: draft.locationTag });
+                        set({
+                          altText,
+                          content: draft.content.trim()
+                            ? draft.content
+                            : `${opener} `,
+                        });
+                      }}
+                      className="h-6 px-2 rounded border-hairline text-[11px] text-muted-foreground hover:bg-surface-hover inline-flex items-center gap-1"
+                    >
+                      <Sparkles className="w-3 h-3 text-primary" /> Describe this photo
+                    </button>
+                  </div>
                   <Input
                     className="mt-1.5"
                     placeholder="New kitchen with oak worktops"
                     value={draft.altText ?? ""}
                     onChange={(e) => set({ altText: e.target.value || undefined })}
                   />
+                  {!ai.note?.trim() && (
+                    <p className="text-[11px] text-muted-foreground mt-1">
+                      Tip: add a line under “Write it for me” about what is in the photo for a better description.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs text-muted-foreground inline-flex items-center gap-1">
@@ -268,9 +301,12 @@ export function ComposePostDialog({
                 </div>
               </div>
               <div className="mt-2.5">
-                <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mb-1.5">
+                <div className="text-xs text-muted-foreground inline-flex items-center gap-1 mb-1">
                   <Wand2 className="w-3 h-3" /> Best times {shown ? `for ${shown}` : ""}
                 </div>
+                {shown && (
+                  <p className="text-[11px] text-muted-foreground mb-1.5">{bestTimeReasons[shown]}</p>
+                )}
                 <div className="flex flex-wrap gap-1.5">
                   {bestTimes.map((t) => (
                     <button
