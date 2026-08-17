@@ -78,6 +78,7 @@ export function ComposePostDialog({
 }) {
   const [draft, setDraft] = useState<SocialPost | null>(post);
   const [previewChannel, setPreviewChannel] = useState<SocialChannel | null>(null);
+  const [ai, setAi] = useState<SuggestInput>({ topic: "finished-job", tone: "friendly" });
 
   useEffect(() => {
     setDraft(post);
