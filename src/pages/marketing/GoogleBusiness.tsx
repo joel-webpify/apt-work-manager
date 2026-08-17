@@ -79,6 +79,8 @@ export default function GoogleBusiness() {
         {tab === "profile" && <ProfileTab />}
         {tab === "reviews" && <ReviewsTab />}
         {tab === "posts" && <PostsTab />}
+        {tab === "rank" && <RankGridTab businessName={profile.name} />}
+
         {tab === "insights" && <GoogleBusinessReport range="30d" />}
       </div>
     </PageBody>
