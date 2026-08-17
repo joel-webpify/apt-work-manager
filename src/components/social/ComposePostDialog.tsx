@@ -28,6 +28,8 @@ import {
   type SocialPost,
 } from "@/lib/socialPostsStore";
 import { OrganicPostPreview } from "./OrganicPostPreview";
+import { AiCaptionPanel } from "./AiCaptionPanel";
+import { bestTimeReasons, describePhoto, type SuggestInput } from "@/lib/socialAiSuggest";
 import { cn } from "@/lib/utils";
 
 const channelDefs: { id: SocialChannel; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
