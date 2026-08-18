@@ -42,7 +42,12 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+          <Route path="/field" element={<FieldLayout />}>
+            <Route index element={<MyDay />} />
+            <Route path="job/:id" element={<FieldJob />} />
+          </Route>
           <Route element={<AppLayout />}>
+
 
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
