@@ -20,6 +20,7 @@ import {
   Workflow,
   Repeat,
   Radar,
+  HardHat,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
