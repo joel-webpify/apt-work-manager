@@ -71,8 +71,12 @@ const groups: Group[] = [
   },
   {
     id: "system",
-    items: [{ to: "/settings", label: "Settings", icon: Settings }],
+    items: [
+      { to: "/field", label: "Field app", icon: HardHat },
+      { to: "/settings", label: "Settings", icon: Settings },
+    ],
   },
+
 ];
 
 const STORAGE_KEY = "sidebar.collapsed.v1";
