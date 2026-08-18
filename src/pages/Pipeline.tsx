@@ -818,13 +818,10 @@ function JobDrawer({
             </Section>
           )}
 
-          <Section title="Photos">
-            <div className="grid grid-cols-3 gap-2">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="aspect-square rounded-md bg-surface border-hairline" />
-              ))}
-            </div>
+          <Section title="Site visit">
+            <SiteVisitSection jobId={job.id} />
           </Section>
+
 
           <Section title="Communication">
             {job.timeline.length === 0 ? (
