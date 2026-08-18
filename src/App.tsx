@@ -25,6 +25,9 @@ import WorkflowDetail from "./pages/automations/WorkflowDetail";
 import Sequences from "./pages/automations/Sequences";
 import Login from "./pages/Login";
 import OAuthConsent from "./pages/OAuthConsent";
+import FieldLayout from "./components/field/FieldLayout";
+import MyDay from "./pages/field/MyDay";
+import FieldJob from "./pages/field/FieldJob";
 
 
 
@@ -39,7 +42,12 @@ const App = () => (
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+          <Route path="/field" element={<FieldLayout />}>
+            <Route index element={<MyDay />} />
+            <Route path="job/:id" element={<FieldJob />} />
+          </Route>
           <Route element={<AppLayout />}>
+
 
             <Route path="/" element={<Dashboard />} />
             <Route path="/pipeline" element={<Pipeline />} />
