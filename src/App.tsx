@@ -15,6 +15,7 @@ import Reporting from "./pages/Reporting";
 import Tracking from "./pages/Tracking";
 import Settings from "./pages/Settings";
 import Quotes from "./pages/Quotes";
+import PublicQuote from "./pages/PublicQuote";
 import NotFound from "./pages/NotFound";
 import MarketingOverview from "./pages/marketing/MarketingOverview";
 import GoogleBusiness from "./pages/marketing/GoogleBusiness";
