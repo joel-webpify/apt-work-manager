@@ -45,6 +45,7 @@ const App = () => (
           <Route path="/field" element={<FieldLayout />}>
             <Route index element={<MyDay />} />
             <Route path="job/:id" element={<FieldJob />} />
+            <Route path="me" element={<MyStats />} />
           </Route>
           <Route element={<AppLayout />}>
 
