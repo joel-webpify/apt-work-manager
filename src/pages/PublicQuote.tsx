@@ -102,6 +102,15 @@ export default function PublicQuote() {
 
   return (
     <div className="min-h-screen bg-surface py-8 px-4">
+      <div className="max-w-2xl mx-auto mb-3">
+        <Link
+          to="/portal/quotes"
+          className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        >
+          <ChevronLeft className="w-4 h-4" /> All your quotes
+        </Link>
+      </div>
+
       <div className="max-w-2xl mx-auto">
         {/* Brand header */}
         <div className="flex items-start justify-between mb-5">
