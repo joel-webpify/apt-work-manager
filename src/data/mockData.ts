@@ -606,6 +606,9 @@ export const products: Product[] = [
 export type QuoteStatus = "Draft" | "Sent" | "Accepted" | "Declined" | "Expired";
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue" | "Void";
 
+/** How a line behaves on the customer-facing quote. Undefined = "included". */
+export type QuoteLineKind = "included" | "choice" | "optional";
+
 export interface QuoteLineItem {
   id: string;
   productId?: string;
@@ -616,6 +619,19 @@ export interface QuoteLineItem {
   unitPrice: number;
   taxRate: number;
   discount?: number; // %
+  kind?: QuoteLineKind;
+  groupId?: string; // choice lines only — alternatives share a group
+  groupLabel?: string; // e.g. "Boiler"
+  defaultSelected?: boolean; // default choice, or pre-ticked extra
+}
+
+export interface QuoteSelection {
+  /** groupId -> chosen line item id */
+  chosen: Record<string, string>;
+  /** ids of ticked optional extras */
+  extras: string[];
+  acceptedBy?: string;
+  acceptedAt?: string; // ISO datetime
 }
 
 export interface Quote {
@@ -630,6 +646,7 @@ export interface Quote {
   items: QuoteLineItem[];
   notes?: string;
   terms?: string;
+  selection?: QuoteSelection;
 }
 
 export interface Invoice {
