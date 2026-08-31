@@ -404,6 +404,11 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
                 <span>Total</span>
                 <span className="tabular-nums">{fmt(t.total)}</span>
               </div>
+              {tailored && (
+                <div className="text-xs text-muted-foreground">
+                  Based on your defaults — the customer can change this.
+                </div>
+              )}
             </div>
           </div>
 
