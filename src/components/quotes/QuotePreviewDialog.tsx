@@ -10,7 +10,17 @@ import {
   quoteStatusTones,
   invoiceStatusTones,
 } from "@/data/mockData";
-import { totals, fmt, fmtDate } from "@/lib/quoteUtils";
+import {
+  totals,
+  fmt,
+  fmtDate,
+  fmtDateTime,
+  resolveItems,
+  hasCustomerChoices,
+  defaultSelection,
+  choiceGroups,
+  optionalItems,
+} from "@/lib/quoteUtils";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -22,8 +32,13 @@ interface Props {
 
 export function QuotePreviewDialog({ open, onOpenChange, doc, mode }: Props) {
   if (!doc) return null;
-  const t = totals(doc.items);
   const isInvoice = mode === "invoice";
+  const quote = isInvoice ? null : (doc as Quote);
+  const selection = quote?.selection;
+  const items = resolveItems(doc.items, selection);
+  const t = totals(items);
+  const tailored = !isInvoice && hasCustomerChoices(doc.items);
+  const effective = selection ?? (quote ? defaultSelection(doc.items) : undefined);
   const tone = isInvoice
     ? invoiceStatusTones[(doc as Invoice).status]
     : quoteStatusTones[(doc as Quote).status];
@@ -99,7 +114,7 @@ export function QuotePreviewDialog({ open, onOpenChange, doc, mode }: Props) {
               <div className="text-right">Price</div>
               <div className="text-right">Total</div>
             </div>
-            {doc.items.map((li) => (
+            {items.map((li) => (
               <div
                 key={li.id}
                 className="grid grid-cols-[2.5fr_0.6fr_0.7fr_0.8fr_0.9fr] px-4 py-2.5 items-start text-sm border-b-hairline last:border-b-0"
@@ -138,6 +153,45 @@ export function QuotePreviewDialog({ open, onOpenChange, doc, mode }: Props) {
               </div>
             </div>
           </div>
+
+          {tailored && effective && (
+            <div className="border-hairline rounded-lg p-4 mb-6 bg-surface/40 text-sm">
+              <div className="font-medium mb-2">
+                {selection?.acceptedAt
+                  ? `What ${selection.acceptedBy || "the customer"} chose`
+                  : "What the customer can choose"}
+              </div>
+              <div className="space-y-1.5">
+                {choiceGroups(doc.items).map((g) => {
+                  const pickedId = effective.chosen?.[g.id];
+                  const picked = g.options.find((o) => o.id === pickedId);
+                  return (
+                    <div key={g.id} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">{g.label}</span>
+                      <span>
+                        {picked?.name || "—"}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({g.options.length} options)
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+                {optionalItems(doc.items).map((li) => (
+                  <div key={li.id} className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Extra — {li.name}</span>
+                    <span>{effective.extras?.includes(li.id) ? "Added" : "Not added"}</span>
+                  </div>
+                ))}
+              </div>
+              {selection?.acceptedAt && (
+                <div className="text-xs text-muted-foreground mt-2 border-t-hairline pt-2">
+                  Signed off by {selection.acceptedBy} on {fmtDateTime(selection.acceptedAt)}.
+                </div>
+              )}
+            </div>
+          )}
 
           {doc.notes && (
             <div className="border-t-hairline pt-4 text-sm">

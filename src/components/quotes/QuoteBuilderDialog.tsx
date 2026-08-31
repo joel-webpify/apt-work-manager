@@ -24,8 +24,9 @@ import {
   type QuoteLineItem,
   type QuoteStatus,
   type ProductUnit,
+  type QuoteLineKind,
 } from "@/data/mockData";
-import { totals, fmt } from "@/lib/quoteUtils";
+import { fmt, lineKind, resolveItems, totals, hasCustomerChoices } from "@/lib/quoteUtils";
 
 const statuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined", "Expired"];
 
@@ -75,7 +76,8 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
     }
   }, [open, initial]);
 
-  const t = useMemo(() => totals(draft.items), [draft.items]);
+  const t = useMemo(() => totals(resolveItems(draft.items, draft.selection)), [draft]);
+  const tailored = hasCustomerChoices(draft.items);
 
   const addItem = () => setDraft((d) => ({ ...d, items: [...d.items, blankItem()] }));
   const removeItem = (id: string) =>
@@ -96,6 +98,73 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
       unit: p.unit,
       unitPrice: p.price,
       taxRate: p.taxRate,
+    });
+  };
+
+  const setKind = (li: QuoteLineItem, kind: QuoteLineKind) => {
+    if (kind === "choice") {
+      updateItem(li.id, {
+        kind,
+        groupId: li.groupId ?? `g-${li.id}`,
+        groupLabel: li.groupLabel ?? "",
+        defaultSelected: li.defaultSelected ?? true,
+      });
+    } else if (kind === "optional") {
+      updateItem(li.id, { kind, groupId: undefined, groupLabel: undefined });
+    } else {
+      updateItem(li.id, {
+        kind: "included",
+        groupId: undefined,
+        groupLabel: undefined,
+        defaultSelected: undefined,
+      });
+    }
+  };
+
+  const setGroupLabel = (groupId: string, label: string) =>
+    setDraft((d) => ({
+      ...d,
+      items: d.items.map((i) =>
+        (i.groupId ?? i.id) === groupId && lineKind(i) === "choice"
+          ? { ...i, groupLabel: label }
+          : i,
+      ),
+    }));
+
+  /** Only one default per choice group. */
+  const setDefault = (li: QuoteLineItem, on: boolean) => {
+    if (lineKind(li) !== "choice") {
+      updateItem(li.id, { defaultSelected: on });
+      return;
+    }
+    const gid = li.groupId ?? li.id;
+    setDraft((d) => ({
+      ...d,
+      items: d.items.map((i) =>
+        (i.groupId ?? i.id) === gid && lineKind(i) === "choice"
+          ? { ...i, defaultSelected: on ? i.id === li.id : false }
+          : i,
+      ),
+    }));
+  };
+
+  const addAlternative = (li: QuoteLineItem) => {
+    const gid = li.groupId ?? li.id;
+    const alt: QuoteLineItem = {
+      ...blankItem(),
+      kind: "choice",
+      groupId: gid,
+      groupLabel: li.groupLabel,
+      unit: li.unit,
+      taxRate: li.taxRate,
+      qty: li.qty,
+      defaultSelected: false,
+    };
+    setDraft((d) => {
+      const idx = d.items.findIndex((i) => i.id === li.id);
+      const items = [...d.items];
+      items.splice(idx + 1, 0, alt);
+      return { ...d, items };
     });
   };
 
@@ -219,6 +288,53 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
                         placeholder="Description"
                         className="h-8 text-xs"
                       />
+                      {mode === "quote" && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Select
+                            value={lineKind(li)}
+                            onValueChange={(v: QuoteLineKind) => setKind(li, v)}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-[9.5rem]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="included">Always included</SelectItem>
+                              <SelectItem value="choice">Customer picks one</SelectItem>
+                              <SelectItem value="optional">Optional extra</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {lineKind(li) === "choice" && (
+                            <Input
+                              value={li.groupLabel ?? ""}
+                              onChange={(e) =>
+                                setGroupLabel(li.groupId ?? li.id, e.target.value)
+                              }
+                              placeholder="Choice name (e.g. Boiler)"
+                              className="h-7 text-xs w-40"
+                            />
+                          )}
+                          {lineKind(li) !== "included" && (
+                            <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                className="accent-[hsl(var(--primary))]"
+                                checked={!!li.defaultSelected}
+                                onChange={(e) => setDefault(li, e.target.checked)}
+                              />
+                              {lineKind(li) === "choice" ? "Default" : "Pre-ticked"}
+                            </label>
+                          )}
+                          {lineKind(li) === "choice" && (
+                            <button
+                              type="button"
+                              onClick={() => addAlternative(li)}
+                              className="h-7 px-2 rounded-md border-hairline text-xs hover:bg-surface-hover"
+                            >
+                              + Alternative
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Input
                       type="number"
@@ -288,6 +404,11 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
                 <span>Total</span>
                 <span className="tabular-nums">{fmt(t.total)}</span>
               </div>
+              {tailored && (
+                <div className="text-xs text-muted-foreground">
+                  Based on your defaults — the customer can change this.
+                </div>
+              )}
             </div>
           </div>
 

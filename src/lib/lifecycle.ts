@@ -2,7 +2,7 @@ import { addJob, updateJob, findJob, getJobs } from "./jobsStore";
 import { addInvoice, updateInvoice, findInvoice, findInvoiceByJob, getInvoices } from "./invoicesStore";
 import { updateQuote, findQuote, getQuotes } from "./quotesStore";
 import { contacts, type Job, type Invoice } from "@/data/mockData";
-import { totals } from "./quoteUtils";
+import { totals, resolveItems } from "./quoteUtils";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const niceDate = () =>
@@ -30,13 +30,14 @@ export function acceptQuote(quoteId: string): LifecycleResult | null {
     };
   }
 
-  const total = totals(q.items).total;
+  const chosenItems = resolveItems(q.items, q.selection);
+  const total = totals(chosenItems).total;
   const contact = q.contactId ? contacts.find((c) => c.id === q.contactId) : undefined;
   const job: Job = {
     id: `j-q-${quoteId}-${Date.now()}`,
     contactId: q.contactId ?? "manual",
     customer: q.customer,
-    service: q.items[0]?.name ?? "Service",
+    service: chosenItems[0]?.name ?? "Service",
     value: total,
     stage: "Job booked",
     daysInStage: 0,
@@ -87,7 +88,14 @@ export function completeJob(jobId: string): LifecycleResult | null {
 
   const quote = getQuotes().find((q) => q.jobId === jobId);
   const items = quote
-    ? quote.items.map((li) => ({ ...li, id: `il-${Math.random().toString(36).slice(2, 8)}` }))
+    ? resolveItems(quote.items, quote.selection).map((li) => ({
+        ...li,
+        kind: undefined,
+        groupId: undefined,
+        groupLabel: undefined,
+        defaultSelected: undefined,
+        id: `il-${Math.random().toString(36).slice(2, 8)}`,
+      }))
     : [
         {
           id: `il-${Math.random().toString(36).slice(2, 8)}`,

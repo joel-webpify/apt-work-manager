@@ -11,6 +11,7 @@ import {
   AlertCircle,
   Send,
   ThumbsUp,
+  Link2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,7 +22,14 @@ import {
   type QuoteStatus,
   type InvoiceStatus,
 } from "@/data/mockData";
-import { totals, fmt, fmtDate } from "@/lib/quoteUtils";
+import {
+  totals,
+  fmt,
+  fmtDate,
+  docTotals,
+  resolveItems,
+  hasCustomerChoices,
+} from "@/lib/quoteUtils";
 import { QuoteBuilderDialog } from "@/components/quotes/QuoteBuilderDialog";
 import { QuotePreviewDialog } from "@/components/quotes/QuotePreviewDialog";
 import { toast } from "@/hooks/use-toast";
@@ -51,10 +59,10 @@ export default function Quotes() {
   const stats = useMemo(() => {
     const sent = quotes
       .filter((q) => q.status === "Sent")
-      .reduce((s, q) => s + totals(q.items).total, 0);
+      .reduce((s, q) => s + docTotals(q).total, 0);
     const accepted = quotes
       .filter((q) => q.status === "Accepted")
-      .reduce((s, q) => s + totals(q.items).total, 0);
+      .reduce((s, q) => s + docTotals(q).total, 0);
     const outstanding = invoices
       .filter((i) => i.status === "Sent" || i.status === "Overdue")
       .reduce((s, i) => s + totals(i.items).total, 0);
@@ -119,6 +127,12 @@ export default function Quotes() {
     if (r) toast({ title: "Quote accepted", description: r.message });
   };
 
+  const copyCustomerLink = (q: Quote) => {
+    const url = `${window.location.origin}/quote/${q.id}`;
+    navigator.clipboard?.writeText(url);
+    toast({ title: "Customer link copied", description: url });
+  };
+
   const convertToInvoice = (q: Quote) => {
     const number = `INV-${1100 + invoices.length}`;
     const inv: Invoice = {
@@ -131,7 +145,14 @@ export default function Quotes() {
       status: "Draft",
       issueDate: new Date().toISOString().slice(0, 10),
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-      items: q.items.map((li) => ({ ...li, id: `il-${Math.random().toString(36).slice(2, 8)}` })),
+      items: resolveItems(q.items, q.selection).map((li) => ({
+        ...li,
+        kind: undefined,
+        groupId: undefined,
+        groupLabel: undefined,
+        defaultSelected: undefined,
+        id: `il-${Math.random().toString(36).slice(2, 8)}`,
+      })),
     };
     addInvoice(inv);
     toast({ title: "Invoice created", description: `${number} from ${q.number}` });
@@ -263,7 +284,8 @@ export default function Quotes() {
               <EmptyRow icon={<FileText className="w-5 h-5" />} text="No quotes match." />
             )}
             {filteredQuotes.map((q) => {
-              const tot = totals(q.items).total;
+              const tot = docTotals(q).total;
+              const tailored = hasCustomerChoices(q.items);
               return (
                 <div
                   key={q.id}
@@ -271,7 +293,14 @@ export default function Quotes() {
                   onClick={() => openPreview(q)}
                 >
                   <div className="font-medium tabular-nums">{q.number}</div>
-                  <div className="truncate">{q.customer}</div>
+                  <div className="truncate flex items-center gap-1.5">
+                    <span className="truncate">{q.customer}</span>
+                    {tailored && (
+                      <span className="shrink-0">
+                        <Pill tone="info">Customer choices</Pill>
+                      </span>
+                    )}
+                  </div>
                   <div className="text-muted-foreground text-xs">{fmtDate(q.issueDate)}</div>
                   <div className="text-muted-foreground text-xs">{fmtDate(q.validUntil)}</div>
                   <div className="text-right tabular-nums font-medium">{fmt(tot)}</div>
@@ -282,6 +311,9 @@ export default function Quotes() {
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <Btn onClick={() => copyCustomerLink(q)} title="Copy the link the customer opens">
+                      <Link2 className="w-3.5 h-3.5" /> Link
+                    </Btn>
                     {(q.status === "Draft" || q.status === "Sent") && (
                       <Btn onClick={() => handleAcceptQuote(q)} title="Mark accepted — creates a job">
                         <ThumbsUp className="w-3.5 h-3.5" /> Accept

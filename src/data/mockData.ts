@@ -606,6 +606,9 @@ export const products: Product[] = [
 export type QuoteStatus = "Draft" | "Sent" | "Accepted" | "Declined" | "Expired";
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Overdue" | "Void";
 
+/** How a line behaves on the customer-facing quote. Undefined = "included". */
+export type QuoteLineKind = "included" | "choice" | "optional";
+
 export interface QuoteLineItem {
   id: string;
   productId?: string;
@@ -616,6 +619,19 @@ export interface QuoteLineItem {
   unitPrice: number;
   taxRate: number;
   discount?: number; // %
+  kind?: QuoteLineKind;
+  groupId?: string; // choice lines only — alternatives share a group
+  groupLabel?: string; // e.g. "Boiler"
+  defaultSelected?: boolean; // default choice, or pre-ticked extra
+}
+
+export interface QuoteSelection {
+  /** groupId -> chosen line item id */
+  chosen: Record<string, string>;
+  /** ids of ticked optional extras */
+  extras: string[];
+  acceptedBy?: string;
+  acceptedAt?: string; // ISO datetime
 }
 
 export interface Quote {
@@ -630,6 +646,7 @@ export interface Quote {
   items: QuoteLineItem[];
   notes?: string;
   terms?: string;
+  selection?: QuoteSelection;
 }
 
 export interface Invoice {
@@ -674,10 +691,27 @@ export const quotes: Quote[] = [
     issueDate: "2026-04-16",
     validUntil: "2026-05-16",
     items: [
-      { id: "li1", productId: "p7", name: "Artificial grass — premium", qty: 45, unit: "sqm", unitPrice: 58, taxRate: 20 },
-      { id: "li2", productId: "p8", name: "Garden tidy", qty: 1, unit: "day", unitPrice: 280, taxRate: 20 },
+      { id: "li2", productId: "p8", name: "Garden tidy and ground prep", qty: 1, unit: "day", unitPrice: 280, taxRate: 20 },
+      {
+        id: "li1a", productId: "p7", name: "Artificial grass — standard", description: "8-year guarantee",
+        qty: 45, unit: "sqm", unitPrice: 42, taxRate: 20,
+        kind: "choice", groupId: "g-grass", groupLabel: "Grass grade", defaultSelected: true,
+      },
+      {
+        id: "li1b", productId: "p7", name: "Artificial grass — premium", description: "12-year guarantee, softer pile",
+        qty: 45, unit: "sqm", unitPrice: 58, taxRate: 20,
+        kind: "choice", groupId: "g-grass", groupLabel: "Grass grade",
+      },
+      {
+        id: "li1x", name: "Edging boards", description: "Treated timber edging all round",
+        qty: 1, unit: "each", unitPrice: 180, taxRate: 20, kind: "optional",
+      },
+      {
+        id: "li1y", name: "Yearly brush-up visit", description: "One tidy-up visit next spring",
+        qty: 1, unit: "visit", unitPrice: 95, taxRate: 20, kind: "optional",
+      },
     ],
-    notes: "Premium grade selected. 12-year guarantee included.",
+    notes: "Pick the grade that suits you — both are laid the same way.",
     terms: "50% deposit on acceptance. Balance on completion.",
   },
   {
