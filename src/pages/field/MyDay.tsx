@@ -76,6 +76,20 @@ export default function MyDay() {
 
   const totalHours = dayStops.reduce((sum, s) => sum + s.assignment.duration, 0);
 
+  // The one job you're actually on right now — everything else can wait.
+  const live = dayStops.find((s) => {
+    const r = records[`${s.job.id}::${userId}`];
+    return r && ["on-my-way", "arrived", "working"].includes(r.status) && !r.lockedAt;
+  });
+  const nextUp = dayStops.find((s) => {
+    const r = records[`${s.job.id}::${userId}`];
+    return !r || r.status === "not-started";
+  });
+  const focus = live ?? nextUp;
+  const focusRec = focus ? (records[`${focus.job.id}::${userId}`] ?? emptyRecord()) : undefined;
+  const doneCount = dayStops.filter((s) => records[`${s.job.id}::${userId}`]?.lockedAt).length;
+
+
   return (
     <div className="flex-1">
       {/* date strip */}
@@ -109,7 +123,9 @@ export default function MyDay() {
         <div className="text-xs text-muted-foreground">
           {dayStops.length === 0
             ? "Nothing booked in"
-            : `${dayStops.length} ${dayStops.length === 1 ? "job" : "jobs"} · ${totalHours}h of work`}
+            : `${dayStops.length} ${dayStops.length === 1 ? "job" : "jobs"} · ${totalHours}h of work${
+                doneCount ? ` · ${doneCount} signed off` : ""
+              }`}
         </div>
         <button
           type="button"
@@ -120,6 +136,40 @@ export default function MyDay() {
           <Navigation className="w-4 h-4" /> Route for the day
         </button>
       </div>
+
+      {/* the job you're on right now */}
+      {focus && focusRec && (
+        <div className="mx-4 mt-4 rounded-xl border-hairline bg-surface p-4">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {live ? "You're on this now" : "Next up"}
+          </div>
+          <div className="text-base font-semibold mt-1 leading-tight">{focus.job.customer}</div>
+          <div className="text-sm text-muted-foreground">{focus.job.service}</div>
+          <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
+            <MapPin className="w-3.5 h-3.5" /> {focus.job.address}
+          </div>
+          <div className="mt-3 flex gap-2">
+            <Link
+              to={`/field/job/${focus.job.id}`}
+              className="h-11 flex-1 rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center"
+            >
+              {focusRec.status === "not-started"
+                ? "I'm on my way"
+                : focusRec.status === "working"
+                  ? "Open the job sheet"
+                  : "Carry on"}
+            </Link>
+            <button
+              type="button"
+              onClick={() => openMaps(routeUrl([focus.job.address]))}
+              aria-label="Directions to this job"
+              className="h-11 w-11 rounded-lg border-hairline bg-background hover:bg-surface-hover inline-flex items-center justify-center"
+            >
+              <Navigation className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* jobs */}
       <div className="p-4 space-y-3">
@@ -135,8 +185,9 @@ export default function MyDay() {
           </div>
         )}
 
+
         {dayStops.map(({ job, assignment }) => {
-          const rec = records[job.id] ?? emptyRecord();
+          const rec = records[`${job.id}::${userId}`] ?? emptyRecord();
           const photoCount = rec.photos.length;
           return (
             <Link

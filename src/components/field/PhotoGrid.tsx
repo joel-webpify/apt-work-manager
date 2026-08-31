@@ -2,10 +2,12 @@ import { useRef, useState } from "react";
 import { Camera, Trash2, X } from "lucide-react";
 import {
   addPhoto,
+  autoPhotoLabel,
   fileToDataUrl,
   removePhoto,
   updatePhoto,
   type FieldPhoto,
+  type FieldStatus,
   type PhotoLabel,
 } from "@/lib/fieldStore";
 import { useToast } from "@/hooks/use-toast";
@@ -16,18 +18,32 @@ const labels: { id: PhotoLabel; label: string }[] = [
   { id: "after", label: "After" },
 ];
 
-export default function PhotoGrid({ jobId, photos }: { jobId: string; photos: FieldPhoto[] }) {
+export default function PhotoGrid({
+  jobId,
+  employeeId,
+  photos,
+  status,
+  readOnly,
+}: {
+  jobId: string;
+  employeeId: string;
+  photos: FieldPhoto[];
+  status: FieldStatus;
+  readOnly?: boolean;
+}) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [nextLabel, setNextLabel] = useState<PhotoLabel>("before");
   const [viewing, setViewing] = useState<FieldPhoto | null>(null);
   const { toast } = useToast();
+
+  // Where you are in the visit decides the label — no dropdown to remember.
+  const autoLabel = autoPhotoLabel(status);
 
   const pick = async (files: FileList | null) => {
     if (!files) return;
     for (const file of Array.from(files)) {
       try {
         const dataUrl = await fileToDataUrl(file);
-        addPhoto(jobId, { dataUrl, caption: "", label: nextLabel });
+        addPhoto(jobId, employeeId, { dataUrl, caption: "", label: autoLabel });
       } catch {
         toast({ title: "Could not add that photo", description: file.name });
       }
@@ -37,40 +53,35 @@ export default function PhotoGrid({ jobId, photos }: { jobId: string; photos: Fi
 
   return (
     <div className="space-y-3">
-      <div className="flex gap-1.5">
-        {labels.map((l) => (
+      {!readOnly && (
+        <>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            multiple
+            className="hidden"
+            onChange={(e) => pick(e.target.files)}
+          />
           <button
-            key={l.id}
             type="button"
-            onClick={() => setNextLabel(l.id)}
-            className={`h-8 px-3 rounded-full text-xs font-medium border-hairline ${
-              nextLabel === l.id ? "bg-primary text-primary-foreground" : "bg-surface hover:bg-surface-hover"
-            }`}
+            onClick={() => inputRef.current?.click()}
+            className="w-full h-12 rounded-lg bg-primary text-primary-foreground text-sm font-medium inline-flex items-center justify-center gap-2"
           >
-            {l.label}
+            <Camera className="w-4 h-4" /> Take a photo
           </button>
-        ))}
-      </div>
-
-      <input
-        ref={inputRef}
-        type="file"
-        accept="image/*"
-        capture="environment"
-        multiple
-        className="hidden"
-        onChange={(e) => pick(e.target.files)}
-      />
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="w-full h-12 rounded-lg border-hairline bg-surface hover:bg-surface-hover text-sm font-medium inline-flex items-center justify-center gap-2"
-      >
-        <Camera className="w-4 h-4" /> Add {labels.find((l) => l.id === nextLabel)?.label.toLowerCase()} photo
-      </button>
+          <p className="text-[11px] text-muted-foreground">
+            Saved as a <span className="font-medium capitalize">{autoLabel}</span> photo and time-stamped
+            automatically. You can change the label below if it's wrong.
+          </p>
+        </>
+      )}
 
       {photos.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No photos yet. Before and after shots help with sign-off and reviews.</p>
+        <p className="text-xs text-muted-foreground">
+          No photos yet. Before and after shots help with sign-off and reviews.
+        </p>
       ) : (
         <div className="space-y-2">
           {photos.map((p) => (
@@ -78,14 +89,18 @@ export default function PhotoGrid({ jobId, photos }: { jobId: string; photos: Fi
               <button
                 type="button"
                 onClick={() => setViewing(p)}
-                className="w-20 h-20 rounded-md overflow-hidden border-hairline shrink-0 bg-surface"
+                className="w-20 h-20 rounded-md overflow-hidden border-hairline shrink-0 bg-surface relative"
               >
                 <img src={p.dataUrl} alt={p.caption || `${p.label} photo`} className="w-full h-full object-cover" />
+                <span className="absolute bottom-0.5 left-0.5 h-4 px-1 rounded bg-background/85 text-[10px] capitalize">
+                  {p.label}
+                </span>
               </button>
               <div className="flex-1 min-w-0 space-y-1.5">
                 <select
                   value={p.label}
-                  onChange={(e) => updatePhoto(jobId, p.id, { label: e.target.value as PhotoLabel })}
+                  disabled={readOnly}
+                  onChange={(e) => updatePhoto(jobId, employeeId, p.id, { label: e.target.value as PhotoLabel })}
                   className="h-8 w-full rounded-md border-hairline bg-background px-2 text-xs"
                 >
                   {labels.map((l) => (
@@ -96,26 +111,35 @@ export default function PhotoGrid({ jobId, photos }: { jobId: string; photos: Fi
                 </select>
                 <input
                   value={p.caption}
-                  onChange={(e) => updatePhoto(jobId, p.id, { caption: e.target.value })}
+                  readOnly={readOnly}
+                  onChange={(e) => updatePhoto(jobId, employeeId, p.id, { caption: e.target.value })}
                   placeholder="Add a note about this photo…"
                   className="h-8 w-full rounded-md border-hairline bg-background px-2 text-xs"
                 />
+                <div className="text-[10px] text-muted-foreground">
+                  {new Date(p.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => removePhoto(jobId, p.id)}
-                aria-label="Delete photo"
-                className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-surface-hover shrink-0"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => removePhoto(jobId, employeeId, p.id)}
+                  aria-label="Delete photo"
+                  className="w-8 h-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-destructive hover:bg-surface-hover shrink-0"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
             </div>
           ))}
         </div>
       )}
 
       {viewing && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setViewing(null)}>
+        <div
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setViewing(null)}
+        >
           <img src={viewing.dataUrl} alt={viewing.caption || "Job photo"} className="max-h-full max-w-full rounded-lg" />
           <button
             type="button"

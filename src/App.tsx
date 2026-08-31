@@ -28,6 +28,7 @@ import OAuthConsent from "./pages/OAuthConsent";
 import FieldLayout from "./components/field/FieldLayout";
 import MyDay from "./pages/field/MyDay";
 import FieldJob from "./pages/field/FieldJob";
+import MyStats from "./pages/field/MyStats";
 
 
 
@@ -45,6 +46,7 @@ const App = () => (
           <Route path="/field" element={<FieldLayout />}>
             <Route index element={<MyDay />} />
             <Route path="job/:id" element={<FieldJob />} />
+            <Route path="me" element={<MyStats />} />
           </Route>
           <Route element={<AppLayout />}>
 
