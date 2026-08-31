@@ -30,13 +30,14 @@ export function acceptQuote(quoteId: string): LifecycleResult | null {
     };
   }
 
-  const total = totals(q.items).total;
+  const chosenItems = resolveItems(q.items, q.selection);
+  const total = totals(chosenItems).total;
   const contact = q.contactId ? contacts.find((c) => c.id === q.contactId) : undefined;
   const job: Job = {
     id: `j-q-${quoteId}-${Date.now()}`,
     contactId: q.contactId ?? "manual",
     customer: q.customer,
-    service: q.items[0]?.name ?? "Service",
+    service: chosenItems[0]?.name ?? "Service",
     value: total,
     stage: "Job booked",
     daysInStage: 0,
