@@ -136,7 +136,7 @@ export default function MyDay() {
         )}
 
         {dayStops.map(({ job, assignment }) => {
-          const rec = records[job.id] ?? emptyRecord();
+          const rec = records[`${job.id}::${userId}`] ?? emptyRecord();
           const photoCount = rec.photos.length;
           return (
             <Link
