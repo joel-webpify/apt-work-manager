@@ -246,6 +246,14 @@ export default function Pipeline() {
         />
       )}
 
+      {view === "list" && (
+        <div className="px-6 pb-6">
+          <FieldOpportunities />
+        </div>
+      )}
+
+
+
       {selected && (
         <JobDrawer
           job={selected}
