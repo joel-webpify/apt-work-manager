@@ -28,6 +28,7 @@ import OAuthConsent from "./pages/OAuthConsent";
 import FieldLayout from "./components/field/FieldLayout";
 import MyDay from "./pages/field/MyDay";
 import FieldJob from "./pages/field/FieldJob";
+import MyStats from "./pages/field/MyStats";
 
 
 
