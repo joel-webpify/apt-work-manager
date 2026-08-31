@@ -88,7 +88,14 @@ export function completeJob(jobId: string): LifecycleResult | null {
 
   const quote = getQuotes().find((q) => q.jobId === jobId);
   const items = quote
-    ? quote.items.map((li) => ({ ...li, id: `il-${Math.random().toString(36).slice(2, 8)}` }))
+    ? resolveItems(quote.items, quote.selection).map((li) => ({
+        ...li,
+        kind: undefined,
+        groupId: undefined,
+        groupLabel: undefined,
+        defaultSelected: undefined,
+        id: `il-${Math.random().toString(36).slice(2, 8)}`,
+      }))
     : [
         {
           id: `il-${Math.random().toString(36).slice(2, 8)}`,
