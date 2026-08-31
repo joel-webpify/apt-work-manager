@@ -24,8 +24,9 @@ import {
   type QuoteLineItem,
   type QuoteStatus,
   type ProductUnit,
+  type QuoteLineKind,
 } from "@/data/mockData";
-import { totals, fmt } from "@/lib/quoteUtils";
+import { fmt, lineKind, resolveItems, totals, hasCustomerChoices } from "@/lib/quoteUtils";
 
 const statuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined", "Expired"];
 
