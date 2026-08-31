@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { CheckCircle2, ChevronLeft, Loader2, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { findQuote, useQuotes } from "@/lib/quotesStore";
 import { acceptQuote } from "@/lib/lifecycle";
 import { updateQuote } from "@/lib/quotesStore";
+import { normEmail, quoteEmail, usePortalSession } from "@/lib/portalSession";
 import type { QuoteSelection } from "@/data/mockData";
+
 import {
   choiceGroups,
   defaultSelection,
@@ -28,7 +30,9 @@ import {
 export default function PublicQuote() {
   const { id } = useParams();
   useQuotes(); // re-render when the quote is updated
+  const session = usePortalSession();
   const quote = id ? findQuote(id) : undefined;
+
 
   const [sel, setSel] = useState<QuoteSelection>(() =>
     quote ? quote.selection ?? defaultSelection(quote.items) : { chosen: {}, extras: [] },
@@ -57,6 +61,13 @@ export default function PublicQuote() {
       </div>
     );
   }
+
+  // Only the customer this quote was sent to can see it.
+  const onRecord = quoteEmail(quote);
+  if (!session || (onRecord && normEmail(onRecord) !== session.email)) {
+    return <Navigate to={`/portal?next=/quote/${quote.id}`} replace />;
+  }
+
 
   const locked = !!quote.selection?.acceptedAt;
   const shown = locked ? quote.selection! : sel;
@@ -91,6 +102,15 @@ export default function PublicQuote() {
 
   return (
     <div className="min-h-screen bg-surface py-8 px-4">
+      <div className="max-w-2xl mx-auto mb-3">
+        <Link
+          to="/portal/quotes"
+          className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+        >
+          <ChevronLeft className="w-4 h-4" /> All your quotes
+        </Link>
+      </div>
+
       <div className="max-w-2xl mx-auto">
         {/* Brand header */}
         <div className="flex items-start justify-between mb-5">
