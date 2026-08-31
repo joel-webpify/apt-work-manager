@@ -219,6 +219,53 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
                         placeholder="Description"
                         className="h-8 text-xs"
                       />
+                      {mode === "quote" && (
+                        <div className="flex flex-wrap items-center gap-1">
+                          <Select
+                            value={lineKind(li)}
+                            onValueChange={(v: QuoteLineKind) => setKind(li, v)}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-[9.5rem]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="included">Always included</SelectItem>
+                              <SelectItem value="choice">Customer picks one</SelectItem>
+                              <SelectItem value="optional">Optional extra</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          {lineKind(li) === "choice" && (
+                            <Input
+                              value={li.groupLabel ?? ""}
+                              onChange={(e) =>
+                                setGroupLabel(li.groupId ?? li.id, e.target.value)
+                              }
+                              placeholder="Choice name (e.g. Boiler)"
+                              className="h-7 text-xs w-40"
+                            />
+                          )}
+                          {lineKind(li) !== "included" && (
+                            <label className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <input
+                                type="checkbox"
+                                className="accent-[hsl(var(--primary))]"
+                                checked={!!li.defaultSelected}
+                                onChange={(e) => setDefault(li, e.target.checked)}
+                              />
+                              {lineKind(li) === "choice" ? "Default" : "Pre-ticked"}
+                            </label>
+                          )}
+                          {lineKind(li) === "choice" && (
+                            <button
+                              type="button"
+                              onClick={() => addAlternative(li)}
+                              className="h-7 px-2 rounded-md border-hairline text-xs hover:bg-surface-hover"
+                            >
+                              + Alternative
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <Input
                       type="number"
