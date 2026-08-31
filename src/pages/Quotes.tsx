@@ -58,10 +58,10 @@ export default function Quotes() {
   const stats = useMemo(() => {
     const sent = quotes
       .filter((q) => q.status === "Sent")
-      .reduce((s, q) => s + totals(q.items).total, 0);
+      .reduce((s, q) => s + docTotals(q).total, 0);
     const accepted = quotes
       .filter((q) => q.status === "Accepted")
-      .reduce((s, q) => s + totals(q.items).total, 0);
+      .reduce((s, q) => s + docTotals(q).total, 0);
     const outstanding = invoices
       .filter((i) => i.status === "Sent" || i.status === "Overdue")
       .reduce((s, i) => s + totals(i.items).total, 0);
