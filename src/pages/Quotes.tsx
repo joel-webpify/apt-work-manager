@@ -126,6 +126,12 @@ export default function Quotes() {
     if (r) toast({ title: "Quote accepted", description: r.message });
   };
 
+  const copyCustomerLink = (q: Quote) => {
+    const url = `${window.location.origin}/quote/${q.id}`;
+    navigator.clipboard?.writeText(url);
+    toast({ title: "Customer link copied", description: url });
+  };
+
   const convertToInvoice = (q: Quote) => {
     const number = `INV-${1100 + invoices.length}`;
     const inv: Invoice = {
@@ -138,7 +144,14 @@ export default function Quotes() {
       status: "Draft",
       issueDate: new Date().toISOString().slice(0, 10),
       dueDate: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10),
-      items: q.items.map((li) => ({ ...li, id: `il-${Math.random().toString(36).slice(2, 8)}` })),
+      items: resolveItems(q.items, q.selection).map((li) => ({
+        ...li,
+        kind: undefined,
+        groupId: undefined,
+        groupLabel: undefined,
+        defaultSelected: undefined,
+        id: `il-${Math.random().toString(36).slice(2, 8)}`,
+      })),
     };
     addInvoice(inv);
     toast({ title: "Invoice created", description: `${number} from ${q.number}` });
