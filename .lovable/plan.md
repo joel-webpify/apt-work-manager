@@ -2,15 +2,16 @@
 
 Right now the field app records a job. That's table stakes. The version worth building does two things instead: it makes the visit almost effortless for the worker, and it turns every visit into revenue — payment, a review, and the next job — before the van leaves the driveway.
 
-The guiding rule: **a worker should be able to run a whole job with a thumb and their voice, and never type a paragraph.**
+The guiding rule: **never make a worker type a paragraph they could tap, pick, or say instead** — typing stays available everywhere, it's just no longer the only way.
 
 ## Part 1 — Make it effortless
 
 **One live job screen.**
 When a worker arrives, the app knows which job they're on. My day collapses into a single "current job" card with one big primary button that changes as the visit progresses: On my way → Arrived → Start work → Wrap up. No hunting through sections.
 
-**Talk, don't type.**
-A single mic button on the job sheet. The worker says "replaced the two radiator valves, old ones were seized, cleared up, customer's happy, spotted the outside tap dripping." The app fills in work done, parts used, ticks the matching checks, and drops the tap into "extra work spotted" — all editable. This is the single biggest change to how the app feels.
+**Type or talk — the worker's choice.**
+The text fields stay exactly where they are, and they get better: quick-pick chips above each box (common jobs, common parts, "cleared up", "customer happy") that drop wording straight in, plus a "tidy this up" action that turns rough notes into a clean sentence for the customer summary.
+Next to the box sits a mic button as an alternative for anyone who'd rather talk than thumb-type. Say "replaced the two radiator valves, old ones were seized, cleared up, spotted the outside tap dripping" and the app fills work done, parts used, ticks the matching checks and drops the tap into "extra work spotted" — all landing in the same editable fields, never posted anywhere without the worker seeing it first. If dictation isn't available on the device, the fields simply work as they do today.
 
 **Photos do the paperwork.**
 Every photo is auto-labelled Before/During/After from where you are in the status flow, timestamped and geo-noted. No dropdowns.
@@ -55,7 +56,7 @@ Site visit section on the job shows: every worker's sheet merged, the visit outc
 
 - `src/lib/fieldStore.ts`: key records by `${jobId}::${employeeId}` with a migration of existing keys; add `outcome`, `outcomeNote`, `payment`, `reviewRequest`, `followUp`, `lockedAt`, `syncState`. Selectors for all records on a job.
 - `src/lib/fieldTemplates.ts`: service-type → suggested checks, parts and measurements.
-- Voice: Web Speech API for dictation where available, with a typed fallback; parsing into fields via the Lovable AI gateway, returning a structured job sheet the worker confirms.
+- Voice is additive: the existing textareas stay, with quick-pick chips driven by `fieldTemplates` and an optional mic button. Web Speech API for dictation where available (button hidden if not); the transcript is parsed into fields via the Lovable AI gateway and shown for confirmation before it's written. "Tidy this up" runs the same gateway call on typed text.
 - `src/components/field/WrapUpSheet.tsx` — completeness checks, outcome, payment, signature, review request, follow-up booking, all in one guided sheet.
 - `src/components/field/PaymentStep.tsx` — records payment method and amount, writes to `invoicesStore`. Card links are a placeholder until a payment provider is enabled.
 - `src/lib/visitSummary.ts` + `src/components/field/VisitSummary.tsx` — the customer-facing job story, shareable via the Web Share API.
