@@ -76,7 +76,8 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
     }
   }, [open, initial]);
 
-  const t = useMemo(() => totals(draft.items), [draft.items]);
+  const t = useMemo(() => totals(resolveItems(draft.items, draft.selection)), [draft]);
+  const tailored = hasCustomerChoices(draft.items);
 
   const addItem = () => setDraft((d) => ({ ...d, items: [...d.items, blankItem()] }));
   const removeItem = (id: string) =>
