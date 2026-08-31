@@ -2,7 +2,7 @@ import { addJob, updateJob, findJob, getJobs } from "./jobsStore";
 import { addInvoice, updateInvoice, findInvoice, findInvoiceByJob, getInvoices } from "./invoicesStore";
 import { updateQuote, findQuote, getQuotes } from "./quotesStore";
 import { contacts, type Job, type Invoice } from "@/data/mockData";
-import { totals } from "./quoteUtils";
+import { totals, resolveItems } from "./quoteUtils";
 
 const today = () => new Date().toISOString().slice(0, 10);
 const niceDate = () =>
