@@ -9,8 +9,9 @@ The guiding rule: **a worker should be able to run a whole job with a thumb and 
 **One live job screen.**
 When a worker arrives, the app knows which job they're on. My day collapses into a single "current job" card with one big primary button that changes as the visit progresses: On my way → Arrived → Start work → Wrap up. No hunting through sections.
 
-**Talk, don't type.**
-A single mic button on the job sheet. The worker says "replaced the two radiator valves, old ones were seized, cleared up, customer's happy, spotted the outside tap dripping." The app fills in work done, parts used, ticks the matching checks, and drops the tap into "extra work spotted" — all editable. This is the single biggest change to how the app feels.
+**Type or talk — the worker's choice.**
+The text fields stay exactly where they are, and they get better: quick-pick chips above each box (common jobs, common parts, "cleared up", "customer happy") that drop wording straight in, plus a "tidy this up" action that turns rough notes into a clean sentence for the customer summary.
+Next to the box sits a mic button as an alternative for anyone who'd rather talk than thumb-type. Say "replaced the two radiator valves, old ones were seized, cleared up, spotted the outside tap dripping" and the app fills work done, parts used, ticks the matching checks and drops the tap into "extra work spotted" — all landing in the same editable fields, never posted anywhere without the worker seeing it first. If dictation isn't available on the device, the fields simply work as they do today.
 
 **Photos do the paperwork.**
 Every photo is auto-labelled Before/During/After from where you are in the status flow, timestamped and geo-noted. No dropdowns.
