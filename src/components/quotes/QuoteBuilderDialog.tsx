@@ -101,6 +101,73 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
     });
   };
 
+  const setKind = (li: QuoteLineItem, kind: QuoteLineKind) => {
+    if (kind === "choice") {
+      updateItem(li.id, {
+        kind,
+        groupId: li.groupId ?? `g-${li.id}`,
+        groupLabel: li.groupLabel ?? "",
+        defaultSelected: li.defaultSelected ?? true,
+      });
+    } else if (kind === "optional") {
+      updateItem(li.id, { kind, groupId: undefined, groupLabel: undefined });
+    } else {
+      updateItem(li.id, {
+        kind: "included",
+        groupId: undefined,
+        groupLabel: undefined,
+        defaultSelected: undefined,
+      });
+    }
+  };
+
+  const setGroupLabel = (groupId: string, label: string) =>
+    setDraft((d) => ({
+      ...d,
+      items: d.items.map((i) =>
+        (i.groupId ?? i.id) === groupId && lineKind(i) === "choice"
+          ? { ...i, groupLabel: label }
+          : i,
+      ),
+    }));
+
+  /** Only one default per choice group. */
+  const setDefault = (li: QuoteLineItem, on: boolean) => {
+    if (lineKind(li) !== "choice") {
+      updateItem(li.id, { defaultSelected: on });
+      return;
+    }
+    const gid = li.groupId ?? li.id;
+    setDraft((d) => ({
+      ...d,
+      items: d.items.map((i) =>
+        (i.groupId ?? i.id) === gid && lineKind(i) === "choice"
+          ? { ...i, defaultSelected: on ? i.id === li.id : false }
+          : i,
+      ),
+    }));
+  };
+
+  const addAlternative = (li: QuoteLineItem) => {
+    const gid = li.groupId ?? li.id;
+    const alt: QuoteLineItem = {
+      ...blankItem(),
+      kind: "choice",
+      groupId: gid,
+      groupLabel: li.groupLabel,
+      unit: li.unit,
+      taxRate: li.taxRate,
+      qty: li.qty,
+      defaultSelected: false,
+    };
+    setDraft((d) => {
+      const idx = d.items.findIndex((i) => i.id === li.id);
+      const items = [...d.items];
+      items.splice(idx + 1, 0, alt);
+      return { ...d, items };
+    });
+  };
+
   const save = () => {
     if (!draft.customer.trim()) return;
     const number =
