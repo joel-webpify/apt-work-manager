@@ -114,7 +114,7 @@ export function QuotePreviewDialog({ open, onOpenChange, doc, mode }: Props) {
               <div className="text-right">Price</div>
               <div className="text-right">Total</div>
             </div>
-            {doc.items.map((li) => (
+            {items.map((li) => (
               <div
                 key={li.id}
                 className="grid grid-cols-[2.5fr_0.6fr_0.7fr_0.8fr_0.9fr] px-4 py-2.5 items-start text-sm border-b-hairline last:border-b-0"
