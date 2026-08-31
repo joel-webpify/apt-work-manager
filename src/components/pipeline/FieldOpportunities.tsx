@@ -27,21 +27,12 @@ export default function FieldOpportunities() {
       </div>
 
       <ul className="mt-3 space-y-2">
-        {rows.map(({ employeeId, record }, i) => {
-          const jobId = Object.keys({});
-          return null;
-        })}
-      </ul>
-
-      <ul className="space-y-2">
         {rows.map((row, i) => {
-          const job = jobs.find((j) => (row as { jobId?: string }).jobId === j.id);
+          const job = jobs.find((j) => j.id === row.jobId);
           const who = employees.find((e) => e.id === row.employeeId);
           return (
-            <li
-              key={`${(row as { jobId?: string }).jobId}-${row.employeeId}-${i}`}
-              className="rounded-lg border-hairline p-3"
-            >
+            <li key={`${row.jobId}-${row.employeeId}-${i}`} className="rounded-lg border-hairline p-3">
+
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="text-sm font-medium truncate">{job?.customer ?? "Job"}</div>
