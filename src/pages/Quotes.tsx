@@ -21,7 +21,14 @@ import {
   type QuoteStatus,
   type InvoiceStatus,
 } from "@/data/mockData";
-import { totals, fmt, fmtDate } from "@/lib/quoteUtils";
+import {
+  totals,
+  fmt,
+  fmtDate,
+  docTotals,
+  resolveItems,
+  hasCustomerChoices,
+} from "@/lib/quoteUtils";
 import { QuoteBuilderDialog } from "@/components/quotes/QuoteBuilderDialog";
 import { QuotePreviewDialog } from "@/components/quotes/QuotePreviewDialog";
 import { toast } from "@/hooks/use-toast";
