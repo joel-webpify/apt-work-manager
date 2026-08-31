@@ -1,75 +1,75 @@
-# Field app: honest critique and the fixes worth making
+# Field app: fewer taps, more money out of every visit
 
-The bones are good — My day, status stamps, photos, job sheet, extra work, signature, office sync. What's missing is the stuff that bites on a real van day: nothing enforces a complete job, there's no travel/timing sense, no way to say "couldn't get in", and a few technical soft spots that will fail quietly.
+Right now the field app records a job. That's table stakes. The version worth building does two things instead: it makes the visit almost effortless for the worker, and it turns every visit into revenue — payment, a review, and the next job — before the van leaves the driveway.
 
-## The problems, ranked
+The guiding rule: **a worker should be able to run a whole job with a thumb and their voice, and never type a paragraph.**
 
-**1. A job can be "Finished" with nothing filled in.**
-Nothing checks photos, checks, notes or a signature. The office gets empty job sheets and finds out days later.
+## Part 1 — Make it effortless
 
-**2. Two workers on the same job overwrite each other.**
-Field records are keyed by job id only, so a second person on the job edits the first person's sheet, photos and signature.
+**One live job screen.**
+When a worker arrives, the app knows which job they're on. My day collapses into a single "current job" card with one big primary button that changes as the visit progresses: On my way → Arrived → Start work → Wrap up. No hunting through sections.
 
-**3. No sense of time or travel.**
-My day shows times and hours but no gaps between stops, no "you're running late", no travel hop between addresses, no per-stop navigate button (you have to open the job first).
+**Talk, don't type.**
+A single mic button on the job sheet. The worker says "replaced the two radiator valves, old ones were seized, cleared up, customer's happy, spotted the outside tap dripping." The app fills in work done, parts used, ticks the matching checks, and drops the tap into "extra work spotted" — all editable. This is the single biggest change to how the app feels.
 
-**4. No "it didn't go to plan" path.**
-No access, customer not in, needs a return visit, parts missing. Right now the only honest option is to leave the job untouched.
+**Photos do the paperwork.**
+Every photo is auto-labelled Before/During/After from where you are in the status flow, timestamped and geo-noted. No dropdowns.
 
-**5. Photos are fragile.**
-Stored as data URLs in browser storage; when it fills up the save silently fails and the photo is lost. No upload feedback, no HEIC handling, no "photo required" prompt.
+**Nothing is a blank box.**
+Checks, parts and measurements are suggested from the service type on the job (boiler service vs. fencing vs. garden clearance), so the sheet starts 80% filled.
 
-**6. Small but constant friction.**
-Signature name is read out of the DOM rather than state. No time on site actually measured (only stamps). No "next job" link at the bottom of a job sheet. No offline indicator. The whole sheet stays editable after sign-off.
+## Part 2 — Make every visit pay
 
-## What I'd build
+**Get paid before you leave.**
+At wrap up, the worker can take payment on the spot — amount pre-filled from the job value, a payment link the customer taps on their own phone or a "paid by card/cash/bank transfer" record. Cash in the same day instead of chasing an invoice for three weeks.
 
-### A. Finish properly (biggest win)
-- Replace the free "Finished" tap with a **Wrap up** sheet: shows what's still missing (no after photo, checks unticked, no signature, no notes) and asks for a reason if the worker finishes anyway.
-- Sign-off locks the sheet to read-only with a small "Reopen" for corrections; the office sees who reopened and when.
-- Day-level "Day complete" summary on My day: jobs done, hours on site, extra work spotted.
+**Extra work becomes a real quote, on site.**
+"Spotted more work" stops being a note. The worker picks a service and a rough price, and the app produces a proper quote the customer can approve there and then, or that lands in the office's Quotes pipeline with photos already attached.
 
-### B. Outcomes, not just statuses
-- Add an outcome to each visit: **Completed / Couldn't get access / Needs a return visit / Parts needed**, each with a short note.
-- Anything other than Completed shows on the office job drawer as a flag, not buried in notes.
+**Ask for the review at the best possible moment.**
+Straight after the signature — while the customer is happy and standing there — one tap sends the review request. This feeds directly into the Google Business Profile module already in the app.
 
-### C. Timing and travel on My day
-- Timeline layout with gaps between stops ("45 min gap", "back-to-back").
-- Per-card **Navigate** and **Call** buttons so the worker never has to open the job to leave.
-- Running-late hint when the current time is past the start of a job still not started.
-- Time on site measured from Arrived → Finished, shown on the card and sent to the office (feeds timesheets later).
+**The customer gets a job story, not silence.**
+Sign-off generates a clean visit summary: before/after photos, what was done, parts used, who attended, signature. Sent by text/email automatically. It's proof of work, marketing content and a dispute-killer in one.
 
-### D. Photo reliability
-- Show upload/compress progress and a clear error if storage is full, with a prompt to reduce quality rather than losing the shot.
-- Prompt for at least one **After** photo before wrap up.
-- Per-photo timestamps visible; group the grid by Before / During / After.
+**Book the next visit while you're there.**
+Servicing, follow-up, second fix — one tap proposes a return date and puts it in the schedule.
 
-### E. Per-worker records
-- Key field records by `jobId + employeeId` so each worker's sheet, photos and stamps are their own; the office view merges all workers on a job.
-- Migrate existing single-key records to the first assigned worker on load, so nothing is lost.
+## Part 3 — Make it trustworthy
 
-### F. Field navigation
-- Sticky bottom bar in the field app: **My day**, **Job** (current), **Me** (today's hours and jobs done).
-- End of job sheet: "Next: 14:00 Mrs Hall" with a direct link.
+**Works with no signal.** Everything is written locally and marked "Waiting to send", with a clear banner. Nothing is ever lost because a barn had no bars.
+
+**Finish means finished.** A wrap-up sheet shows what's missing (no after photo, no signature, no notes) and asks for a reason if the worker skips it. Sign-off locks the sheet.
+
+**It didn't go to plan is a first-class option.** Couldn't get access / needs a return visit / parts needed — each with a note, flagged straight to the office instead of being buried.
+
+**Each worker owns their own sheet.** Records are per worker per job, so two people on one job don't overwrite each other; the office view merges them.
+
+**The worker sees what they earned.** A simple "Me" tab: jobs done this week, hours on site, extra work spotted, payments taken. Motivating, and it doubles as a timesheet.
+
+## What the office gets out of it
+
+Site visit section on the job shows: every worker's sheet merged, the visit outcome flag, time on site, payment taken, extra work with a draft quote ready to send, review request status, and the customer summary that went out. Extra work spotted across all jobs becomes a small "Opportunities from the field" list — the cheapest pipeline in the business.
 
 ## Technical notes
 
-- `src/lib/fieldStore.ts`: change the record key to `${jobId}::${employeeId}`, add `outcome`, `outcomeNote`, `lockedAt`, `reopenedAt`, and a one-off migration of old keys. Add selectors for "all records for a job" used by the office view.
-- New `src/components/field/WrapUpSheet.tsx` — completeness checks derived from the record, blocking-with-override behaviour.
-- `src/pages/field/MyDay.tsx` — timeline with gap rows, per-card navigate/call, running-late state, day summary footer.
-- `src/pages/field/FieldJob.tsx` — read-only mode after sign-off, outcome picker, next-job footer, time-on-site display.
-- `src/components/field/PhotoGrid.tsx` — progress state, quota error handling, grouped by label.
-- `src/components/field/FieldLayout.tsx` — bottom tab bar.
-- `src/components/pipeline/SiteVisitSection.tsx` — multi-worker merge, outcome flags, time on site.
-- `src/components/field/SignaturePad.tsx` / `SignOff` — lift the name into React state instead of `getElementById`.
-
-Existing semantic tokens and mock data only; no backend changes.
+- `src/lib/fieldStore.ts`: key records by `${jobId}::${employeeId}` with a migration of existing keys; add `outcome`, `outcomeNote`, `payment`, `reviewRequest`, `followUp`, `lockedAt`, `syncState`. Selectors for all records on a job.
+- `src/lib/fieldTemplates.ts`: service-type → suggested checks, parts and measurements.
+- Voice: Web Speech API for dictation where available, with a typed fallback; parsing into fields via the Lovable AI gateway, returning a structured job sheet the worker confirms.
+- `src/components/field/WrapUpSheet.tsx` — completeness checks, outcome, payment, signature, review request, follow-up booking, all in one guided sheet.
+- `src/components/field/PaymentStep.tsx` — records payment method and amount, writes to `invoicesStore`. Card links are a placeholder until a payment provider is enabled.
+- `src/lib/visitSummary.ts` + `src/components/field/VisitSummary.tsx` — the customer-facing job story, shareable via the Web Share API.
+- Extra work → `quotesStore` draft with photos attached; surfaced in Quotes and a new office "Opportunities from the field" list.
+- `src/pages/field/MyDay.tsx` — current-job card, timeline with travel gaps, per-card Navigate/Call, running-late hint, day summary.
+- `src/components/field/FieldLayout.tsx` — bottom tabs (My day / Job / Me) and the offline banner.
+- `src/components/pipeline/SiteVisitSection.tsx` — multi-worker merge, outcome flags, payment, review status.
+- Existing semantic tokens and mock data; no schema changes unless we later move field records to the backend.
 
 ## Suggested order
 
-1. Per-worker records + migration (everything else depends on the key change)
-2. Wrap up + outcomes + sign-off lock
-3. My day timeline, travel gaps, per-card actions
-4. Photo reliability
-5. Bottom nav + next job
-6. Office-side merge and flags
+1. Per-worker records + offline banner + wrap-up sheet with outcomes and lock
+2. One live job screen and the day timeline
+3. Voice-to-job-sheet plus service templates and auto-labelled photos
+4. Payment on site, review request, customer visit summary
+5. Extra work → quote, follow-up booking, "Opportunities from the field"
+6. "Me" tab and office-side merge
