@@ -154,6 +154,45 @@ export function QuotePreviewDialog({ open, onOpenChange, doc, mode }: Props) {
             </div>
           </div>
 
+          {tailored && effective && (
+            <div className="border-hairline rounded-lg p-4 mb-6 bg-surface/40 text-sm">
+              <div className="font-medium mb-2">
+                {selection?.acceptedAt
+                  ? `What ${selection.acceptedBy || "the customer"} chose`
+                  : "What the customer can choose"}
+              </div>
+              <div className="space-y-1.5">
+                {choiceGroups(doc.items).map((g) => {
+                  const pickedId = effective.chosen?.[g.id];
+                  const picked = g.options.find((o) => o.id === pickedId);
+                  return (
+                    <div key={g.id} className="flex justify-between gap-3">
+                      <span className="text-muted-foreground">{g.label}</span>
+                      <span>
+                        {picked?.name || "—"}
+                        <span className="text-muted-foreground">
+                          {" "}
+                          ({g.options.length} options)
+                        </span>
+                      </span>
+                    </div>
+                  );
+                })}
+                {optionalItems(doc.items).map((li) => (
+                  <div key={li.id} className="flex justify-between gap-3">
+                    <span className="text-muted-foreground">Extra — {li.name}</span>
+                    <span>{effective.extras?.includes(li.id) ? "Added" : "Not added"}</span>
+                  </div>
+                ))}
+              </div>
+              {selection?.acceptedAt && (
+                <div className="text-xs text-muted-foreground mt-2 border-t-hairline pt-2">
+                  Signed off by {selection.acceptedBy} on {fmtDateTime(selection.acceptedAt)}.
+                </div>
+              )}
+            </div>
+          )}
+
           {doc.notes && (
             <div className="border-t-hairline pt-4 text-sm">
               <div className="text-xs text-muted-foreground mb-1">Notes</div>
