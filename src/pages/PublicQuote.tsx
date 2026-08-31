@@ -1,13 +1,15 @@
 import { useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
-import { CheckCircle2, Loader2, MessageCircle } from "lucide-react";
+import { Link, Navigate, useParams } from "react-router-dom";
+import { CheckCircle2, ChevronLeft, Loader2, MessageCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { findQuote, useQuotes } from "@/lib/quotesStore";
 import { acceptQuote } from "@/lib/lifecycle";
 import { updateQuote } from "@/lib/quotesStore";
+import { normEmail, quoteEmail, usePortalSession } from "@/lib/portalSession";
 import type { QuoteSelection } from "@/data/mockData";
+
 import {
   choiceGroups,
   defaultSelection,
