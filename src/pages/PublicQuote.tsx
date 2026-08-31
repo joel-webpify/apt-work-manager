@@ -30,7 +30,9 @@ import {
 export default function PublicQuote() {
   const { id } = useParams();
   useQuotes(); // re-render when the quote is updated
+  const session = usePortalSession();
   const quote = id ? findQuote(id) : undefined;
+
 
   const [sel, setSel] = useState<QuoteSelection>(() =>
     quote ? quote.selection ?? defaultSelection(quote.items) : { chosen: {}, extras: [] },
