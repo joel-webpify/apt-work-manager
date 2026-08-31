@@ -270,7 +270,8 @@ export default function Quotes() {
               <EmptyRow icon={<FileText className="w-5 h-5" />} text="No quotes match." />
             )}
             {filteredQuotes.map((q) => {
-              const tot = totals(q.items).total;
+              const tot = docTotals(q).total;
+              const tailored = hasCustomerChoices(q.items);
               return (
                 <div
                   key={q.id}
@@ -278,7 +279,14 @@ export default function Quotes() {
                   onClick={() => openPreview(q)}
                 >
                   <div className="font-medium tabular-nums">{q.number}</div>
-                  <div className="truncate">{q.customer}</div>
+                  <div className="truncate flex items-center gap-1.5">
+                    <span className="truncate">{q.customer}</span>
+                    {tailored && (
+                      <span className="shrink-0">
+                        <Pill tone="info">Customer choices</Pill>
+                      </span>
+                    )}
+                  </div>
                   <div className="text-muted-foreground text-xs">{fmtDate(q.issueDate)}</div>
                   <div className="text-muted-foreground text-xs">{fmtDate(q.validUntil)}</div>
                   <div className="text-right tabular-nums font-medium">{fmt(tot)}</div>
@@ -289,6 +297,9 @@ export default function Quotes() {
                     className="flex items-center gap-1"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <Btn onClick={() => copyCustomerLink(q)} title="Copy the link the customer opens">
+                      <Link2 className="w-3.5 h-3.5" /> Link
+                    </Btn>
                     {(q.status === "Draft" || q.status === "Sent") && (
                       <Btn onClick={() => handleAcceptQuote(q)} title="Mark accepted — creates a job">
                         <ThumbsUp className="w-3.5 h-3.5" /> Accept
