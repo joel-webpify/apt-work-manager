@@ -56,7 +56,7 @@ Site visit section on the job shows: every worker's sheet merged, the visit outc
 
 - `src/lib/fieldStore.ts`: key records by `${jobId}::${employeeId}` with a migration of existing keys; add `outcome`, `outcomeNote`, `payment`, `reviewRequest`, `followUp`, `lockedAt`, `syncState`. Selectors for all records on a job.
 - `src/lib/fieldTemplates.ts`: service-type → suggested checks, parts and measurements.
-- Voice: Web Speech API for dictation where available, with a typed fallback; parsing into fields via the Lovable AI gateway, returning a structured job sheet the worker confirms.
+- Voice is additive: the existing textareas stay, with quick-pick chips driven by `fieldTemplates` and an optional mic button. Web Speech API for dictation where available (button hidden if not); the transcript is parsed into fields via the Lovable AI gateway and shown for confirmation before it's written. "Tidy this up" runs the same gateway call on typed text.
 - `src/components/field/WrapUpSheet.tsx` — completeness checks, outcome, payment, signature, review request, follow-up booking, all in one guided sheet.
 - `src/components/field/PaymentStep.tsx` — records payment method and amount, writes to `invoicesStore`. Card links are a placeholder until a payment provider is enabled.
 - `src/lib/visitSummary.ts` + `src/components/field/VisitSummary.tsx` — the customer-facing job story, shareable via the Web Share API.
