@@ -1,10 +1,11 @@
 import { Outlet, Link, NavLink, useLocation } from "react-router-dom";
-import { ArrowLeft, CalendarDays, ClipboardList, CloudOff, User, AlertTriangle } from "lucide-react";
+import { ArrowLeft, CalendarDays, CalendarRange, ClipboardList, CloudOff, User, AlertTriangle } from "lucide-react";
 import { employees } from "@/data/mockData";
 import { storageFailed, useFieldRecords, useFieldUser, useOnline } from "@/lib/fieldStore";
 
 const tabs = [
   { to: "/field", label: "My day", icon: CalendarDays, end: true },
+  { to: "/field/week", label: "My week", icon: CalendarRange, end: true },
   { to: "/field/me", label: "Me", icon: User, end: true },
 ];
 
@@ -67,7 +68,7 @@ export default function FieldLayout() {
         </main>
 
         {!onJob && (
-          <nav className="sticky bottom-0 z-30 bg-background/95 backdrop-blur border-t-hairline grid grid-cols-2">
+          <nav className="sticky bottom-0 z-30 bg-background/95 backdrop-blur border-t-hairline grid grid-cols-3">
             {tabs.map((t) => (
               <NavLink
                 key={t.to}
