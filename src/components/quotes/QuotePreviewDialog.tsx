@@ -10,7 +10,17 @@ import {
   quoteStatusTones,
   invoiceStatusTones,
 } from "@/data/mockData";
-import { totals, fmt, fmtDate } from "@/lib/quoteUtils";
+import {
+  totals,
+  fmt,
+  fmtDate,
+  fmtDateTime,
+  resolveItems,
+  hasCustomerChoices,
+  defaultSelection,
+  choiceGroups,
+  optionalItems,
+} from "@/lib/quoteUtils";
 import { toast } from "@/hooks/use-toast";
 
 interface Props {
@@ -22,8 +32,13 @@ interface Props {
 
 export function QuotePreviewDialog({ open, onOpenChange, doc, mode }: Props) {
   if (!doc) return null;
-  const t = totals(doc.items);
   const isInvoice = mode === "invoice";
+  const quote = isInvoice ? null : (doc as Quote);
+  const selection = quote?.selection;
+  const items = resolveItems(doc.items, selection);
+  const t = totals(items);
+  const tailored = !isInvoice && hasCustomerChoices(doc.items);
+  const effective = selection ?? (quote ? defaultSelection(doc.items) : undefined);
   const tone = isInvoice
     ? invoiceStatusTones[(doc as Invoice).status]
     : quoteStatusTones[(doc as Quote).status];
