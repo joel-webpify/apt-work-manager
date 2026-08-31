@@ -2,7 +2,7 @@
 
 Right now the field app records a job. That's table stakes. The version worth building does two things instead: it makes the visit almost effortless for the worker, and it turns every visit into revenue — payment, a review, and the next job — before the van leaves the driveway.
 
-The guiding rule: **a worker should be able to run a whole job with a thumb and their voice, and never type a paragraph.**
+The guiding rule: **never make a worker type a paragraph they could tap, pick, or say instead** — typing stays available everywhere, it's just no longer the only way.
 
 ## Part 1 — Make it effortless
 
