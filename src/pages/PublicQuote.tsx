@@ -62,6 +62,13 @@ export default function PublicQuote() {
     );
   }
 
+  // Only the customer this quote was sent to can see it.
+  const onRecord = quoteEmail(quote);
+  if (!session || (onRecord && normEmail(onRecord) !== session.email)) {
+    return <Navigate to={`/portal?next=/quote/${quote.id}`} replace />;
+  }
+
+
   const locked = !!quote.selection?.acceptedAt;
   const shown = locked ? quote.selection! : sel;
   const finalItems = resolveItems(quote.items, shown);
