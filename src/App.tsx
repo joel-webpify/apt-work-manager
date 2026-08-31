@@ -29,6 +29,7 @@ import FieldLayout from "./components/field/FieldLayout";
 import MyDay from "./pages/field/MyDay";
 import FieldJob from "./pages/field/FieldJob";
 import MyStats from "./pages/field/MyStats";
+import MyWeek from "./pages/field/MyWeek";
 
 
 
@@ -46,6 +47,7 @@ const App = () => (
           <Route path="/field" element={<FieldLayout />}>
             <Route index element={<MyDay />} />
             <Route path="job/:id" element={<FieldJob />} />
+            <Route path="week" element={<MyWeek />} />
             <Route path="me" element={<MyStats />} />
           </Route>
           <Route element={<AppLayout />}>
