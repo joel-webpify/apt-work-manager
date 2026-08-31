@@ -43,6 +43,7 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/quote/:id" element={<PublicQuote />} />
           <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
           <Route path="/field" element={<FieldLayout />}>
             <Route index element={<MyDay />} />
