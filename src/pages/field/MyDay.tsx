@@ -76,6 +76,20 @@ export default function MyDay() {
 
   const totalHours = dayStops.reduce((sum, s) => sum + s.assignment.duration, 0);
 
+  // The one job you're actually on right now — everything else can wait.
+  const live = dayStops.find((s) => {
+    const r = records[`${s.job.id}::${userId}`];
+    return r && ["on-my-way", "arrived", "working"].includes(r.status) && !r.lockedAt;
+  });
+  const nextUp = dayStops.find((s) => {
+    const r = records[`${s.job.id}::${userId}`];
+    return !r || r.status === "not-started";
+  });
+  const focus = live ?? nextUp;
+  const focusRec = focus ? (records[`${focus.job.id}::${userId}`] ?? emptyRecord()) : undefined;
+  const doneCount = dayStops.filter((s) => records[`${s.job.id}::${userId}`]?.lockedAt).length;
+
+
   return (
     <div className="flex-1">
       {/* date strip */}
