@@ -1208,34 +1208,83 @@ export default function WorkflowDetail() {
         )}
 
         {tab === "history" && (
-          <div className="border-hairline rounded-lg bg-card overflow-hidden max-w-3xl">
-            <div className="grid grid-cols-[1fr_160px_120px] px-4 h-9 border-b-hairline text-xs text-muted-foreground items-center">
-              <div>Who / what happened</div>
-              <div>Started</div>
-              <div>Status</div>
-            </div>
-            {(draft.runs ?? []).length === 0 ? (
-              <div className="p-10 text-center text-sm text-muted-foreground">
-                Nothing yet. Once this automation is switched on, everything it does will be listed here.
-              </div>
-            ) : (
-              (draft.runs ?? []).map((r) => (
-                <div key={r.id} className="grid grid-cols-[1fr_160px_120px] px-4 h-12 border-b-hairline last:border-b-0 items-center text-sm">
-                  <div>
-                    <div className="font-medium">{r.contact ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground truncate">{r.summary}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{new Date(r.startedAt).toLocaleString()}</div>
-                  <div>
-                    <Pill tone={r.status === "completed" ? "success" : r.status === "failed" ? "danger" : "info"}>
-                      {r.status}
-                    </Pill>
-                  </div>
+          <div className="max-w-3xl space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {[
+                { label: "People in it", value: stats.enrolled },
+                { label: "Finished", value: stats.finished },
+                { label: "Skipped", value: stats.skipped },
+                { label: "Problems", value: stats.failed },
+                { label: "Emails opened", value: stats.opened },
+                { label: "Links clicked", value: stats.clicked },
+              ].map((s) => (
+                <div key={s.label} className="border-hairline rounded-lg bg-card p-3">
+                  <div className="text-lg font-semibold tabular-nums">{s.value}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.label}</div>
                 </div>
-              ))
-            )}
+              ))}
+            </div>
+
+            <div className="border-hairline rounded-lg bg-card overflow-hidden">
+              <div className="grid grid-cols-[1fr_160px_110px_28px] px-4 h-9 border-b-hairline text-xs text-muted-foreground items-center">
+                <div>Who / what happened</div>
+                <div>Started</div>
+                <div>Status</div>
+                <div />
+              </div>
+              {(draft.runs ?? []).length === 0 ? (
+                <div className="p-10 text-center text-sm text-muted-foreground">
+                  Nothing yet. Once this automation is switched on, everything it does will be listed here.
+                </div>
+              ) : (
+                (draft.runs ?? []).map((r) => {
+                  const isOpen = openRun === r.id;
+                  return (
+                    <div key={r.id} className="border-b-hairline last:border-b-0">
+                      <button
+                        onClick={() => setOpenRun(isOpen ? null : r.id)}
+                        className="w-full grid grid-cols-[1fr_160px_110px_28px] px-4 h-12 items-center text-sm text-left hover:bg-surface-hover"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{r.contact ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{r.reason ?? r.summary}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{new Date(r.startedAt).toLocaleString()}</div>
+                        <div>
+                          <Pill tone={r.status === "completed" ? "success" : r.status === "failed" ? "danger" : r.status === "skipped" ? "neutral" : "info"}>
+                            {r.status === "skipped" ? "not run" : r.status}
+                          </Pill>
+                        </div>
+                        <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                      </button>
+                      {isOpen && (
+                        <div className="px-4 pb-3 space-y-1.5 bg-surface/30">
+                          {(r.steps ?? []).length === 0 ? (
+                            <div className="text-xs text-muted-foreground italic py-2">No step details for this one.</div>
+                          ) : (
+                            (r.steps ?? []).map((s, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs p-2 rounded-md bg-card border-hairline">
+                                {s.status === "done" ? <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
+                                  : s.status === "failed" ? <AlertTriangle className="w-3.5 h-3.5 text-rose-500 mt-0.5" />
+                                  : s.status === "waiting" ? <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5" />
+                                  : <X className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />}
+                                <div>
+                                  <div className="font-medium">{s.label}</div>
+                                  {s.note && <div className="text-muted-foreground">{s.note}</div>}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
+
 
         {tab === "settings" && (
           <div className="max-w-2xl space-y-4">
