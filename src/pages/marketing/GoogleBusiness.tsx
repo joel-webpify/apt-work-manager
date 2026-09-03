@@ -14,6 +14,7 @@ import {
   Trash2,
   Sparkles,
   Grid3x3,
+  ImagePlus,
 } from "lucide-react";
 import { PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { RankGridTab } from "@/components/marketing/RankGridTab";
