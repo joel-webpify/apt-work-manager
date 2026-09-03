@@ -1253,44 +1253,74 @@ export default function WorkflowDetail() {
         {tab === "settings" && (
           <div className="max-w-2xl space-y-4">
             <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
-              <div className="text-sm font-medium">How often it runs</div>
+              <div className="text-sm font-medium">How often the same person goes through this</div>
+              <Select value={settings.reEnroll} onValueChange={(v) => patchSettings({ reEnroll: v as WorkflowSettings["reEnroll"] })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="once">Once only</SelectItem>
+                  <SelectItem value="once_per_job">Once for each job</SelectItem>
+                  <SelectItem value="every_time">Every time it happens</SelectItem>
+                </SelectContent>
+              </Select>
+            </section>
+
+            <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
+              <div className="text-sm font-medium">Good manners</div>
               <label className="flex items-center gap-3 text-sm">
-                <Switch
-                  checked={(draft.triggerConfig?.reEnroll as string) === "true"}
-                  onCheckedChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, reEnroll: v ? "true" : "false" } })}
-                />
-                Let the same person go through this more than once
+                <Switch checked={settings.workingDaysOnly} onCheckedChange={(v) => patchSettings({ workingDaysOnly: v })} />
+                Only send emails and texts on working days
               </label>
               <label className="flex items-center gap-3 text-sm">
-                <Switch
-                  checked={(draft.triggerConfig?.skipWeekends as string) === "true"}
-                  onCheckedChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, skipWeekends: v ? "true" : "false" } })}
+                <Switch checked={settings.quietHours} onCheckedChange={(v) => patchSettings({ quietHours: v })} />
+                Keep quiet in the evening and early morning
+              </label>
+              {settings.quietHours && (
+                <div className="flex items-center gap-2 pl-11">
+                  <span className="text-xs text-muted-foreground">from</span>
+                  <Input type="time" value={settings.quietFrom} onChange={(e) => patchSettings({ quietFrom: e.target.value })} className="h-8 text-xs w-28" />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <Input type="time" value={settings.quietTo} onChange={(e) => patchSettings({ quietTo: e.target.value })} className="h-8 text-xs w-28" />
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Never send more than</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={settings.maxPerContactPerDay}
+                  onChange={(e) => patchSettings({ maxPerContactPerDay: Number(e.target.value) })}
+                  className="h-8 text-xs w-20"
                 />
-                Only send emails and messages on working days
+                <span className="text-sm">message(s) a day to one person</span>
+              </div>
+              <label className="flex items-center gap-3 text-sm">
+                <Switch checked={settings.skipUnsubscribed} onCheckedChange={(v) => patchSettings({ skipUnsubscribed: v })} />
+                Skip anyone who has asked not to be emailed
               </label>
             </section>
+
             <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
               <div className="text-sm font-medium">Stop early when… (optional)</div>
               <p className="text-xs text-muted-foreground">If this happens, the person stops receiving the rest of the steps.</p>
-              <Select
-                value={(draft.triggerConfig?.goal as string) ?? "none"}
-                onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, goal: v } })}
-              >
+              <Select value={settings.goal} onValueChange={(v) => patchSettings({ goal: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Never stop early</SelectItem>
                   <SelectItem value="quote_accepted">They accept a quote</SelectItem>
                   <SelectItem value="invoice_paid">They pay an invoice</SelectItem>
                   <SelectItem value="job_created">A job is created for them</SelectItem>
-                  <SelectItem value="tag_added">A label is added to them</SelectItem>
+                  <SelectItem value="visit_booked">They book a visit</SelectItem>
+                  <SelectItem value="email_replied">They reply to an email</SelectItem>
                 </SelectContent>
               </Select>
             </section>
+
             <div className="flex justify-end">
               <Btn variant="primary" onClick={() => save()}>Save settings</Btn>
             </div>
           </div>
         )}
+
       </PageBody>
     </>
   );
