@@ -1,10 +1,11 @@
-import { Workflow as WorkflowIcon, Plus, Copy, Trash2, MoreHorizontal, Search } from "lucide-react";
+import { Workflow as WorkflowIcon, Plus, Copy, Trash2, Search, Sparkles } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Input } from "@/components/ui/input";
 import {
   addWorkflow,
+  countSteps,
   deleteWorkflow,
   duplicateWorkflow,
   newWorkflow,
@@ -12,13 +13,17 @@ import {
   updateWorkflow,
   useWorkflows,
 } from "@/lib/workflowsStore";
+import { workflowFromTemplate, workflowTemplates, type WorkflowTemplate } from "@/lib/workflowTemplates";
 import { toast } from "@/hooks/use-toast";
+
+const categories = ["Win more work", "Get paid", "Keep customers", "Reputation"] as const;
 
 export default function Workflows() {
   const workflows = useWorkflows();
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "active" | "draft">("all");
+  const [cat, setCat] = useState<"All" | (typeof categories)[number]>("All");
 
   const filtered = workflows.filter((w) => {
     if (filter === "active" && !w.active) return false;
@@ -27,14 +32,24 @@ export default function Workflows() {
     return true;
   });
 
+  const recipes = workflowTemplates.filter((t) => cat === "All" || t.category === cat);
+
   const create = () => {
     const w = newWorkflow();
     addWorkflow(w);
     navigate(`/automations/${w.id}`);
   };
 
+  const useRecipe = (t: WorkflowTemplate) => {
+    const w = workflowFromTemplate(t);
+    addWorkflow(w);
+    toast({ title: "Added as a draft", description: "Have a look, then switch it on when you are happy." });
+    navigate(`/automations/${w.id}`);
+  };
+
   const activeCount = workflows.filter((w) => w.active).length;
   const totalRuns = workflows.reduce((s, w) => s + (w.runs?.length ?? 0), 0);
+
 
   return (
     <>
