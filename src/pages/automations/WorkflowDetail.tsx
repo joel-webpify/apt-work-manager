@@ -990,7 +990,19 @@ export default function WorkflowDetail() {
           ))}
         </div>
 
+        {tab === "build" && warnings.length > 0 && (
+          <div className="mb-4 border-hairline rounded-lg bg-amber-500/[0.06] p-3 space-y-1">
+            <div className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5" /> Worth fixing before you switch this on
+            </div>
+            {warnings.map((w, i) => (
+              <div key={i} className="text-xs text-muted-foreground pl-5">{w}</div>
+            ))}
+          </div>
+        )}
+
         {tab === "build" && (
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
             {/* Editor */}
             <div className="space-y-6">
