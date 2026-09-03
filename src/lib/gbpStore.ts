@@ -39,6 +39,7 @@ export interface GbpPost {
   ctaUrl: string;
   status: "draft" | "scheduled" | "published";
   date: string; // ISO date (yyyy-mm-dd)
+  imageUrl?: string;
 }
 
 export interface GbpState {
