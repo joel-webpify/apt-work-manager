@@ -140,7 +140,7 @@ export default function Workflows() {
                   <span className="mx-1">·</span>
                   {tmeta.label}
                 </div>
-                <div className="text-xs">{w.actions.length}</div>
+                <div className="text-xs">{countSteps(w.actions)}</div>
                 <div>
                   <button
                     onClick={(e) => {
