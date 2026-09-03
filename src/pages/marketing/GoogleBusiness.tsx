@@ -427,9 +427,20 @@ function PostsTab() {
                 </Btn>
               </div>
             </div>
-            <div className="text-sm font-medium mt-2">{p.title || "Untitled post"}</div>
-            <p className="text-sm text-muted-foreground mt-0.5">{p.body}</p>
-            {p.cta && <div className="text-xs text-primary mt-2">{p.cta} →</div>}
+            <div className="flex gap-3 mt-2">
+              {p.imageUrl && (
+                <img
+                  src={p.imageUrl}
+                  alt={p.title || "Post photo"}
+                  className="w-20 h-20 rounded-md object-cover border-hairline shrink-0"
+                />
+              )}
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{p.title || "Untitled post"}</div>
+                <p className="text-sm text-muted-foreground mt-0.5">{p.body}</p>
+                {p.cta && <div className="text-xs text-primary mt-2">{p.cta} →</div>}
+              </div>
+            </div>
           </div>
         ))}
       </div>
