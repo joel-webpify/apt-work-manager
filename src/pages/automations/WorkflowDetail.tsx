@@ -1123,43 +1123,29 @@ export default function WorkflowDetail() {
                   <div className="text-xs text-muted-foreground italic">No rules — this runs every time.</div>
                 ) : (
                   <div className="space-y-2">
+                    {draft.conditions.length > 1 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Match</span>
+                        <Select
+                          value={draft.conditionMatch ?? "all"}
+                          onValueChange={(v) => patch({ conditionMatch: v as "all" | "any" })}
+                        >
+                          <SelectTrigger className="h-8 text-xs w-[220px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">all of these rules</SelectItem>
+                            <SelectItem value="any">any one of these rules</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {draft.conditions.map((c, i) => (
-                      <div key={c.id} className="grid grid-cols-[60px_1fr_110px_1fr_auto] gap-2 items-center">
-                        <span className="text-xs text-muted-foreground text-center">{i === 0 ? "Only if" : "and"}</span>
-                        <Select
-                          value={c.field}
-                          onValueChange={(v) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, field: v } : x) })}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="contact.tag">Contact label</SelectItem>
-                            <SelectItem value="contact.lifecycle">Customer stage</SelectItem>
-                            <SelectItem value="contact.source">Where they came from</SelectItem>
-                            <SelectItem value="contact.totalSpend">Total they have spent</SelectItem>
-                            <SelectItem value="job.value">Job value (£)</SelectItem>
-                            <SelectItem value="job.stage">Job stage</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={c.op}
-                          onValueChange={(v) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, op: v as WorkflowCondition["op"] } : x) })}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="equals">is</SelectItem>
-                            <SelectItem value="not_equals">is not</SelectItem>
-                            <SelectItem value="contains">contains</SelectItem>
-                            <SelectItem value="greater_than">is more than</SelectItem>
-                            <SelectItem value="less_than">is less than</SelectItem>
-                            <SelectItem value="is_set">has a value</SelectItem>
-                            <SelectItem value="is_empty">is blank</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          value={c.value}
-                          onChange={(e) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, value: e.target.value } : x) })}
-                          className="h-8 text-xs"
-                          placeholder="Value"
+                      <div key={c.id} className="grid grid-cols-[60px_1fr_auto] gap-2 items-center">
+                        <span className="text-xs text-muted-foreground text-center">
+                          {i === 0 ? "Only if" : (draft.conditionMatch ?? "all") === "all" ? "and" : "or"}
+                        </span>
+                        <ConditionRow
+                          value={c}
+                          onChange={(next) => patch({ conditions: draft.conditions.map((x) => (x.id === c.id ? next : x)) })}
                         />
                         <button
                           onClick={() => patch({ conditions: draft.conditions.filter((x) => x.id !== c.id) })}
@@ -1171,6 +1157,7 @@ export default function WorkflowDetail() {
                     ))}
                   </div>
                 )}
+
               </section>
 
               {/* Actions */}
