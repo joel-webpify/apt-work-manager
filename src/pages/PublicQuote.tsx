@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import { CheckCircle2, ChevronLeft, Loader2, MessageCircle } from "lucide-react";
+import { CheckCircle2, ChevronLeft, Loader2, MessageCircle, PenLine } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
@@ -8,6 +8,7 @@ import { findQuote, useQuotes } from "@/lib/quotesStore";
 import { acceptQuote } from "@/lib/lifecycle";
 import { updateQuote } from "@/lib/quotesStore";
 import { normEmail, quoteEmail, usePortalSession } from "@/lib/portalSession";
+import SignaturePad from "@/components/field/SignaturePad";
 import type { QuoteSelection } from "@/data/mockData";
 
 import {
@@ -38,6 +39,7 @@ export default function PublicQuote() {
     quote ? quote.selection ?? defaultSelection(quote.items) : { chosen: {}, extras: [] },
   );
   const [name, setName] = useState("");
+  const [signature, setSignature] = useState<string | null>(null);
   const [question, setQuestion] = useState("");
   const [asking, setAsking] = useState(false);
 
@@ -79,9 +81,18 @@ export default function PublicQuote() {
       toast({ title: "Please add your name", description: "We need a name for the sign-off." });
       return;
     }
+    if (!signature) {
+      toast({ title: "Please sign first", description: "Draw your signature in the box to accept." });
+      return;
+    }
     updateQuote(quote.id, {
       items: finalItems,
-      selection: { ...sel, acceptedBy: name.trim(), acceptedAt: new Date().toISOString() },
+      selection: {
+        ...sel,
+        acceptedBy: name.trim(),
+        acceptedAt: new Date().toISOString(),
+        signature,
+      },
     });
     acceptQuote(quote.id);
     toast({
@@ -147,6 +158,16 @@ export default function PublicQuote() {
                 <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))]" />
                 Accepted by {quote.selection?.acceptedBy} — thank you.
               </div>
+              {quote.selection?.signature && (
+                <div className="rounded-lg border-hairline bg-surface p-3">
+                  <div className="text-xs text-muted-foreground mb-1">Signed</div>
+                  <img
+                    src={quote.selection.signature}
+                    alt={`Signature of ${quote.selection.acceptedBy ?? "customer"}`}
+                    className="h-16 w-auto"
+                  />
+                </div>
+              )}
               {finalItems.map((li) => (
                 <Row key={li.id} label={li.name} sub={li.description} price={lineTotal(li)} qty={li.qty} unit={li.unit} />
               ))}
@@ -283,6 +304,29 @@ export default function PublicQuote() {
                   <span className="tabular-nums">{fmt(t.total)}</span>
                 </div>
 
+                {/* Signature */}
+                <div className="mt-4 rounded-lg border-hairline p-4">
+                  <div className="flex items-center gap-2 text-sm font-medium mb-2">
+                    <PenLine className="w-4 h-4 text-muted-foreground" /> Sign here to accept
+                  </div>
+                  {signature ? (
+                    <div className="space-y-2">
+                      <div className="rounded-lg border-hairline bg-surface p-2">
+                        <img src={signature} alt="Your signature" className="h-[110px] w-auto mx-auto" />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setSignature(null)}
+                        className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-2"
+                      >
+                        Clear and sign again
+                      </button>
+                    </div>
+                  ) : (
+                    <SignaturePad onSave={setSignature} />
+                  )}
+                </div>
+
                 <div className="mt-4 flex flex-col sm:flex-row gap-2">
                   <Input
                     value={name}
@@ -298,6 +342,9 @@ export default function PublicQuote() {
                     <CheckCircle2 className="w-4 h-4" /> Accept quote — {fmt(t.total)}
                   </button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  By signing you accept this quote for {fmt(t.total)}, including the options you picked.
+                </p>
               </div>
             </>
           )}

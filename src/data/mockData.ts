@@ -632,6 +632,7 @@ export interface QuoteSelection {
   extras: string[];
   acceptedBy?: string;
   acceptedAt?: string; // ISO datetime
+  signature?: string; // data URL of the drawn signature
 }
 
 export interface Quote {
