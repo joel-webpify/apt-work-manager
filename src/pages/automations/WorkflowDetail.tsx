@@ -7,15 +7,29 @@ import {
   ArrowUp,
   ArrowDown,
   Mail,
+  MessageSquare,
   Clock,
+  Hourglass,
+  Sun,
   Tag,
   TagIcon,
+  ListPlus,
+  ListMinus,
+  Pencil,
+  StickyNote,
   CheckSquare,
   GitBranch,
+  SplitSquareHorizontal,
   Briefcase,
   Move,
   UserPlus,
   Bell,
+  BellRing,
+  FileText,
+  Receipt,
+  PoundSterling,
+  CalendarPlus,
+  StopCircle,
   Webhook,
   Zap,
   Repeat,
@@ -25,6 +39,8 @@ import {
   ChevronRight,
   Check,
   X,
+  AlertTriangle,
+  FlaskConical,
 } from "lucide-react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Input } from "@/components/ui/input";
@@ -34,47 +50,84 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   actionMeta,
+  checkWorkflow,
+  conditionFields,
+  conditionOps,
+  countSteps,
+  defaultSettings,
   deleteWorkflow,
   duplicateWorkflow,
   findWorkflow,
+  segmentOptions,
   triggerMeta,
   updateWorkflow,
   useWorkflows,
+  workflowStats,
   type Workflow,
   type WorkflowAction,
   type WorkflowActionType,
   type WorkflowCondition,
+  type WorkflowSettings,
   type WorkflowTrigger,
 } from "@/lib/workflowsStore";
 import { useStages } from "@/lib/stagesStore";
+import { TestRunDialog } from "@/components/automations/TestRunDialog";
 
 const actionIcons: Record<WorkflowActionType, typeof Mail> = {
   send_email: Mail,
+  send_sms: MessageSquare,
   send_sequence: Repeat,
   notify_team: Bell,
+  remind_owner: BellRing,
   add_tag: Tag,
   remove_tag: TagIcon,
+  add_to_segment: ListPlus,
+  remove_from_segment: ListMinus,
   assign_owner: UserPlus,
+  update_field: Pencil,
+  add_note: StickyNote,
   create_task: CheckSquare,
   create_job: Briefcase,
   move_stage: Move,
+  send_quote: FileText,
+  send_invoice: Receipt,
+  payment_reminder: PoundSterling,
+  book_visit: CalendarPlus,
   wait: Clock,
+  wait_until: Hourglass,
+  wait_for_good_time: Sun,
   branch: GitBranch,
+  ab_split: SplitSquareHorizontal,
+  exit: StopCircle,
   webhook: Webhook,
 };
 
 const actionTones: Record<WorkflowActionType, string> = {
   send_email: "text-blue-500 bg-blue-500/10",
+  send_sms: "text-blue-500 bg-blue-500/10",
   send_sequence: "text-blue-500 bg-blue-500/10",
   notify_team: "text-sky-500 bg-sky-500/10",
+  remind_owner: "text-sky-500 bg-sky-500/10",
   add_tag: "text-purple-500 bg-purple-500/10",
   remove_tag: "text-purple-500 bg-purple-500/10",
+  add_to_segment: "text-purple-500 bg-purple-500/10",
+  remove_from_segment: "text-purple-500 bg-purple-500/10",
   assign_owner: "text-purple-500 bg-purple-500/10",
+  update_field: "text-purple-500 bg-purple-500/10",
+  add_note: "text-purple-500 bg-purple-500/10",
   create_task: "text-emerald-500 bg-emerald-500/10",
   create_job: "text-emerald-500 bg-emerald-500/10",
   move_stage: "text-emerald-500 bg-emerald-500/10",
+  send_quote: "text-teal-500 bg-teal-500/10",
+  send_invoice: "text-teal-500 bg-teal-500/10",
+  payment_reminder: "text-teal-500 bg-teal-500/10",
+  book_visit: "text-emerald-500 bg-emerald-500/10",
   wait: "text-amber-500 bg-amber-500/10",
+  wait_until: "text-amber-500 bg-amber-500/10",
+  wait_for_good_time: "text-amber-500 bg-amber-500/10",
   branch: "text-pink-500 bg-pink-500/10",
+  ab_split: "text-pink-500 bg-pink-500/10",
+  exit: "text-rose-500 bg-rose-500/10",
   webhook: "text-slate-500 bg-slate-500/10",
 };
 
@@ -92,25 +145,52 @@ const newAction = (type: WorkflowActionType): WorkflowAction => {
   switch (type) {
     case "send_email":
       return { id, type, emailSubject: "New email", emailTemplate: "default" };
+    case "send_sms":
+      return { id, type, smsMessage: "" };
     case "send_sequence":
       return { id, type, sequenceId: "" };
     case "notify_team":
       return { id, type, notifyChannel: "in_app", notifyRecipients: "sales", notifyMessage: "" };
+    case "remind_owner":
+      return { id, type, reminderMessage: "", reminderInMinutes: 30 };
     case "add_tag":
     case "remove_tag":
       return { id, type, tag: "" };
+    case "add_to_segment":
+    case "remove_from_segment":
+      return { id, type, segmentId: segmentOptions[0].value };
     case "assign_owner":
       return { id, type, ownerId: "owner" };
+    case "update_field":
+      return { id, type, fieldTarget: "contact", fieldName: "source", fieldValue: "" };
+    case "add_note":
+      return { id, type, noteText: "" };
     case "create_task":
       return { id, type, taskTitle: "Follow up", taskAssignee: "owner", taskDueInDays: 2 };
     case "create_job":
       return { id, type, jobService: "New service", jobPipelineStage: "New lead" };
     case "move_stage":
       return { id, type, targetStage: "" };
+    case "send_quote":
+      return { id, type, quoteTemplate: "standard" };
+    case "send_invoice":
+      return { id, type, invoiceTemplate: "standard", invoiceDueInDays: 14 };
+    case "payment_reminder":
+      return { id, type, paymentReminderTone: "friendly" };
+    case "book_visit":
+      return { id, type, visitWhen: "next_available", visitInDays: 3, visitDurationMins: 60 };
     case "wait":
       return { id, type, waitAmount: 1, waitUnit: "days" };
+    case "wait_until":
+      return { id, type, untilCondition: newCondition(), untilMaxDays: 7 };
+    case "wait_for_good_time":
+      return { id, type, goodTimeWindow: "business_hours" };
+    case "exit":
+      return { id, type, exitReason: "" };
     case "webhook":
       return { id, type, webhookUrl: "", webhookMethod: "POST" };
+    case "ab_split":
+      return { id, type, abLabel: "Two versions", abSplit: 50, aActions: [], bActions: [] };
     case "branch":
       return {
         id,
@@ -122,6 +202,42 @@ const newAction = (type: WorkflowActionType): WorkflowAction => {
       };
   }
 };
+
+// Small reusable condition row used by branches and "wait until"
+function ConditionRow({
+  value,
+  onChange,
+}: {
+  value: WorkflowCondition;
+  onChange: (next: WorkflowCondition) => void;
+}) {
+  const needsValue = !["is_set", "is_empty"].includes(value.op);
+  return (
+    <div className={`grid gap-2 ${needsValue ? "grid-cols-[1fr_110px_1fr]" : "grid-cols-[1fr_110px]"}`}>
+      <Select value={value.field} onValueChange={(v) => onChange({ ...value, field: v })}>
+        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {conditionFields.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={value.op} onValueChange={(v) => onChange({ ...value, op: v as WorkflowCondition["op"] })}>
+        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {conditionOps.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      {needsValue && (
+        <Input
+          value={value.value}
+          onChange={(e) => onChange({ ...value, value: e.target.value })}
+          className="h-8 text-xs"
+          placeholder="Value"
+        />
+      )}
+    </div>
+  );
+}
+
 
 // ───────── Recursive action list editor ─────────
 function ActionListEditor({
@@ -350,6 +466,239 @@ function ActionListEditor({
                   </div>
                 </>
               )}
+              {a.type === "send_sms" && (
+                <>
+                  <Textarea
+                    value={a.smsMessage ?? ""}
+                    onChange={(e) => update(a.id, { smsMessage: e.target.value })}
+                    className="text-xs min-h-[60px]"
+                    placeholder="Hi {{first_name}}, …"
+                  />
+                  <div className="text-[10px] text-muted-foreground">
+                    {(a.smsMessage ?? "").length}/160 characters · {"{{first_name}}"} and {"{{company}}"} are filled in automatically
+                  </div>
+                </>
+              )}
+              {a.type === "remind_owner" && (
+                <>
+                  <Input
+                    value={a.reminderMessage ?? ""}
+                    onChange={(e) => update(a.id, { reminderMessage: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="What should they be reminded to do?"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={a.reminderInMinutes ?? 30}
+                      onChange={(e) => update(a.id, { reminderInMinutes: Number(e.target.value) })}
+                      className="h-8 text-xs w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">minutes from now</span>
+                  </div>
+                </>
+              )}
+              {(a.type === "add_to_segment" || a.type === "remove_from_segment") && (
+                <Select value={a.segmentId ?? ""} onValueChange={(v) => update(a.id, { segmentId: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick a list" /></SelectTrigger>
+                  <SelectContent>
+                    {segmentOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "update_field" && (
+                <div className="grid grid-cols-3 gap-2">
+                  <Select value={a.fieldTarget ?? "contact"} onValueChange={(v) => update(a.id, { fieldTarget: v as WorkflowAction["fieldTarget"] })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="contact">On the contact</SelectItem>
+                      <SelectItem value="job">On the job</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={a.fieldName ?? ""}
+                    onChange={(e) => update(a.id, { fieldName: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="Detail (e.g. source)"
+                  />
+                  <Input
+                    value={a.fieldValue ?? ""}
+                    onChange={(e) => update(a.id, { fieldValue: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="New value"
+                  />
+                </div>
+              )}
+              {a.type === "add_note" && (
+                <Textarea
+                  value={a.noteText ?? ""}
+                  onChange={(e) => update(a.id, { noteText: e.target.value })}
+                  className="text-xs min-h-[54px]"
+                  placeholder="Note to drop on the timeline"
+                />
+              )}
+              {a.type === "send_quote" && (
+                <Select value={a.quoteTemplate ?? "standard"} onValueChange={(v) => update(a.id, { quoteTemplate: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard quote</SelectItem>
+                    <SelectItem value="extra-work">Extra work found on site</SelectItem>
+                    <SelectItem value="service-plan">Service plan</SelectItem>
+                    <SelectItem value="options">Quote with options to choose</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "send_invoice" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={a.invoiceTemplate ?? "standard"} onValueChange={(v) => update(a.id, { invoiceTemplate: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">Standard invoice</SelectItem>
+                      <SelectItem value="deposit">Deposit (50%)</SelectItem>
+                      <SelectItem value="final">Final balance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={a.invoiceDueInDays ?? 14}
+                      onChange={(e) => update(a.id, { invoiceDueInDays: Number(e.target.value) })}
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0">days to pay</span>
+                  </div>
+                </div>
+              )}
+              {a.type === "payment_reminder" && (
+                <Select value={a.paymentReminderTone ?? "friendly"} onValueChange={(v) => update(a.id, { paymentReminderTone: v as WorkflowAction["paymentReminderTone"] })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="friendly">Friendly nudge</SelectItem>
+                    <SelectItem value="firm">Firm reminder</SelectItem>
+                    <SelectItem value="final">Final notice</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "book_visit" && (
+                <div className="grid grid-cols-3 gap-2">
+                  <Select value={a.visitWhen ?? "next_available"} onValueChange={(v) => update(a.id, { visitWhen: v as WorkflowAction["visitWhen"] })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="next_available">Next free slot</SelectItem>
+                      <SelectItem value="same_day">Same day</SelectItem>
+                      <SelectItem value="in_days">In a set number of days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {a.visitWhen === "in_days" ? (
+                    <Input
+                      type="number"
+                      min={1}
+                      value={a.visitInDays ?? 3}
+                      onChange={(e) => update(a.id, { visitInDays: Number(e.target.value) })}
+                      className="h-8 text-xs"
+                    />
+                  ) : <div />}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={15}
+                      step={15}
+                      value={a.visitDurationMins ?? 60}
+                      onChange={(e) => update(a.id, { visitDurationMins: Number(e.target.value) })}
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0">mins</span>
+                  </div>
+                </div>
+              )}
+              {a.type === "wait_until" && (
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Carry on once this is true</div>
+                  <ConditionRow
+                    value={a.untilCondition ?? newCondition()}
+                    onChange={(c) => update(a.id, { untilCondition: c })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Give up after</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={a.untilMaxDays ?? 7}
+                      onChange={(e) => update(a.id, { untilMaxDays: Number(e.target.value) })}
+                      className="h-8 text-xs w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">days</span>
+                  </div>
+                </div>
+              )}
+              {a.type === "wait_for_good_time" && (
+                <Select value={a.goodTimeWindow ?? "business_hours"} onValueChange={(v) => update(a.id, { goodTimeWindow: v as WorkflowAction["goodTimeWindow"] })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="business_hours">Next working hours (9–5, Mon–Fri)</SelectItem>
+                    <SelectItem value="morning">Next morning</SelectItem>
+                    <SelectItem value="afternoon">Next afternoon</SelectItem>
+                    <SelectItem value="weekday">Next working day</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "exit" && (
+                <Input
+                  value={a.exitReason ?? ""}
+                  onChange={(e) => update(a.id, { exitReason: e.target.value })}
+                  className="h-8 text-xs"
+                  placeholder="Why does it stop here? (optional)"
+                />
+              )}
+              {a.type === "ab_split" && (
+                <div className="space-y-3">
+                  <Input
+                    value={a.abLabel ?? ""}
+                    onChange={(e) => update(a.id, { abLabel: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="What are you testing?"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Send version A to</span>
+                    <Input
+                      type="number"
+                      min={5}
+                      max={95}
+                      step={5}
+                      value={a.abSplit ?? 50}
+                      onChange={(e) => update(a.id, { abSplit: Number(e.target.value) })}
+                      className="h-8 text-xs w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">% — the rest get version B</span>
+                  </div>
+                  <div className="rounded-md border-l-2 border-indigo-500/60 pl-3 space-y-2">
+                    <div className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Version A</div>
+                    {(a.aActions?.length ?? 0) > 0 && (
+                      <ActionListEditor
+                        actions={a.aActions ?? []}
+                        onChange={(next) => update(a.id, { aActions: next })}
+                        stageNames={stageNames}
+                        depth={depth + 1}
+                      />
+                    )}
+                    <AddActionMenu compact onAdd={(t) => update(a.id, { aActions: [...(a.aActions ?? []), newAction(t)] })} allowBranch={depth < 2} />
+                  </div>
+                  <div className="rounded-md border-l-2 border-fuchsia-500/60 pl-3 space-y-2">
+                    <div className="text-[11px] font-medium text-fuchsia-600 dark:text-fuchsia-400">Version B</div>
+                    {(a.bActions?.length ?? 0) > 0 && (
+                      <ActionListEditor
+                        actions={a.bActions ?? []}
+                        onChange={(next) => update(a.id, { bActions: next })}
+                        stageNames={stageNames}
+                        depth={depth + 1}
+                      />
+                    )}
+                    <AddActionMenu compact onAdd={(t) => update(a.id, { bActions: [...(a.bActions ?? []), newAction(t)] })} allowBranch={depth < 2} />
+                  </div>
+                </div>
+              )}
               {a.type === "branch" && (
                 <div className="space-y-3">
                   <Input
@@ -360,46 +709,10 @@ function ActionListEditor({
                   />
                   <div className="rounded-md bg-surface/40 p-2 space-y-2">
                     <div className="text-[10px] uppercase tracking-wide text-muted-foreground">If condition</div>
-                    <div className="grid grid-cols-[1fr_110px_1fr] gap-2">
-                      <Select
-                        value={a.branchCondition?.field ?? "contact.tag"}
-                        onValueChange={(v) => update(a.id, { branchCondition: { ...(a.branchCondition ?? newCondition()), field: v } })}
-                      >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="contact.tag">Contact label</SelectItem>
-                          <SelectItem value="contact.lifecycle">Lifecycle stage</SelectItem>
-                          <SelectItem value="contact.source">Where they came from</SelectItem>
-                          <SelectItem value="contact.totalSpend">Total they have spent</SelectItem>
-                          <SelectItem value="job.value">Job value (£)</SelectItem>
-                          <SelectItem value="job.stage">Job stage</SelectItem>
-                          <SelectItem value="quote.status">Quote status</SelectItem>
-                          <SelectItem value="email.opened">Email opened</SelectItem>
-                          <SelectItem value="email.clicked">Email clicked</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={a.branchCondition?.op ?? "equals"}
-                        onValueChange={(v) => update(a.id, { branchCondition: { ...(a.branchCondition ?? newCondition()), op: v as WorkflowCondition["op"] } })}
-                      >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="equals">is</SelectItem>
-                          <SelectItem value="not_equals">is not</SelectItem>
-                          <SelectItem value="contains">contains</SelectItem>
-                          <SelectItem value="greater_than">is more than</SelectItem>
-                          <SelectItem value="less_than">is less than</SelectItem>
-                          <SelectItem value="is_set">has a value</SelectItem>
-                          <SelectItem value="is_empty">is blank</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        value={a.branchCondition?.value ?? ""}
-                        onChange={(e) => update(a.id, { branchCondition: { ...(a.branchCondition ?? newCondition()), value: e.target.value } })}
-                        className="h-8 text-xs"
-                        placeholder="Value"
-                      />
-                    </div>
+                    <ConditionRow
+                      value={a.branchCondition ?? newCondition()}
+                      onChange={(c) => update(a.id, { branchCondition: c })}
+                    />
                   </div>
 
                   <div className="rounded-md border-l-2 border-emerald-500/60 pl-3 space-y-2">
@@ -433,6 +746,7 @@ function ActionListEditor({
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         );
@@ -502,19 +816,35 @@ function FlowActions({ actions }: { actions: WorkflowAction[] }) {
         const Icon = actionIcons[a.type];
         let summary = "";
         if (a.type === "send_email") summary = a.emailSubject || "Untitled email";
-        else if (a.type === "send_sequence") summary = a.sequenceId || "(pick sequence)";
+        else if (a.type === "send_sms") summary = a.smsMessage || "(no message)";
+        else if (a.type === "send_sequence") summary = a.sequenceId || "(pick follow-up)";
         else if (a.type === "notify_team") summary = `${a.notifyChannel} → ${a.notifyRecipients || "team"}`;
-        else if (a.type === "add_tag") summary = a.tag ? `+ ${a.tag}` : "(no tag)";
-        else if (a.type === "remove_tag") summary = a.tag ? `− ${a.tag}` : "(no tag)";
+        else if (a.type === "remind_owner") summary = a.reminderMessage || "(no reminder)";
+        else if (a.type === "add_tag") summary = a.tag ? `+ ${a.tag}` : "(no label)";
+        else if (a.type === "remove_tag") summary = a.tag ? `− ${a.tag}` : "(no label)";
+        else if (a.type === "add_to_segment" || a.type === "remove_from_segment") summary = a.segmentId || "(no list)";
         else if (a.type === "assign_owner") summary = a.ownerId || "";
+        else if (a.type === "update_field") summary = `${a.fieldTarget}.${a.fieldName || "?"} → ${a.fieldValue || "(blank)"}`;
+        else if (a.type === "add_note") summary = a.noteText || "(empty note)";
         else if (a.type === "create_task") summary = a.taskTitle || "Task";
         else if (a.type === "create_job") summary = a.jobService || "Job";
         else if (a.type === "move_stage") summary = `→ ${a.targetStage || "(stage)"}`;
+        else if (a.type === "send_quote") summary = a.quoteTemplate || "standard";
+        else if (a.type === "send_invoice") summary = `due in ${a.invoiceDueInDays ?? 14} days`;
+        else if (a.type === "payment_reminder") summary = `${a.paymentReminderTone ?? "friendly"} reminder`;
+        else if (a.type === "book_visit") summary = a.visitWhen === "in_days" ? `in ${a.visitInDays ?? 3} days` : a.visitWhen === "same_day" ? "same day" : "next free slot";
         else if (a.type === "wait") summary = `${a.waitAmount ?? 1} ${a.waitUnit ?? "days"}`;
+        else if (a.type === "wait_until") summary = `until true · up to ${a.untilMaxDays ?? 7} days`;
+        else if (a.type === "wait_for_good_time") summary = (a.goodTimeWindow ?? "business_hours").replace(/_/g, " ");
+        else if (a.type === "exit") summary = a.exitReason || "stops here";
         else if (a.type === "webhook") summary = `${a.webhookMethod} ${a.webhookUrl || "(url)"}`;
         else if (a.type === "branch") summary = a.branchLabel || "Branch";
+        else if (a.type === "ab_split") summary = a.abLabel || "A/B test";
 
-        if (a.type === "branch") {
+        if (a.type === "branch" || a.type === "ab_split") {
+          const isAb = a.type === "ab_split";
+          const left = (isAb ? a.aActions : a.ifActions) ?? [];
+          const right = (isAb ? a.bActions : a.elseActions) ?? [];
           return (
             <div key={a.id}>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-card border-hairline">
@@ -524,22 +854,27 @@ function FlowActions({ actions }: { actions: WorkflowAction[] }) {
                 <span className="text-xs font-medium truncate">{summary}</span>
               </div>
               <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                <div className="rounded-md border-hairline bg-emerald-500/[0.04] p-1.5">
-                  <div className="text-[9px] font-medium uppercase text-emerald-600 dark:text-emerald-400 mb-1">If true</div>
-                  {(a.ifActions?.length ?? 0) === 0
+                <div className={`rounded-md border-hairline p-1.5 ${isAb ? "bg-indigo-500/[0.04]" : "bg-emerald-500/[0.04]"}`}>
+                  <div className={`text-[9px] font-medium uppercase mb-1 ${isAb ? "text-indigo-600 dark:text-indigo-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    {isAb ? `Version A (${a.abSplit ?? 50}%)` : "If true"}
+                  </div>
+                  {left.length === 0
                     ? <div className="text-[10px] text-muted-foreground italic">(no steps)</div>
-                    : <FlowActions actions={a.ifActions ?? []} />}
+                    : <FlowActions actions={left} />}
                 </div>
-                <div className="rounded-md border-hairline bg-rose-500/[0.04] p-1.5">
-                  <div className="text-[9px] font-medium uppercase text-rose-600 dark:text-rose-400 mb-1">If false</div>
-                  {(a.elseActions?.length ?? 0) === 0
+                <div className={`rounded-md border-hairline p-1.5 ${isAb ? "bg-fuchsia-500/[0.04]" : "bg-rose-500/[0.04]"}`}>
+                  <div className={`text-[9px] font-medium uppercase mb-1 ${isAb ? "text-fuchsia-600 dark:text-fuchsia-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {isAb ? `Version B (${100 - (a.abSplit ?? 50)}%)` : "If false"}
+                  </div>
+                  {right.length === 0
                     ? <div className="text-[10px] text-muted-foreground italic">(no steps)</div>
-                    : <FlowActions actions={a.elseActions ?? []} />}
+                    : <FlowActions actions={right} />}
                 </div>
               </div>
             </div>
           );
         }
+
         return (
           <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-card border-hairline">
             <div className={`w-6 h-6 rounded flex items-center justify-center ${actionTones[a.type]}`}>
@@ -576,17 +911,26 @@ export default function WorkflowDetail() {
   const setDraft = (updater: (d: Workflow) => Workflow) =>
     setLocalDraft((prev) => updater((prev ?? existing) as Workflow));
   const [tab, setTab] = useState<"build" | "history" | "settings">("build");
+  const [openRun, setOpenRun] = useState<string | null>(null);
+  const [testOpen, setTestOpen] = useState(false);
 
   const patch = (p: Partial<Workflow>) => setDraft((d) => ({ ...d, ...p }));
+  const settings = draft.settings ?? defaultSettings();
+  const patchSettings = (p: Partial<WorkflowSettings>) => patch({ settings: { ...settings, ...p } });
+  const stats = workflowStats(draft);
+  const warnings = checkWorkflow(draft);
   const save = (silent = false) => {
     updateWorkflow(draft.id, draft);
-    if (!silent) toast({ title: "Workflow saved" });
+    if (!silent) toast({ title: "Automation saved" });
   };
   const toggleActive = () => {
     const next = !draft.active;
+    if (next && warnings.length > 0) {
+      toast({ title: "Have a quick look first", description: warnings[0] });
+    }
     patch({ active: next });
-    updateWorkflow(draft.id, { active: next });
-    toast({ title: next ? "Workflow activated" : "Workflow paused" });
+    updateWorkflow(draft.id, { ...draft, active: next });
+    toast({ title: next ? "Automation switched on" : "Automation paused" });
   };
   const onDuplicate = () => {
     const copy = duplicateWorkflow(draft.id);
@@ -607,22 +951,25 @@ export default function WorkflowDetail() {
     <>
       <PageHeader
         title={draft.name}
-        description={tmeta.label}
+        description={`${tmeta.label} · ${countSteps(draft.actions)} step${countSteps(draft.actions) === 1 ? "" : "s"}`}
         actions={
           <div className="flex items-center gap-2">
             <Link to="/automations" className="h-8 px-2 rounded-md hover:bg-surface-hover inline-flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowLeft className="w-3.5 h-3.5" /> All automations
             </Link>
             <div className="flex items-center gap-2 pl-2 border-l-hairline">
-              <span className="text-xs text-muted-foreground">{draft.active ? "Active" : "Paused"}</span>
+              <span className="text-xs text-muted-foreground">{draft.active ? "On" : "Paused"}</span>
               <Switch checked={draft.active} onCheckedChange={toggleActive} />
             </div>
+            <Btn onClick={() => setTestOpen(true)}><FlaskConical className="w-3.5 h-3.5" /> Try it out</Btn>
             <Btn onClick={onDuplicate}><Copy className="w-3.5 h-3.5" /> Duplicate</Btn>
             <Btn onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /> Delete</Btn>
             <Btn variant="primary" onClick={() => save()}>Save</Btn>
           </div>
         }
       />
+      <TestRunDialog open={testOpen} onOpenChange={setTestOpen} workflow={draft} />
+
       <PageBody>
         <div className="flex border-b-hairline mb-4 -mt-2">
           {([
@@ -643,7 +990,19 @@ export default function WorkflowDetail() {
           ))}
         </div>
 
+        {tab === "build" && warnings.length > 0 && (
+          <div className="mb-4 border-hairline rounded-lg bg-amber-500/[0.06] p-3 space-y-1">
+            <div className="flex items-center gap-2 text-xs font-medium text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="w-3.5 h-3.5" /> Worth fixing before you switch this on
+            </div>
+            {warnings.map((w, i) => (
+              <div key={i} className="text-xs text-muted-foreground pl-5">{w}</div>
+            ))}
+          </div>
+        )}
+
         {tab === "build" && (
+
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
             {/* Editor */}
             <div className="space-y-6">
@@ -754,7 +1113,7 @@ export default function WorkflowDetail() {
                     </Select>
                   </div>
                 )}
-                {draft.trigger === "form_submitted" && (
+                {(draft.trigger === "form_submitted" || draft.trigger === "form_abandoned") && (
                   <Select
                     value={(draft.triggerConfig?.formId as string) ?? "any"}
                     onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, formId: v } })}
@@ -768,6 +1127,67 @@ export default function WorkflowDetail() {
                     </SelectContent>
                   </Select>
                 )}
+                {draft.trigger === "low_rating_review" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Anything at or below</span>
+                    <Select
+                      value={String(draft.triggerConfig?.maxRating ?? 3)}
+                      onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, maxRating: Number(v) } })}
+                    >
+                      <SelectTrigger className="h-8 text-xs w-24"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4].map((n) => <SelectItem key={n} value={String(n)}>{n} star{n === 1 ? "" : "s"}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {(draft.trigger === "job_won" || draft.trigger === "job_lost" || draft.trigger === "job_created") && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Only jobs worth more than £</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(draft.triggerConfig?.minValue as number) ?? 0}
+                      onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, minValue: Number(e.target.value) } })}
+                      className="h-8 text-xs w-24"
+                    />
+                  </div>
+                )}
+                {draft.trigger === "invoice_overdue" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={(draft.triggerConfig?.daysOverdue as number) ?? 3}
+                      onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, daysOverdue: Number(e.target.value) } })}
+                      className="h-8 text-xs w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">days past the due date</span>
+                  </div>
+                )}
+                {draft.trigger === "recurring_schedule" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={(draft.triggerConfig?.every as string) ?? "monthly"}
+                      onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, every: v } })}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Every week</SelectItem>
+                        <SelectItem value="monthly">Every month</SelectItem>
+                        <SelectItem value="quarterly">Every three months</SelectItem>
+                        <SelectItem value="yearly">Every year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="time"
+                      value={(draft.triggerConfig?.atTime as string) ?? "09:00"}
+                      onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, atTime: e.target.value } })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                )}
+
               </section>
 
               {/* Filters */}
@@ -788,43 +1208,29 @@ export default function WorkflowDetail() {
                   <div className="text-xs text-muted-foreground italic">No rules — this runs every time.</div>
                 ) : (
                   <div className="space-y-2">
+                    {draft.conditions.length > 1 && (
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">Match</span>
+                        <Select
+                          value={draft.conditionMatch ?? "all"}
+                          onValueChange={(v) => patch({ conditionMatch: v as "all" | "any" })}
+                        >
+                          <SelectTrigger className="h-8 text-xs w-[220px]"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">all of these rules</SelectItem>
+                            <SelectItem value="any">any one of these rules</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                     {draft.conditions.map((c, i) => (
-                      <div key={c.id} className="grid grid-cols-[60px_1fr_110px_1fr_auto] gap-2 items-center">
-                        <span className="text-xs text-muted-foreground text-center">{i === 0 ? "Only if" : "and"}</span>
-                        <Select
-                          value={c.field}
-                          onValueChange={(v) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, field: v } : x) })}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="contact.tag">Contact label</SelectItem>
-                            <SelectItem value="contact.lifecycle">Customer stage</SelectItem>
-                            <SelectItem value="contact.source">Where they came from</SelectItem>
-                            <SelectItem value="contact.totalSpend">Total they have spent</SelectItem>
-                            <SelectItem value="job.value">Job value (£)</SelectItem>
-                            <SelectItem value="job.stage">Job stage</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Select
-                          value={c.op}
-                          onValueChange={(v) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, op: v as WorkflowCondition["op"] } : x) })}
-                        >
-                          <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="equals">is</SelectItem>
-                            <SelectItem value="not_equals">is not</SelectItem>
-                            <SelectItem value="contains">contains</SelectItem>
-                            <SelectItem value="greater_than">is more than</SelectItem>
-                            <SelectItem value="less_than">is less than</SelectItem>
-                            <SelectItem value="is_set">has a value</SelectItem>
-                            <SelectItem value="is_empty">is blank</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <Input
-                          value={c.value}
-                          onChange={(e) => patch({ conditions: draft.conditions.map((x) => x.id === c.id ? { ...x, value: e.target.value } : x) })}
-                          className="h-8 text-xs"
-                          placeholder="Value"
+                      <div key={c.id} className="grid grid-cols-[60px_1fr_auto] gap-2 items-center">
+                        <span className="text-xs text-muted-foreground text-center">
+                          {i === 0 ? "Only if" : (draft.conditionMatch ?? "all") === "all" ? "and" : "or"}
+                        </span>
+                        <ConditionRow
+                          value={c}
+                          onChange={(next) => patch({ conditions: draft.conditions.map((x) => (x.id === c.id ? next : x)) })}
                         />
                         <button
                           onClick={() => patch({ conditions: draft.conditions.filter((x) => x.id !== c.id) })}
@@ -836,6 +1242,7 @@ export default function WorkflowDetail() {
                     ))}
                   </div>
                 )}
+
               </section>
 
               {/* Actions */}
@@ -886,76 +1293,155 @@ export default function WorkflowDetail() {
         )}
 
         {tab === "history" && (
-          <div className="border-hairline rounded-lg bg-card overflow-hidden max-w-3xl">
-            <div className="grid grid-cols-[1fr_160px_120px] px-4 h-9 border-b-hairline text-xs text-muted-foreground items-center">
-              <div>Who / what happened</div>
-              <div>Started</div>
-              <div>Status</div>
-            </div>
-            {(draft.runs ?? []).length === 0 ? (
-              <div className="p-10 text-center text-sm text-muted-foreground">
-                Nothing yet. Once this automation is switched on, everything it does will be listed here.
-              </div>
-            ) : (
-              (draft.runs ?? []).map((r) => (
-                <div key={r.id} className="grid grid-cols-[1fr_160px_120px] px-4 h-12 border-b-hairline last:border-b-0 items-center text-sm">
-                  <div>
-                    <div className="font-medium">{r.contact ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground truncate">{r.summary}</div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">{new Date(r.startedAt).toLocaleString()}</div>
-                  <div>
-                    <Pill tone={r.status === "completed" ? "success" : r.status === "failed" ? "danger" : "info"}>
-                      {r.status}
-                    </Pill>
-                  </div>
+          <div className="max-w-3xl space-y-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+              {[
+                { label: "People in it", value: stats.enrolled },
+                { label: "Finished", value: stats.finished },
+                { label: "Skipped", value: stats.skipped },
+                { label: "Problems", value: stats.failed },
+                { label: "Emails opened", value: stats.opened },
+                { label: "Links clicked", value: stats.clicked },
+              ].map((s) => (
+                <div key={s.label} className="border-hairline rounded-lg bg-card p-3">
+                  <div className="text-lg font-semibold tabular-nums">{s.value}</div>
+                  <div className="text-[11px] text-muted-foreground">{s.label}</div>
                 </div>
-              ))
-            )}
+              ))}
+            </div>
+
+            <div className="border-hairline rounded-lg bg-card overflow-hidden">
+              <div className="grid grid-cols-[1fr_160px_110px_28px] px-4 h-9 border-b-hairline text-xs text-muted-foreground items-center">
+                <div>Who / what happened</div>
+                <div>Started</div>
+                <div>Status</div>
+                <div />
+              </div>
+              {(draft.runs ?? []).length === 0 ? (
+                <div className="p-10 text-center text-sm text-muted-foreground">
+                  Nothing yet. Once this automation is switched on, everything it does will be listed here.
+                </div>
+              ) : (
+                (draft.runs ?? []).map((r) => {
+                  const isOpen = openRun === r.id;
+                  return (
+                    <div key={r.id} className="border-b-hairline last:border-b-0">
+                      <button
+                        onClick={() => setOpenRun(isOpen ? null : r.id)}
+                        className="w-full grid grid-cols-[1fr_160px_110px_28px] px-4 h-12 items-center text-sm text-left hover:bg-surface-hover"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-medium truncate">{r.contact ?? "—"}</div>
+                          <div className="text-xs text-muted-foreground truncate">{r.reason ?? r.summary}</div>
+                        </div>
+                        <div className="text-xs text-muted-foreground">{new Date(r.startedAt).toLocaleString()}</div>
+                        <div>
+                          <Pill tone={r.status === "completed" ? "success" : r.status === "failed" ? "danger" : r.status === "skipped" ? "neutral" : "info"}>
+                            {r.status === "skipped" ? "not run" : r.status}
+                          </Pill>
+                        </div>
+                        <ChevronRight className={`w-3.5 h-3.5 text-muted-foreground transition-transform ${isOpen ? "rotate-90" : ""}`} />
+                      </button>
+                      {isOpen && (
+                        <div className="px-4 pb-3 space-y-1.5 bg-surface/30">
+                          {(r.steps ?? []).length === 0 ? (
+                            <div className="text-xs text-muted-foreground italic py-2">No step details for this one.</div>
+                          ) : (
+                            (r.steps ?? []).map((s, i) => (
+                              <div key={i} className="flex items-start gap-2 text-xs p-2 rounded-md bg-card border-hairline">
+                                {s.status === "done" ? <Check className="w-3.5 h-3.5 text-emerald-500 mt-0.5" />
+                                  : s.status === "failed" ? <AlertTriangle className="w-3.5 h-3.5 text-rose-500 mt-0.5" />
+                                  : s.status === "waiting" ? <Clock className="w-3.5 h-3.5 text-amber-500 mt-0.5" />
+                                  : <X className="w-3.5 h-3.5 text-muted-foreground mt-0.5" />}
+                                <div>
+                                  <div className="font-medium">{s.label}</div>
+                                  {s.note && <div className="text-muted-foreground">{s.note}</div>}
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         )}
+
 
         {tab === "settings" && (
           <div className="max-w-2xl space-y-4">
             <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
-              <div className="text-sm font-medium">How often it runs</div>
+              <div className="text-sm font-medium">How often the same person goes through this</div>
+              <Select value={settings.reEnroll} onValueChange={(v) => patchSettings({ reEnroll: v as WorkflowSettings["reEnroll"] })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="once">Once only</SelectItem>
+                  <SelectItem value="once_per_job">Once for each job</SelectItem>
+                  <SelectItem value="every_time">Every time it happens</SelectItem>
+                </SelectContent>
+              </Select>
+            </section>
+
+            <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
+              <div className="text-sm font-medium">Good manners</div>
               <label className="flex items-center gap-3 text-sm">
-                <Switch
-                  checked={(draft.triggerConfig?.reEnroll as string) === "true"}
-                  onCheckedChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, reEnroll: v ? "true" : "false" } })}
-                />
-                Let the same person go through this more than once
+                <Switch checked={settings.workingDaysOnly} onCheckedChange={(v) => patchSettings({ workingDaysOnly: v })} />
+                Only send emails and texts on working days
               </label>
               <label className="flex items-center gap-3 text-sm">
-                <Switch
-                  checked={(draft.triggerConfig?.skipWeekends as string) === "true"}
-                  onCheckedChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, skipWeekends: v ? "true" : "false" } })}
+                <Switch checked={settings.quietHours} onCheckedChange={(v) => patchSettings({ quietHours: v })} />
+                Keep quiet in the evening and early morning
+              </label>
+              {settings.quietHours && (
+                <div className="flex items-center gap-2 pl-11">
+                  <span className="text-xs text-muted-foreground">from</span>
+                  <Input type="time" value={settings.quietFrom} onChange={(e) => patchSettings({ quietFrom: e.target.value })} className="h-8 text-xs w-28" />
+                  <span className="text-xs text-muted-foreground">to</span>
+                  <Input type="time" value={settings.quietTo} onChange={(e) => patchSettings({ quietTo: e.target.value })} className="h-8 text-xs w-28" />
+                </div>
+              )}
+              <div className="flex items-center gap-2">
+                <span className="text-sm">Never send more than</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={settings.maxPerContactPerDay}
+                  onChange={(e) => patchSettings({ maxPerContactPerDay: Number(e.target.value) })}
+                  className="h-8 text-xs w-20"
                 />
-                Only send emails and messages on working days
+                <span className="text-sm">message(s) a day to one person</span>
+              </div>
+              <label className="flex items-center gap-3 text-sm">
+                <Switch checked={settings.skipUnsubscribed} onCheckedChange={(v) => patchSettings({ skipUnsubscribed: v })} />
+                Skip anyone who has asked not to be emailed
               </label>
             </section>
+
             <section className="border-hairline rounded-lg bg-card p-4 space-y-3">
               <div className="text-sm font-medium">Stop early when… (optional)</div>
               <p className="text-xs text-muted-foreground">If this happens, the person stops receiving the rest of the steps.</p>
-              <Select
-                value={(draft.triggerConfig?.goal as string) ?? "none"}
-                onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, goal: v } })}
-              >
+              <Select value={settings.goal} onValueChange={(v) => patchSettings({ goal: v })}>
                 <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">Never stop early</SelectItem>
                   <SelectItem value="quote_accepted">They accept a quote</SelectItem>
                   <SelectItem value="invoice_paid">They pay an invoice</SelectItem>
                   <SelectItem value="job_created">A job is created for them</SelectItem>
-                  <SelectItem value="tag_added">A label is added to them</SelectItem>
+                  <SelectItem value="visit_booked">They book a visit</SelectItem>
+                  <SelectItem value="email_replied">They reply to an email</SelectItem>
                 </SelectContent>
               </Select>
             </section>
+
             <div className="flex justify-end">
               <Btn variant="primary" onClick={() => save()}>Save settings</Btn>
             </div>
           </div>
         )}
+
       </PageBody>
     </>
   );
