@@ -7,15 +7,29 @@ import {
   ArrowUp,
   ArrowDown,
   Mail,
+  MessageSquare,
   Clock,
+  Hourglass,
+  Sun,
   Tag,
   TagIcon,
+  ListPlus,
+  ListMinus,
+  Pencil,
+  StickyNote,
   CheckSquare,
   GitBranch,
+  SplitSquareHorizontal,
   Briefcase,
   Move,
   UserPlus,
   Bell,
+  BellRing,
+  FileText,
+  Receipt,
+  PoundSterling,
+  CalendarPlus,
+  StopCircle,
   Webhook,
   Zap,
   Repeat,
@@ -25,6 +39,8 @@ import {
   ChevronRight,
   Check,
   X,
+  AlertTriangle,
+  FlaskConical,
 } from "lucide-react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Input } from "@/components/ui/input";
@@ -34,47 +50,84 @@ import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
 import {
   actionMeta,
+  checkWorkflow,
+  conditionFields,
+  conditionOps,
+  countSteps,
+  defaultSettings,
   deleteWorkflow,
   duplicateWorkflow,
   findWorkflow,
+  segmentOptions,
   triggerMeta,
   updateWorkflow,
   useWorkflows,
+  workflowStats,
   type Workflow,
   type WorkflowAction,
   type WorkflowActionType,
   type WorkflowCondition,
+  type WorkflowSettings,
   type WorkflowTrigger,
 } from "@/lib/workflowsStore";
 import { useStages } from "@/lib/stagesStore";
+import { TestRunDialog } from "@/components/automations/TestRunDialog";
 
 const actionIcons: Record<WorkflowActionType, typeof Mail> = {
   send_email: Mail,
+  send_sms: MessageSquare,
   send_sequence: Repeat,
   notify_team: Bell,
+  remind_owner: BellRing,
   add_tag: Tag,
   remove_tag: TagIcon,
+  add_to_segment: ListPlus,
+  remove_from_segment: ListMinus,
   assign_owner: UserPlus,
+  update_field: Pencil,
+  add_note: StickyNote,
   create_task: CheckSquare,
   create_job: Briefcase,
   move_stage: Move,
+  send_quote: FileText,
+  send_invoice: Receipt,
+  payment_reminder: PoundSterling,
+  book_visit: CalendarPlus,
   wait: Clock,
+  wait_until: Hourglass,
+  wait_for_good_time: Sun,
   branch: GitBranch,
+  ab_split: SplitSquareHorizontal,
+  exit: StopCircle,
   webhook: Webhook,
 };
 
 const actionTones: Record<WorkflowActionType, string> = {
   send_email: "text-blue-500 bg-blue-500/10",
+  send_sms: "text-blue-500 bg-blue-500/10",
   send_sequence: "text-blue-500 bg-blue-500/10",
   notify_team: "text-sky-500 bg-sky-500/10",
+  remind_owner: "text-sky-500 bg-sky-500/10",
   add_tag: "text-purple-500 bg-purple-500/10",
   remove_tag: "text-purple-500 bg-purple-500/10",
+  add_to_segment: "text-purple-500 bg-purple-500/10",
+  remove_from_segment: "text-purple-500 bg-purple-500/10",
   assign_owner: "text-purple-500 bg-purple-500/10",
+  update_field: "text-purple-500 bg-purple-500/10",
+  add_note: "text-purple-500 bg-purple-500/10",
   create_task: "text-emerald-500 bg-emerald-500/10",
   create_job: "text-emerald-500 bg-emerald-500/10",
   move_stage: "text-emerald-500 bg-emerald-500/10",
+  send_quote: "text-teal-500 bg-teal-500/10",
+  send_invoice: "text-teal-500 bg-teal-500/10",
+  payment_reminder: "text-teal-500 bg-teal-500/10",
+  book_visit: "text-emerald-500 bg-emerald-500/10",
   wait: "text-amber-500 bg-amber-500/10",
+  wait_until: "text-amber-500 bg-amber-500/10",
+  wait_for_good_time: "text-amber-500 bg-amber-500/10",
   branch: "text-pink-500 bg-pink-500/10",
+  ab_split: "text-pink-500 bg-pink-500/10",
+  exit: "text-rose-500 bg-rose-500/10",
   webhook: "text-slate-500 bg-slate-500/10",
 };
 
@@ -92,25 +145,52 @@ const newAction = (type: WorkflowActionType): WorkflowAction => {
   switch (type) {
     case "send_email":
       return { id, type, emailSubject: "New email", emailTemplate: "default" };
+    case "send_sms":
+      return { id, type, smsMessage: "" };
     case "send_sequence":
       return { id, type, sequenceId: "" };
     case "notify_team":
       return { id, type, notifyChannel: "in_app", notifyRecipients: "sales", notifyMessage: "" };
+    case "remind_owner":
+      return { id, type, reminderMessage: "", reminderInMinutes: 30 };
     case "add_tag":
     case "remove_tag":
       return { id, type, tag: "" };
+    case "add_to_segment":
+    case "remove_from_segment":
+      return { id, type, segmentId: segmentOptions[0].value };
     case "assign_owner":
       return { id, type, ownerId: "owner" };
+    case "update_field":
+      return { id, type, fieldTarget: "contact", fieldName: "source", fieldValue: "" };
+    case "add_note":
+      return { id, type, noteText: "" };
     case "create_task":
       return { id, type, taskTitle: "Follow up", taskAssignee: "owner", taskDueInDays: 2 };
     case "create_job":
       return { id, type, jobService: "New service", jobPipelineStage: "New lead" };
     case "move_stage":
       return { id, type, targetStage: "" };
+    case "send_quote":
+      return { id, type, quoteTemplate: "standard" };
+    case "send_invoice":
+      return { id, type, invoiceTemplate: "standard", invoiceDueInDays: 14 };
+    case "payment_reminder":
+      return { id, type, paymentReminderTone: "friendly" };
+    case "book_visit":
+      return { id, type, visitWhen: "next_available", visitInDays: 3, visitDurationMins: 60 };
     case "wait":
       return { id, type, waitAmount: 1, waitUnit: "days" };
+    case "wait_until":
+      return { id, type, untilCondition: newCondition(), untilMaxDays: 7 };
+    case "wait_for_good_time":
+      return { id, type, goodTimeWindow: "business_hours" };
+    case "exit":
+      return { id, type, exitReason: "" };
     case "webhook":
       return { id, type, webhookUrl: "", webhookMethod: "POST" };
+    case "ab_split":
+      return { id, type, abLabel: "Two versions", abSplit: 50, aActions: [], bActions: [] };
     case "branch":
       return {
         id,
@@ -122,6 +202,42 @@ const newAction = (type: WorkflowActionType): WorkflowAction => {
       };
   }
 };
+
+// Small reusable condition row used by branches and "wait until"
+function ConditionRow({
+  value,
+  onChange,
+}: {
+  value: WorkflowCondition;
+  onChange: (next: WorkflowCondition) => void;
+}) {
+  const needsValue = !["is_set", "is_empty"].includes(value.op);
+  return (
+    <div className={`grid gap-2 ${needsValue ? "grid-cols-[1fr_110px_1fr]" : "grid-cols-[1fr_110px]"}`}>
+      <Select value={value.field} onValueChange={(v) => onChange({ ...value, field: v })}>
+        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {conditionFields.map((f) => <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Select value={value.op} onValueChange={(v) => onChange({ ...value, op: v as WorkflowCondition["op"] })}>
+        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+        <SelectContent>
+          {conditionOps.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      {needsValue && (
+        <Input
+          value={value.value}
+          onChange={(e) => onChange({ ...value, value: e.target.value })}
+          className="h-8 text-xs"
+          placeholder="Value"
+        />
+      )}
+    </div>
+  );
+}
+
 
 // ───────── Recursive action list editor ─────────
 function ActionListEditor({
