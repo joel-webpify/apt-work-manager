@@ -816,19 +816,35 @@ function FlowActions({ actions }: { actions: WorkflowAction[] }) {
         const Icon = actionIcons[a.type];
         let summary = "";
         if (a.type === "send_email") summary = a.emailSubject || "Untitled email";
-        else if (a.type === "send_sequence") summary = a.sequenceId || "(pick sequence)";
+        else if (a.type === "send_sms") summary = a.smsMessage || "(no message)";
+        else if (a.type === "send_sequence") summary = a.sequenceId || "(pick follow-up)";
         else if (a.type === "notify_team") summary = `${a.notifyChannel} → ${a.notifyRecipients || "team"}`;
-        else if (a.type === "add_tag") summary = a.tag ? `+ ${a.tag}` : "(no tag)";
-        else if (a.type === "remove_tag") summary = a.tag ? `− ${a.tag}` : "(no tag)";
+        else if (a.type === "remind_owner") summary = a.reminderMessage || "(no reminder)";
+        else if (a.type === "add_tag") summary = a.tag ? `+ ${a.tag}` : "(no label)";
+        else if (a.type === "remove_tag") summary = a.tag ? `− ${a.tag}` : "(no label)";
+        else if (a.type === "add_to_segment" || a.type === "remove_from_segment") summary = a.segmentId || "(no list)";
         else if (a.type === "assign_owner") summary = a.ownerId || "";
+        else if (a.type === "update_field") summary = `${a.fieldTarget}.${a.fieldName || "?"} → ${a.fieldValue || "(blank)"}`;
+        else if (a.type === "add_note") summary = a.noteText || "(empty note)";
         else if (a.type === "create_task") summary = a.taskTitle || "Task";
         else if (a.type === "create_job") summary = a.jobService || "Job";
         else if (a.type === "move_stage") summary = `→ ${a.targetStage || "(stage)"}`;
+        else if (a.type === "send_quote") summary = a.quoteTemplate || "standard";
+        else if (a.type === "send_invoice") summary = `due in ${a.invoiceDueInDays ?? 14} days`;
+        else if (a.type === "payment_reminder") summary = `${a.paymentReminderTone ?? "friendly"} reminder`;
+        else if (a.type === "book_visit") summary = a.visitWhen === "in_days" ? `in ${a.visitInDays ?? 3} days` : a.visitWhen === "same_day" ? "same day" : "next free slot";
         else if (a.type === "wait") summary = `${a.waitAmount ?? 1} ${a.waitUnit ?? "days"}`;
+        else if (a.type === "wait_until") summary = `until true · up to ${a.untilMaxDays ?? 7} days`;
+        else if (a.type === "wait_for_good_time") summary = (a.goodTimeWindow ?? "business_hours").replace(/_/g, " ");
+        else if (a.type === "exit") summary = a.exitReason || "stops here";
         else if (a.type === "webhook") summary = `${a.webhookMethod} ${a.webhookUrl || "(url)"}`;
         else if (a.type === "branch") summary = a.branchLabel || "Branch";
+        else if (a.type === "ab_split") summary = a.abLabel || "A/B test";
 
-        if (a.type === "branch") {
+        if (a.type === "branch" || a.type === "ab_split") {
+          const isAb = a.type === "ab_split";
+          const left = (isAb ? a.aActions : a.ifActions) ?? [];
+          const right = (isAb ? a.bActions : a.elseActions) ?? [];
           return (
             <div key={a.id}>
               <div className="flex items-center gap-2 p-2 rounded-lg bg-card border-hairline">
@@ -838,22 +854,27 @@ function FlowActions({ actions }: { actions: WorkflowAction[] }) {
                 <span className="text-xs font-medium truncate">{summary}</span>
               </div>
               <div className="grid grid-cols-2 gap-1.5 mt-1.5">
-                <div className="rounded-md border-hairline bg-emerald-500/[0.04] p-1.5">
-                  <div className="text-[9px] font-medium uppercase text-emerald-600 dark:text-emerald-400 mb-1">If true</div>
-                  {(a.ifActions?.length ?? 0) === 0
+                <div className={`rounded-md border-hairline p-1.5 ${isAb ? "bg-indigo-500/[0.04]" : "bg-emerald-500/[0.04]"}`}>
+                  <div className={`text-[9px] font-medium uppercase mb-1 ${isAb ? "text-indigo-600 dark:text-indigo-400" : "text-emerald-600 dark:text-emerald-400"}`}>
+                    {isAb ? `Version A (${a.abSplit ?? 50}%)` : "If true"}
+                  </div>
+                  {left.length === 0
                     ? <div className="text-[10px] text-muted-foreground italic">(no steps)</div>
-                    : <FlowActions actions={a.ifActions ?? []} />}
+                    : <FlowActions actions={left} />}
                 </div>
-                <div className="rounded-md border-hairline bg-rose-500/[0.04] p-1.5">
-                  <div className="text-[9px] font-medium uppercase text-rose-600 dark:text-rose-400 mb-1">If false</div>
-                  {(a.elseActions?.length ?? 0) === 0
+                <div className={`rounded-md border-hairline p-1.5 ${isAb ? "bg-fuchsia-500/[0.04]" : "bg-rose-500/[0.04]"}`}>
+                  <div className={`text-[9px] font-medium uppercase mb-1 ${isAb ? "text-fuchsia-600 dark:text-fuchsia-400" : "text-rose-600 dark:text-rose-400"}`}>
+                    {isAb ? `Version B (${100 - (a.abSplit ?? 50)}%)` : "If false"}
+                  </div>
+                  {right.length === 0
                     ? <div className="text-[10px] text-muted-foreground italic">(no steps)</div>
-                    : <FlowActions actions={a.elseActions ?? []} />}
+                    : <FlowActions actions={right} />}
                 </div>
               </div>
             </div>
           );
         }
+
         return (
           <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg bg-card border-hairline">
             <div className={`w-6 h-6 rounded flex items-center justify-center ${actionTones[a.type]}`}>
