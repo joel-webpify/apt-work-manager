@@ -466,6 +466,239 @@ function ActionListEditor({
                   </div>
                 </>
               )}
+              {a.type === "send_sms" && (
+                <>
+                  <Textarea
+                    value={a.smsMessage ?? ""}
+                    onChange={(e) => update(a.id, { smsMessage: e.target.value })}
+                    className="text-xs min-h-[60px]"
+                    placeholder="Hi {{first_name}}, …"
+                  />
+                  <div className="text-[10px] text-muted-foreground">
+                    {(a.smsMessage ?? "").length}/160 characters · {"{{first_name}}"} and {"{{company}}"} are filled in automatically
+                  </div>
+                </>
+              )}
+              {a.type === "remind_owner" && (
+                <>
+                  <Input
+                    value={a.reminderMessage ?? ""}
+                    onChange={(e) => update(a.id, { reminderMessage: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="What should they be reminded to do?"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={a.reminderInMinutes ?? 30}
+                      onChange={(e) => update(a.id, { reminderInMinutes: Number(e.target.value) })}
+                      className="h-8 text-xs w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">minutes from now</span>
+                  </div>
+                </>
+              )}
+              {(a.type === "add_to_segment" || a.type === "remove_from_segment") && (
+                <Select value={a.segmentId ?? ""} onValueChange={(v) => update(a.id, { segmentId: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Pick a list" /></SelectTrigger>
+                  <SelectContent>
+                    {segmentOptions.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "update_field" && (
+                <div className="grid grid-cols-3 gap-2">
+                  <Select value={a.fieldTarget ?? "contact"} onValueChange={(v) => update(a.id, { fieldTarget: v as WorkflowAction["fieldTarget"] })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="contact">On the contact</SelectItem>
+                      <SelectItem value="job">On the job</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    value={a.fieldName ?? ""}
+                    onChange={(e) => update(a.id, { fieldName: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="Detail (e.g. source)"
+                  />
+                  <Input
+                    value={a.fieldValue ?? ""}
+                    onChange={(e) => update(a.id, { fieldValue: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="New value"
+                  />
+                </div>
+              )}
+              {a.type === "add_note" && (
+                <Textarea
+                  value={a.noteText ?? ""}
+                  onChange={(e) => update(a.id, { noteText: e.target.value })}
+                  className="text-xs min-h-[54px]"
+                  placeholder="Note to drop on the timeline"
+                />
+              )}
+              {a.type === "send_quote" && (
+                <Select value={a.quoteTemplate ?? "standard"} onValueChange={(v) => update(a.id, { quoteTemplate: v })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="standard">Standard quote</SelectItem>
+                    <SelectItem value="extra-work">Extra work found on site</SelectItem>
+                    <SelectItem value="service-plan">Service plan</SelectItem>
+                    <SelectItem value="options">Quote with options to choose</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "send_invoice" && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Select value={a.invoiceTemplate ?? "standard"} onValueChange={(v) => update(a.id, { invoiceTemplate: v })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="standard">Standard invoice</SelectItem>
+                      <SelectItem value="deposit">Deposit (50%)</SelectItem>
+                      <SelectItem value="final">Final balance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      value={a.invoiceDueInDays ?? 14}
+                      onChange={(e) => update(a.id, { invoiceDueInDays: Number(e.target.value) })}
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0">days to pay</span>
+                  </div>
+                </div>
+              )}
+              {a.type === "payment_reminder" && (
+                <Select value={a.paymentReminderTone ?? "friendly"} onValueChange={(v) => update(a.id, { paymentReminderTone: v as WorkflowAction["paymentReminderTone"] })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="friendly">Friendly nudge</SelectItem>
+                    <SelectItem value="firm">Firm reminder</SelectItem>
+                    <SelectItem value="final">Final notice</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "book_visit" && (
+                <div className="grid grid-cols-3 gap-2">
+                  <Select value={a.visitWhen ?? "next_available"} onValueChange={(v) => update(a.id, { visitWhen: v as WorkflowAction["visitWhen"] })}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="next_available">Next free slot</SelectItem>
+                      <SelectItem value="same_day">Same day</SelectItem>
+                      <SelectItem value="in_days">In a set number of days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {a.visitWhen === "in_days" ? (
+                    <Input
+                      type="number"
+                      min={1}
+                      value={a.visitInDays ?? 3}
+                      onChange={(e) => update(a.id, { visitInDays: Number(e.target.value) })}
+                      className="h-8 text-xs"
+                    />
+                  ) : <div />}
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={15}
+                      step={15}
+                      value={a.visitDurationMins ?? 60}
+                      onChange={(e) => update(a.id, { visitDurationMins: Number(e.target.value) })}
+                      className="h-8 text-xs"
+                    />
+                    <span className="text-xs text-muted-foreground shrink-0">mins</span>
+                  </div>
+                </div>
+              )}
+              {a.type === "wait_until" && (
+                <div className="space-y-2">
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Carry on once this is true</div>
+                  <ConditionRow
+                    value={a.untilCondition ?? newCondition()}
+                    onChange={(c) => update(a.id, { untilCondition: c })}
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Give up after</span>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={a.untilMaxDays ?? 7}
+                      onChange={(e) => update(a.id, { untilMaxDays: Number(e.target.value) })}
+                      className="h-8 text-xs w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">days</span>
+                  </div>
+                </div>
+              )}
+              {a.type === "wait_for_good_time" && (
+                <Select value={a.goodTimeWindow ?? "business_hours"} onValueChange={(v) => update(a.id, { goodTimeWindow: v as WorkflowAction["goodTimeWindow"] })}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="business_hours">Next working hours (9–5, Mon–Fri)</SelectItem>
+                    <SelectItem value="morning">Next morning</SelectItem>
+                    <SelectItem value="afternoon">Next afternoon</SelectItem>
+                    <SelectItem value="weekday">Next working day</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+              {a.type === "exit" && (
+                <Input
+                  value={a.exitReason ?? ""}
+                  onChange={(e) => update(a.id, { exitReason: e.target.value })}
+                  className="h-8 text-xs"
+                  placeholder="Why does it stop here? (optional)"
+                />
+              )}
+              {a.type === "ab_split" && (
+                <div className="space-y-3">
+                  <Input
+                    value={a.abLabel ?? ""}
+                    onChange={(e) => update(a.id, { abLabel: e.target.value })}
+                    className="h-8 text-xs"
+                    placeholder="What are you testing?"
+                  />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Send version A to</span>
+                    <Input
+                      type="number"
+                      min={5}
+                      max={95}
+                      step={5}
+                      value={a.abSplit ?? 50}
+                      onChange={(e) => update(a.id, { abSplit: Number(e.target.value) })}
+                      className="h-8 text-xs w-20"
+                    />
+                    <span className="text-xs text-muted-foreground">% — the rest get version B</span>
+                  </div>
+                  <div className="rounded-md border-l-2 border-indigo-500/60 pl-3 space-y-2">
+                    <div className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Version A</div>
+                    {(a.aActions?.length ?? 0) > 0 && (
+                      <ActionListEditor
+                        actions={a.aActions ?? []}
+                        onChange={(next) => update(a.id, { aActions: next })}
+                        stageNames={stageNames}
+                        depth={depth + 1}
+                      />
+                    )}
+                    <AddActionMenu compact onAdd={(t) => update(a.id, { aActions: [...(a.aActions ?? []), newAction(t)] })} allowBranch={depth < 2} />
+                  </div>
+                  <div className="rounded-md border-l-2 border-fuchsia-500/60 pl-3 space-y-2">
+                    <div className="text-[11px] font-medium text-fuchsia-600 dark:text-fuchsia-400">Version B</div>
+                    {(a.bActions?.length ?? 0) > 0 && (
+                      <ActionListEditor
+                        actions={a.bActions ?? []}
+                        onChange={(next) => update(a.id, { bActions: next })}
+                        stageNames={stageNames}
+                        depth={depth + 1}
+                      />
+                    )}
+                    <AddActionMenu compact onAdd={(t) => update(a.id, { bActions: [...(a.bActions ?? []), newAction(t)] })} allowBranch={depth < 2} />
+                  </div>
+                </div>
+              )}
               {a.type === "branch" && (
                 <div className="space-y-3">
                   <Input
@@ -476,46 +709,10 @@ function ActionListEditor({
                   />
                   <div className="rounded-md bg-surface/40 p-2 space-y-2">
                     <div className="text-[10px] uppercase tracking-wide text-muted-foreground">If condition</div>
-                    <div className="grid grid-cols-[1fr_110px_1fr] gap-2">
-                      <Select
-                        value={a.branchCondition?.field ?? "contact.tag"}
-                        onValueChange={(v) => update(a.id, { branchCondition: { ...(a.branchCondition ?? newCondition()), field: v } })}
-                      >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="contact.tag">Contact label</SelectItem>
-                          <SelectItem value="contact.lifecycle">Lifecycle stage</SelectItem>
-                          <SelectItem value="contact.source">Where they came from</SelectItem>
-                          <SelectItem value="contact.totalSpend">Total they have spent</SelectItem>
-                          <SelectItem value="job.value">Job value (£)</SelectItem>
-                          <SelectItem value="job.stage">Job stage</SelectItem>
-                          <SelectItem value="quote.status">Quote status</SelectItem>
-                          <SelectItem value="email.opened">Email opened</SelectItem>
-                          <SelectItem value="email.clicked">Email clicked</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Select
-                        value={a.branchCondition?.op ?? "equals"}
-                        onValueChange={(v) => update(a.id, { branchCondition: { ...(a.branchCondition ?? newCondition()), op: v as WorkflowCondition["op"] } })}
-                      >
-                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="equals">is</SelectItem>
-                          <SelectItem value="not_equals">is not</SelectItem>
-                          <SelectItem value="contains">contains</SelectItem>
-                          <SelectItem value="greater_than">is more than</SelectItem>
-                          <SelectItem value="less_than">is less than</SelectItem>
-                          <SelectItem value="is_set">has a value</SelectItem>
-                          <SelectItem value="is_empty">is blank</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Input
-                        value={a.branchCondition?.value ?? ""}
-                        onChange={(e) => update(a.id, { branchCondition: { ...(a.branchCondition ?? newCondition()), value: e.target.value } })}
-                        className="h-8 text-xs"
-                        placeholder="Value"
-                      />
-                    </div>
+                    <ConditionRow
+                      value={a.branchCondition ?? newCondition()}
+                      onChange={(c) => update(a.id, { branchCondition: c })}
+                    />
                   </div>
 
                   <div className="rounded-md border-l-2 border-emerald-500/60 pl-3 space-y-2">
@@ -549,6 +746,7 @@ function ActionListEditor({
                   </div>
                 </div>
               )}
+
             </div>
           </div>
         );
