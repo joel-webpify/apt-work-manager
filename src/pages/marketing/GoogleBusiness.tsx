@@ -494,6 +494,51 @@ function PostEditor({ post, onClose }: { post: GbpPost; onClose: () => void }) {
           className="mt-1 w-full text-sm bg-background border-hairline rounded-md px-2.5 py-2 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
         />
       </div>
+      <div>
+        <label className="text-xs text-muted-foreground">Photo</label>
+        {draft.imageUrl ? (
+          <div className="mt-1 relative">
+            <img
+              src={draft.imageUrl}
+              alt="Post photo"
+              className="w-full h-36 object-cover rounded-md border-hairline"
+            />
+            <button
+              onClick={() => set("imageUrl", undefined)}
+              className="absolute top-1.5 right-1.5 h-7 px-2 text-xs rounded-md bg-card/90 border-hairline hover:bg-surface-hover"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <label className="mt-1 flex flex-col items-center justify-center gap-1 h-24 rounded-md border-hairline bg-surface text-xs text-muted-foreground cursor-pointer hover:bg-surface-hover">
+            <ImagePlus className="w-4 h-4" />
+            Add a photo from this device
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () => set("imageUrl", String(reader.result));
+                reader.readAsDataURL(file);
+              }}
+            />
+          </label>
+        )}
+        <input
+          value={draft.imageUrl?.startsWith("data:") ? "" : draft.imageUrl ?? ""}
+          onChange={(e) => set("imageUrl", e.target.value || undefined)}
+          placeholder="…or paste a photo link"
+          className="mt-2 w-full h-8 text-sm bg-background border-hairline rounded-md px-2.5 focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <p className="text-[11px] text-muted-foreground mt-1">
+          Landscape photos of finished work do best. Google shows one photo per post.
+        </p>
+      </div>
+
       <Field label="Button text" value={draft.cta} onChange={(v) => set("cta", v)} />
       <Field label="Button link" value={draft.ctaUrl} onChange={(v) => set("ctaUrl", v)} />
       <div>
