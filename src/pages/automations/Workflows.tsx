@@ -179,11 +179,53 @@ export default function Workflows() {
           )}
         </div>
 
-        {/* Templates hint */}
-        <div className="mt-6 border-hairline border-dashed rounded-lg p-4 text-sm text-muted-foreground max-w-2xl">
-          <div className="font-medium text-foreground mb-1">Coming next</div>
-          Prebuilt templates, visual canvas builder, and A/B branching by contact segment.
+        {/* Recipes */}
+        <div className="mt-8">
+          <div className="flex items-end justify-between mb-3">
+            <div>
+              <div className="text-sm font-medium">Ready-made recipes</div>
+              <div className="text-xs text-muted-foreground">Pick one and we set it up for you — nothing goes live until you switch it on.</div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {(["All", ...categories] as const).map((c) => (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                className={`h-7 px-2.5 rounded-full text-xs border-hairline transition-colors ${
+                  cat === c ? "bg-primary text-primary-foreground border-transparent" : "bg-card text-muted-foreground hover:bg-surface-hover"
+                }`}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+            {recipes.map((t) => (
+              <div key={t.id} className="border-hairline rounded-lg bg-card p-4 flex flex-col gap-2">
+                <div className="flex items-start gap-2">
+                  <div className="w-7 h-7 rounded-md bg-amber-500/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">{t.name}</div>
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t.category}</div>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground flex-1">{t.blurb}</p>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[11px] text-muted-foreground">
+                    {triggerMeta[t.trigger].label} · {t.actions.length} steps
+                  </span>
+                  <Btn onClick={() => useRecipe(t)}>
+                    <Plus className="w-3.5 h-3.5" /> Use this
+                  </Btn>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
+
       </PageBody>
     </>
   );
