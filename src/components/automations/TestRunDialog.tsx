@@ -177,6 +177,7 @@ export function TestRunDialog({
           continue;
         }
         if (a.type === "wait" || a.type === "wait_for_good_time") {
+          if (a.type === "wait_for_good_time" || a.waitUnit === "days") msgCount = 0;
           entries.push({ depth, label: actionMeta[a.type].label, detail: describe(a), state: "waiting" });
           continue;
         }
