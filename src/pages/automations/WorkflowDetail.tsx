@@ -1113,7 +1113,7 @@ export default function WorkflowDetail() {
                     </Select>
                   </div>
                 )}
-                {draft.trigger === "form_submitted" && (
+                {(draft.trigger === "form_submitted" || draft.trigger === "form_abandoned") && (
                   <Select
                     value={(draft.triggerConfig?.formId as string) ?? "any"}
                     onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, formId: v } })}
@@ -1127,6 +1127,67 @@ export default function WorkflowDetail() {
                     </SelectContent>
                   </Select>
                 )}
+                {draft.trigger === "low_rating_review" && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Anything at or below</span>
+                    <Select
+                      value={String(draft.triggerConfig?.maxRating ?? 3)}
+                      onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, maxRating: Number(v) } })}
+                    >
+                      <SelectTrigger className="h-8 text-xs w-24"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4].map((n) => <SelectItem key={n} value={String(n)}>{n} star{n === 1 ? "" : "s"}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                {(draft.trigger === "job_won" || draft.trigger === "job_lost" || draft.trigger === "job_created") && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Only jobs worth more than £</span>
+                    <Input
+                      type="number"
+                      min={0}
+                      value={(draft.triggerConfig?.minValue as number) ?? 0}
+                      onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, minValue: Number(e.target.value) } })}
+                      className="h-8 text-xs w-24"
+                    />
+                  </div>
+                )}
+                {draft.trigger === "invoice_overdue" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      value={(draft.triggerConfig?.daysOverdue as number) ?? 3}
+                      onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, daysOverdue: Number(e.target.value) } })}
+                      className="h-8 text-xs w-24"
+                    />
+                    <span className="text-xs text-muted-foreground">days past the due date</span>
+                  </div>
+                )}
+                {draft.trigger === "recurring_schedule" && (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Select
+                      value={(draft.triggerConfig?.every as string) ?? "monthly"}
+                      onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, every: v } })}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="weekly">Every week</SelectItem>
+                        <SelectItem value="monthly">Every month</SelectItem>
+                        <SelectItem value="quarterly">Every three months</SelectItem>
+                        <SelectItem value="yearly">Every year</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      type="time"
+                      value={(draft.triggerConfig?.atTime as string) ?? "09:00"}
+                      onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, atTime: e.target.value } })}
+                      className="h-8 text-xs"
+                    />
+                  </div>
+                )}
+
               </section>
 
               {/* Filters */}
