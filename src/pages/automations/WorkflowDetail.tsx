@@ -911,17 +911,26 @@ export default function WorkflowDetail() {
   const setDraft = (updater: (d: Workflow) => Workflow) =>
     setLocalDraft((prev) => updater((prev ?? existing) as Workflow));
   const [tab, setTab] = useState<"build" | "history" | "settings">("build");
+  const [openRun, setOpenRun] = useState<string | null>(null);
+  const [testOpen, setTestOpen] = useState(false);
 
   const patch = (p: Partial<Workflow>) => setDraft((d) => ({ ...d, ...p }));
+  const settings = draft.settings ?? defaultSettings();
+  const patchSettings = (p: Partial<WorkflowSettings>) => patch({ settings: { ...settings, ...p } });
+  const stats = workflowStats(draft);
+  const warnings = checkWorkflow(draft);
   const save = (silent = false) => {
     updateWorkflow(draft.id, draft);
-    if (!silent) toast({ title: "Workflow saved" });
+    if (!silent) toast({ title: "Automation saved" });
   };
   const toggleActive = () => {
     const next = !draft.active;
+    if (next && warnings.length > 0) {
+      toast({ title: "Have a quick look first", description: warnings[0] });
+    }
     patch({ active: next });
-    updateWorkflow(draft.id, { active: next });
-    toast({ title: next ? "Workflow activated" : "Workflow paused" });
+    updateWorkflow(draft.id, { ...draft, active: next });
+    toast({ title: next ? "Automation switched on" : "Automation paused" });
   };
   const onDuplicate = () => {
     const copy = duplicateWorkflow(draft.id);
@@ -942,22 +951,25 @@ export default function WorkflowDetail() {
     <>
       <PageHeader
         title={draft.name}
-        description={tmeta.label}
+        description={`${tmeta.label} · ${countSteps(draft.actions)} step${countSteps(draft.actions) === 1 ? "" : "s"}`}
         actions={
           <div className="flex items-center gap-2">
             <Link to="/automations" className="h-8 px-2 rounded-md hover:bg-surface-hover inline-flex items-center gap-1 text-sm text-muted-foreground">
               <ArrowLeft className="w-3.5 h-3.5" /> All automations
             </Link>
             <div className="flex items-center gap-2 pl-2 border-l-hairline">
-              <span className="text-xs text-muted-foreground">{draft.active ? "Active" : "Paused"}</span>
+              <span className="text-xs text-muted-foreground">{draft.active ? "On" : "Paused"}</span>
               <Switch checked={draft.active} onCheckedChange={toggleActive} />
             </div>
+            <Btn onClick={() => setTestOpen(true)}><FlaskConical className="w-3.5 h-3.5" /> Try it out</Btn>
             <Btn onClick={onDuplicate}><Copy className="w-3.5 h-3.5" /> Duplicate</Btn>
             <Btn onClick={onDelete}><Trash2 className="w-3.5 h-3.5" /> Delete</Btn>
             <Btn variant="primary" onClick={() => save()}>Save</Btn>
           </div>
         }
       />
+      <TestRunDialog open={testOpen} onOpenChange={setTestOpen} workflow={draft} />
+
       <PageBody>
         <div className="flex border-b-hairline mb-4 -mt-2">
           {([
