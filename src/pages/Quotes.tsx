@@ -12,6 +12,7 @@ import {
   Send,
   ThumbsUp,
   Link2,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { copyText, openInBrowser, quoteLink } from "@/lib/shareLinks";
