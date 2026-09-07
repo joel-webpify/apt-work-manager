@@ -1,6 +1,6 @@
 import { useMemo, useState, useEffect } from "react";
 import { Btn } from "@/components/layout/PageShell";
-import { Plus, Trash2, FileText } from "lucide-react";
+import { Plus, Trash2, FileText, Package, ImageOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -25,7 +25,9 @@ import {
   type QuoteStatus,
   type ProductUnit,
   type QuoteLineKind,
+  type Product,
 } from "@/data/mockData";
+import { ProductPickerDialog } from "./ProductPickerDialog";
 import { fmt, lineKind, resolveItems, totals, hasCustomerChoices } from "@/lib/quoteUtils";
 
 const statuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined", "Expired"];
@@ -76,6 +78,8 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
     }
   }, [open, initial]);
 
+  const [pickerOpen, setPickerOpen] = useState(false);
+
   const t = useMemo(() => totals(resolveItems(draft.items, draft.selection)), [draft]);
   const tailored = hasCustomerChoices(draft.items);
 
@@ -98,8 +102,29 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
       unit: p.unit,
       unitPrice: p.price,
       taxRate: p.taxRate,
+      imageUrl: p.imageUrl,
     });
   };
+
+  const lineFromProduct = (p: Product): QuoteLineItem => ({
+    ...blankItem(),
+    productId: p.id,
+    name: p.name,
+    description: p.description,
+    unit: p.unit,
+    unitPrice: p.price,
+    taxRate: p.taxRate,
+    imageUrl: p.imageUrl,
+  });
+
+  /** Add catalogue picks as new lines, filling any empty starter line first. */
+  const addFromCatalogue = (picked: Product[]) =>
+    setDraft((d) => {
+      const lines = picked.map(lineFromProduct);
+      const isBlank = (i: QuoteLineItem) => !i.name.trim() && !i.productId && !i.unitPrice;
+      const kept = d.items.filter((i) => !isBlank(i));
+      return { ...d, items: [...kept, ...lines] };
+    });
 
   const setKind = (li: QuoteLineItem, kind: QuoteLineKind) => {
     if (kind === "choice") {
@@ -243,9 +268,14 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
           <div>
             <div className="flex items-center justify-between mb-2">
               <Label>Line items</Label>
-              <Btn onClick={addItem}>
-                <Plus className="w-3.5 h-3.5" /> Add line
-              </Btn>
+              <div className="flex items-center gap-2">
+                <Btn onClick={() => setPickerOpen(true)}>
+                  <Package className="w-3.5 h-3.5" /> From catalogue
+                </Btn>
+                <Btn onClick={addItem}>
+                  <Plus className="w-3.5 h-3.5" /> Add line
+                </Btn>
+              </div>
             </div>
             <div className="border-hairline rounded-lg overflow-hidden">
               <div className="grid grid-cols-[2fr_0.7fr_0.7fr_0.9fr_0.6fr_0.9fr_auto] px-3 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
@@ -265,6 +295,20 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
                     className="grid grid-cols-[2fr_0.7fr_0.7fr_0.9fr_0.6fr_0.9fr_auto] px-3 py-2 gap-1.5 items-start text-sm border-b-hairline last:border-b-0"
                   >
                     <div className="space-y-1">
+                      <div className="flex items-start gap-2">
+                        <div className="w-11 h-11 shrink-0 rounded-md overflow-hidden border-hairline bg-surface flex items-center justify-center">
+                          {li.imageUrl ? (
+                            <img
+                              src={li.imageUrl}
+                              alt={li.name || "Product photo"}
+                              loading="lazy"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <ImageOff className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-1">
                       <Select
                         value={li.productId ?? ""}
                         onValueChange={(v) => pickProduct(li.id, v)}
@@ -288,6 +332,14 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
                         placeholder="Description"
                         className="h-8 text-xs"
                       />
+                      <Input
+                        value={li.imageUrl ?? ""}
+                        onChange={(e) => updateItem(li.id, { imageUrl: e.target.value })}
+                        placeholder="Photo link (optional)"
+                        className="h-7 text-xs"
+                      />
+                        </div>
+                      </div>
                       {mode === "quote" && (
                         <div className="flex flex-wrap items-center gap-1">
                           <Select
@@ -430,6 +482,12 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
           </Btn>
         </DialogFooter>
       </DialogContent>
+
+      <ProductPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        onAdd={addFromCatalogue}
+      />
     </Dialog>
   );
 }
