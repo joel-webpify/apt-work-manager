@@ -127,11 +127,16 @@ export default function Quotes() {
     if (r) toast({ title: "Quote accepted", description: r.message });
   };
 
-  const copyCustomerLink = (q: Quote) => {
-    const url = `${window.location.origin}/quote/${q.id}`;
-    navigator.clipboard?.writeText(url);
-    toast({ title: "Customer link copied", description: url });
+  const copyCustomerLink = async (q: Quote) => {
+    const url = quoteLink(q.id);
+    const ok = await copyText(url);
+    toast({
+      title: ok ? "Customer link copied" : "Here is the customer link",
+      description: ok ? url : `Copy it by hand: ${url}`,
+    });
   };
+
+  const openCustomerLink = (q: Quote) => openInBrowser(quoteLink(q.id));
 
   const convertToInvoice = (q: Quote) => {
     const number = `INV-${1100 + invoices.length}`;
