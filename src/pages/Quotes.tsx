@@ -12,8 +12,10 @@ import {
   Send,
   ThumbsUp,
   Link2,
+  ExternalLink,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { copyText, openInBrowser, quoteLink } from "@/lib/shareLinks";
 import {
   quoteStatusTones,
   invoiceStatusTones,
@@ -127,11 +129,16 @@ export default function Quotes() {
     if (r) toast({ title: "Quote accepted", description: r.message });
   };
 
-  const copyCustomerLink = (q: Quote) => {
-    const url = `${window.location.origin}/quote/${q.id}`;
-    navigator.clipboard?.writeText(url);
-    toast({ title: "Customer link copied", description: url });
+  const copyCustomerLink = async (q: Quote) => {
+    const url = quoteLink(q.id);
+    const ok = await copyText(url);
+    toast({
+      title: ok ? "Customer link copied" : "Here is the customer link",
+      description: ok ? url : `Copy it by hand: ${url}`,
+    });
   };
+
+  const openCustomerLink = (q: Quote) => openInBrowser(quoteLink(q.id));
 
   const convertToInvoice = (q: Quote) => {
     const number = `INV-${1100 + invoices.length}`;
@@ -313,6 +320,9 @@ export default function Quotes() {
                   >
                     <Btn onClick={() => copyCustomerLink(q)} title="Copy the link the customer opens">
                       <Link2 className="w-3.5 h-3.5" /> Link
+                    </Btn>
+                    <Btn onClick={() => openCustomerLink(q)} title="Open the customer's page in a new tab">
+                      <ExternalLink className="w-3.5 h-3.5" /> Open
                     </Btn>
                     {(q.status === "Draft" || q.status === "Sent") && (
                       <Btn onClick={() => handleAcceptQuote(q)} title="Mark accepted — creates a job">

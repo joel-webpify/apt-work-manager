@@ -67,7 +67,12 @@ export default function PublicQuote() {
   // Only the customer this quote was sent to can see it.
   const onRecord = quoteEmail(quote);
   if (!session || (onRecord && normEmail(onRecord) !== session.email)) {
-    return <Navigate to={`/portal?next=/quote/${quote.id}`} replace />;
+    return (
+      <Navigate
+        to={`/portal?next=${encodeURIComponent(`/quote/${quote.id}`)}`}
+        replace
+      />
+    );
   }
 
 
