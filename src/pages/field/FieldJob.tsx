@@ -32,6 +32,9 @@ import { directionsUrl, openMaps, telHref } from "@/lib/mapLinks";
 import StatusStepper from "@/components/field/StatusStepper";
 import PhotoGrid from "@/components/field/PhotoGrid";
 import JobSheetForm from "@/components/field/JobSheetForm";
+import SurveyForm from "@/components/field/SurveyForm";
+import MaterialsList from "@/components/field/MaterialsList";
+import { getSurveys, setJobSurvey, surveyForJob, useSurveys } from "@/lib/surveysStore";
 import WrapUpSheet from "@/components/field/WrapUpSheet";
 import QuickChips, { appendLine } from "@/components/field/QuickChips";
 import VoiceNoteButton from "@/components/field/VoiceNoteButton";
@@ -58,6 +61,9 @@ export default function FieldJob() {
   const me = employees.find((e) => e.id === userId) ?? employees[0];
   const contact = useMemo(() => contacts.find((c) => c.id === job?.contactId), [job]);
   const tpl = templateFor(job?.service);
+  const allSurveys = useSurveys();
+  const survey = surveyForJob(id, job?.service);
+  void allSurveys;
 
   if (!job) {
     return (
@@ -184,6 +190,33 @@ export default function FieldJob() {
 
       <FieldSection title="Photos" subtitle="Labelled from where you are in the job, so you don't have to.">
         <PhotoGrid jobId={id} employeeId={userId} photos={record.photos} status={record.status} readOnly={locked} />
+      </FieldSection>
+
+      <FieldSection
+        title="Site visit survey"
+        subtitle={survey ? "The questions the office set for this kind of job." : "No survey set for this job yet."}
+      >
+        {!locked && (
+          <select
+            value={survey?.id ?? ""}
+            onChange={(e) => setJobSurvey(id, e.target.value || undefined)}
+            className="h-10 w-full rounded-lg border-hairline bg-background px-2.5 text-sm mb-3"
+          >
+            <option value="">No survey</option>
+            {getSurveys().map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        )}
+        {survey && (
+          <SurveyForm jobId={id} employeeId={userId} record={record} survey={survey} readOnly={locked} />
+        )}
+      </FieldSection>
+
+      <FieldSection title="Materials used" subtitle="What you used, what it cost and what the customer pays.">
+        <MaterialsList jobId={id} addedBy={me.name} readOnly={locked} />
       </FieldSection>
 
       <FieldSection title="Job sheet">
