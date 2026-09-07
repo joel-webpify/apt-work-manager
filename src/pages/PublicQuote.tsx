@@ -169,7 +169,7 @@ export default function PublicQuote() {
                 </div>
               )}
               {finalItems.map((li) => (
-                <Row key={li.id} label={li.name} sub={li.description} price={lineTotal(li)} qty={li.qty} unit={li.unit} />
+                <Row key={li.id} label={li.name} sub={li.description} price={lineTotal(li)} qty={li.qty} unit={li.unit} imageUrl={li.imageUrl} />
               ))}
               <div className="flex justify-between text-base font-medium border-t-hairline pt-3">
                 <span>Total</span>
@@ -188,6 +188,7 @@ export default function PublicQuote() {
                       price={lineTotal(li)}
                       qty={li.qty}
                       unit={li.unit}
+                      imageUrl={li.imageUrl}
                     />
                   ))}
                 </Section>
@@ -220,6 +221,14 @@ export default function PublicQuote() {
                           >
                             {active && <span className="w-2 h-2 rounded-full bg-primary" />}
                           </span>
+                          {o.imageUrl && (
+                            <img
+                              src={o.imageUrl}
+                              alt={o.name || "Option photo"}
+                              loading="lazy"
+                              className="w-16 h-16 rounded-md object-cover border-hairline shrink-0"
+                            />
+                          )}
                           <span className="flex-1 min-w-0">
                             <span className="block text-sm font-medium">
                               {o.name || "Option"}
@@ -272,6 +281,14 @@ export default function PublicQuote() {
                         >
                           {on && <CheckCircle2 className="w-3 h-3 text-primary-foreground" />}
                         </span>
+                        {li.imageUrl && (
+                          <img
+                            src={li.imageUrl}
+                            alt={li.name || "Extra photo"}
+                            loading="lazy"
+                            className="w-16 h-16 rounded-md object-cover border-hairline shrink-0"
+                          />
+                        )}
                         <span className="flex-1 min-w-0">
                           <span className="block text-sm font-medium">{li.name || "Extra"}</span>
                           {li.description && (
@@ -422,16 +439,26 @@ function Row({
   price,
   qty,
   unit,
+  imageUrl,
 }: {
   label: string;
   sub?: string;
   price: number;
   qty: number;
   unit: string;
+  imageUrl?: string;
 }) {
   return (
     <div className="flex items-start justify-between gap-3 text-sm py-1.5">
-      <div className="min-w-0">
+      {imageUrl && (
+        <img
+          src={imageUrl}
+          alt={label || "Item photo"}
+          loading="lazy"
+          className="w-14 h-14 rounded-md object-cover border-hairline shrink-0"
+        />
+      )}
+      <div className="min-w-0 flex-1">
         <div className="font-medium">{label || "Item"}</div>
         <div className="text-xs text-muted-foreground mt-0.5">
           {qty} {unit}
