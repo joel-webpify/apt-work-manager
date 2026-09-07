@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import {
   products as seedProducts,
+  contacts as seedContacts,
   type Quote,
   type QuoteLineItem,
   type QuoteStatus,
@@ -39,8 +40,15 @@ import {
   type QuoteLineKind,
   type Product,
 } from "@/data/mockData";
+import {
+  useImportedContacts,
+  useContactExtras,
+  applyExtrasTo,
+  mergeWithMock,
+} from "@/lib/contactsStore";
 import { ProductPickerDialog } from "./ProductPickerDialog";
 import { fmt, lineKind, resolveItems, totals, hasCustomerChoices, lineTotal } from "@/lib/quoteUtils";
+
 
 const statuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined", "Expired"];
 const units: ProductUnit[] = ["each", "hour", "day", "sqm", "m", "visit"];
