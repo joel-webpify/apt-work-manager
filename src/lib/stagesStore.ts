@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { stages as seedStages, stageColors as seedStageColors } from "@/data/mockData";
+import { stageColors as seedStageColors } from "@/data/mockData";
 
 export interface Stage {
   id: string;
@@ -15,8 +15,7 @@ export interface Pipeline {
 
 export type PipelineId = "sales" | "install" | string;
 
-const PIPELINES_KEY = "pipelines-v2";
-const LEGACY_STAGES_KEY = "pipeline-stages-v1";
+const PIPELINES_KEY = "pipelines-v3";
 const RENAMES_KEY = "pipeline-stage-renames-v1";
 
 interface State {
@@ -24,29 +23,45 @@ interface State {
   renames: Record<string, string>;
 }
 
-const SALES_STAGE_NAMES = ["New enquiry", "Quote sent", "Won"];
-/** Installation keeps the original seed stage names so existing jobs slot straight in. */
-const INSTALL_STAGE_NAMES = ["To schedule", "Job booked", "In progress", "Completed", "Invoiced", "Paid"];
+const SALES_STAGE_NAMES = [
+  "New enquiry",
+  "Contacted",
+  "Site visit booked",
+  "Quote sent",
+  "Following up",
+  "Won",
+];
+/** Delivery only — money (invoiced / paid) lives in Quotes & invoices. */
+const INSTALL_STAGE_NAMES = ["To schedule", "Job booked", "In progress", "Completed"];
+
+/** Stages that no longer exist land on their nearest surviving stage. */
+const LEGACY_STAGE_MAP: Record<string, string> = {
+  Invoiced: "Completed",
+  Paid: "Completed",
+  "Follow-up": "Following up",
+};
 
 const FALLBACK_COLORS: Record<string, string> = {
   "New enquiry": "hsl(var(--info))",
+  Contacted: "199 89% 48%",
+  "Site visit booked": "271 91% 65%",
   "Quote sent": "hsl(var(--warning))",
+  "Following up": "25 95% 53%",
   Won: "142 71% 45%",
   "To schedule": "239 84% 67%",
   "Job booked": "hsl(var(--info))",
   "In progress": "hsl(var(--warning))",
   Completed: "hsl(var(--success))",
-  Invoiced: "hsl(var(--warning))",
-  Paid: "hsl(var(--success))",
 };
 
 function colorForSeed(name: string): string {
-  return (seedStageColors as Record<string, string>)[name] ?? FALLBACK_COLORS[name] ?? "215 16% 47%";
+  return FALLBACK_COLORS[name] ?? (seedStageColors as Record<string, string>)[name] ?? "215 16% 47%";
 }
 
 function mkStage(name: string, prefix: string): Stage {
   return { id: `${prefix}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name, color: colorForSeed(name) };
 }
+
 
 function defaultState(): State {
   return {
@@ -56,20 +71,6 @@ function defaultState(): State {
     ],
     renames: {},
   };
-}
-
-/** Old single-list setup: keep any custom stages the user made by folding them into the two pipelines. */
-function migrateFromLegacy(legacy: Stage[]): Pipeline[] {
-  const base = defaultState().pipelines;
-  const known = new Set([...SALES_STAGE_NAMES, ...INSTALL_STAGE_NAMES, ...seedStages]);
-  const extras = legacy.filter((s) => !known.has(s.name));
-  const salesNames = new Set(["New enquiry", "Quote sent", "Won"]);
-  return base.map((p) => {
-    if (p.id !== "install") return p;
-    // Custom stages the user added previously land at the end of installation.
-    const carried = extras.filter((s) => !salesNames.has(s.name));
-    return { ...p, stages: [...p.stages, ...carried] };
-  });
 }
 
 function load(): State {
@@ -85,11 +86,6 @@ function load(): State {
     if (raw) {
       const parsed = JSON.parse(raw) as Pipeline[];
       if (Array.isArray(parsed) && parsed.length) return { pipelines: parsed, renames };
-    }
-    const legacyRaw = localStorage.getItem(LEGACY_STAGES_KEY);
-    if (legacyRaw) {
-      const legacy = JSON.parse(legacyRaw) as Stage[];
-      if (Array.isArray(legacy) && legacy.length) return { pipelines: migrateFromLegacy(legacy), renames };
     }
   } catch {
     /* ignore */
@@ -111,14 +107,18 @@ function persist() {
 }
 
 export function resolveStageName(name: string): string {
-  let cur = name;
+  let cur = LEGACY_STAGE_MAP[name] ?? name;
   const seen = new Set<string>();
   while (state.renames[cur] && !seen.has(cur)) {
     seen.add(cur);
     cur = state.renames[cur];
   }
+  // A stage that no longer exists anywhere falls back to a sensible one.
+  const exists = state.pipelines.some((p) => p.stages.some((s) => s.name === cur));
+  if (!exists) cur = LEGACY_STAGE_MAP[cur] ?? cur;
   return cur;
 }
+
 
 export function getPipelines(): Pipeline[] {
   return state.pipelines;
