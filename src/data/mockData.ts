@@ -8,11 +8,14 @@ export type ContactType = "Residential" | "Commercial";
 export type PipelineStage =
   | "New enquiry"
   | "Quote sent"
+  | "Won"
+  | "To schedule"
   | "Job booked"
   | "In progress"
   | "Completed"
   | "Invoiced"
   | "Paid";
+
 
 export const stages: PipelineStage[] = [
   "New enquiry",
@@ -26,6 +29,8 @@ export const stages: PipelineStage[] = [
 
 export const stageColors: Record<PipelineStage, string> = {
   "New enquiry": "hsl(var(--info))",
+  Won: "hsl(var(--success))",
+  "To schedule": "239 84% 67%",
   "Quote sent": "hsl(var(--warning))",
   "Job booked": "hsl(var(--info))",
   "In progress": "hsl(var(--warning))",
@@ -89,7 +94,10 @@ export interface Job {
   trade?: Trade;
   value: number;
   stage: PipelineStage;
+  /** Which pipeline the job currently sits in ("sales" or "install"). */
+  pipelineId?: string;
   daysInStage: number;
+
   address: string;
   postcode?: string;
   notes: string;

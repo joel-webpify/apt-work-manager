@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState, type DragEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2 } from "lucide-react";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
-import { useStages, resolveStageName, colorToCss } from "@/lib/stagesStore";
+import { useStages, resolveStageName, colorToCss, firstStageOf, lastStageOf } from "@/lib/stagesStore";
 
 import ScheduleView from "@/components/pipeline/ScheduleView";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
@@ -59,7 +59,7 @@ type View = "board" | "list" | "schedule";
 type SortKey = "customer" | "service" | "stage" | "value" | "daysInStage";
 type SortDir = "asc" | "desc";
 
-const seedStageTones: Record<PipelineStage, "neutral" | "success" | "warning" | "danger" | "info"> = {
+const seedStageTones: Partial<Record<PipelineStage, "neutral" | "success" | "warning" | "danger" | "info">> = {
   "New enquiry": "info",
   "Quote sent": "warning",
   "Job booked": "info",
@@ -70,7 +70,7 @@ const seedStageTones: Record<PipelineStage, "neutral" | "success" | "warning" | 
 };
 const stageToneFor = (s: string) => seedStageTones[s as PipelineStage] ?? "neutral";
 
-const seedStuckThresholds: Record<PipelineStage, number> = {
+const seedStuckThresholds: Partial<Record<PipelineStage, number>> = {
   "New enquiry": 2,
   "Quote sent": 4,
   "Job booked": 7,
@@ -81,16 +81,33 @@ const seedStuckThresholds: Record<PipelineStage, number> = {
 };
 const stuckFor = (s: string) => seedStuckThresholds[s as PipelineStage] ?? 7;
 
+type PipelineTab = "sales" | "install" | "all";
+
 export default function Pipeline() {
   const [jobListRaw, setJobListInternal] = useJobs();
-  const { stages: stageDefs, stageNames, colorFor, renameStage: _r } = useStages();
-  void _r;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = (searchParams.get("pipeline") ?? "sales").toLowerCase();
+  const tab: PipelineTab = tabParam === "install" || tabParam === "all" ? (tabParam as PipelineTab) : "sales";
+  const activePipelineId = tab === "all" ? "sales" : tab;
+  const { pipelines, pipeline, stages: stageDefs, stageNames, colorFor, pipelineIdForStage: pipeFor } =
+    useStages(activePipelineId);
 
-  // Resolve any renamed stages on jobs at read time so seed jobs still slot into renamed columns.
+  const setTab = (next: PipelineTab) => {
+    const p = new URLSearchParams(searchParams);
+    p.set("pipeline", next);
+    setSearchParams(p, { replace: true });
+  };
+
+  // Resolve renamed stages, and work out which pipeline each job sits in.
   const jobList = useMemo(
-    () => jobListRaw.map((j) => ({ ...j, stage: resolveStageName(j.stage) as PipelineStage })),
-    [jobListRaw, stageDefs],
+    () =>
+      jobListRaw.map((j) => {
+        const stage = resolveStageName(j.stage) as PipelineStage;
+        return { ...j, stage, pipelineId: j.pipelineId ?? pipeFor(stage) };
+      }),
+    [jobListRaw, stageDefs, pipelines, pipeFor],
   );
+  const boardJobs = useMemo(() => jobList.filter((j) => j.pipelineId === activePipelineId), [jobList, activePipelineId]);
   const setJobList = setJobListInternal;
 
   const [selected, setSelected] = useState<Job | null>(null);
@@ -133,7 +150,11 @@ export default function Pipeline() {
     if (!jobId) return;
     const prevJob = jobList.find((j) => j.id === jobId);
     setJobList((prev) =>
-      prev.map((j) => (j.id === jobId && j.stage !== stage ? { ...j, stage: stage as PipelineStage, daysInStage: 0 } : j)),
+      prev.map((j) =>
+        j.id === jobId && j.stage !== stage
+          ? { ...j, stage: stage as PipelineStage, pipelineId: activePipelineId, daysInStage: 0 }
+          : j,
+      ),
     );
     setDraggingId(null);
     setDragOverStage(null);
@@ -152,12 +173,56 @@ export default function Pipeline() {
     if (patch.stage && prevJob && prevJob.stage !== patch.stage) runLifecycle(id, patch.stage);
   };
 
+  // ---- Handover between pipelines -------------------------------------------
+  const salesLastStage = lastStageOf("sales");
+  const installFirstStage = firstStageOf("install");
+  const salesFirstStage = firstStageOf("sales");
+
+  const moveToPipeline = (job: Job, target: "sales" | "install") => {
+    const stage = (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as PipelineStage;
+    const note = target === "install" ? "Handed over to installation" : "Sent back to sales";
+    updateJob(job.id, {
+      pipelineId: target,
+      stage,
+      daysInStage: 0,
+      timeline: [
+        ...(job.timeline ?? []),
+        { type: "note" as const, text: note, date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) },
+      ],
+    });
+    topToast({
+      title: note,
+      description:
+        target === "install"
+          ? `${job.customer} is now in the installation pipeline at “${stage}”.`
+          : `${job.customer} is back in the sales pipeline at “${stage}”.`,
+    });
+    if (selected?.id === job.id) setSelected((s) => (s ? { ...s, pipelineId: target, stage } : s));
+  };
+
+  const canHandOver = (job: Job) => job.pipelineId === "sales" && job.stage === salesLastStage;
+  const canReturn = (job: Job) => job.pipelineId === "install" && job.stage === installFirstStage;
+
+  const counts = {
+    sales: jobList.filter((j) => j.pipelineId === "sales").length,
+    install: jobList.filter((j) => j.pipelineId === "install").length,
+    all: jobList.length,
+  };
+  const waitingHandover = jobList.filter(canHandOver).length;
 
   return (
     <>
       <PageHeader
         title="Jobs & pipeline"
-        description={view === "board" ? "Drag and track jobs through every stage" : view === "list" ? "Detailed view of every job across all stages" : "Schedule your team across the week — drag jobs onto employees"}
+        description={
+          tab === "all"
+            ? "Every job across sales and installation, in one list"
+            : view === "board"
+              ? `Drag and track ${pipeline?.name.toLowerCase() ?? ""} jobs through every stage`
+              : view === "list"
+                ? "Detailed view of every job in this pipeline"
+                : "Schedule your team across the week — drag jobs onto employees"
+        }
         actions={
           <>
             <Link
@@ -166,16 +231,16 @@ export default function Pipeline() {
             >
               <BarChart3 className="w-3.5 h-3.5" /> Analytics
             </Link>
-            <ViewToggle view={view} onChange={setView} />
+            {tab !== "all" && <ViewToggle view={view} onChange={setView} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="h-8 px-2.5 rounded-md text-sm font-medium inline-flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-surface-hover transition-colors border-hairline">
                   <Settings2 className="w-3.5 h-3.5" /> Settings
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium">
-                  Pipeline configuration
+                  {pipeline?.name ?? "Pipeline"} setup
                 </DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => setManageStagesOpen(true)} className="cursor-pointer">
                   <Columns3 className="w-3.5 h-3.5 mr-2" /> Stages
@@ -190,11 +255,52 @@ export default function Pipeline() {
         }
       />
 
-      {view === "board" && (
+      {/* Pipeline switcher */}
+      <div className="px-8 border-b-hairline flex items-center gap-1">
+        {pipelines.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setTab(p.id as PipelineTab)}
+            className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 ${
+              tab === p.id ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {p.id === "sales" ? <Handshake className="w-3.5 h-3.5" /> : <Wrench className="w-3.5 h-3.5" />}
+            {p.name}
+            <span className="text-xs text-muted-foreground">{counts[p.id as "sales" | "install"] ?? 0}</span>
+          </button>
+        ))}
+        <button
+          onClick={() => setTab("all")}
+          className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 ${
+            tab === "all" ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <List className="w-3.5 h-3.5" /> All jobs
+          <span className="text-xs text-muted-foreground">{counts.all}</span>
+        </button>
+        {tab === "sales" && waitingHandover > 0 && (
+          <span className="ml-auto text-xs text-muted-foreground">
+            {waitingHandover} won {waitingHandover === 1 ? "job" : "jobs"} ready to hand over
+          </span>
+        )}
+      </div>
+
+      {tab === "all" && (
+        <AllJobsView
+          jobs={jobList}
+          pipelines={pipelines}
+          colorFor={colorFor}
+          onSelect={setSelected}
+          onOpenPipeline={(id) => setTab(id as PipelineTab)}
+        />
+      )}
+
+      {tab !== "all" && view === "board" && (
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
           <div className="flex gap-3 px-8 py-6 h-full min-w-max">
             {stageNames.map((stage) => {
-              const stageJobs = jobList.filter((j) => j.stage === stage);
+              const stageJobs = boardJobs.filter((j) => j.stage === stage);
               const total = stageJobs.reduce((s, j) => s + j.value, 0);
               const isOver = dragOverStage === stage;
               const stageColor = colorToCss(colorFor(stage));
@@ -221,6 +327,8 @@ export default function Pipeline() {
                         cardFields={cardFields}
                         editing={editingCardId === job.id}
                         dragging={draggingId === job.id}
+                        handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
+                        onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
                         onCancelEdit={() => setEditingCardId(null)}
                         onSaveEdit={(patch) => { updateJob(job.id, patch); setEditingCardId(null); }}
@@ -236,8 +344,8 @@ export default function Pipeline() {
           </div>
         </div>
       )}
-      {view === "list" && <JobsListView jobs={jobList} stageNames={stageNames} colorFor={colorFor} onSelect={setSelected} />}
-      {view === "schedule" && (
+      {tab !== "all" && view === "list" && <JobsListView jobs={boardJobs} stageNames={stageNames} colorFor={colorFor} onSelect={setSelected} />}
+      {tab !== "all" && view === "schedule" && (
         <ScheduleView
           jobs={jobList}
           onUpdateJob={(jobId, updater) =>
@@ -247,7 +355,7 @@ export default function Pipeline() {
         />
       )}
 
-      {view === "list" && (
+      {tab !== "all" && view === "list" && (
         <div className="px-6 pb-6">
           <FieldOpportunities />
         </div>
@@ -258,8 +366,13 @@ export default function Pipeline() {
       {selected && (
         <JobDrawer
           job={selected}
-          stageNames={stageNames}
+          stageNames={
+            (pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.stages ?? stageDefs).map((s) => s.name)
+          }
           colorFor={colorFor}
+          pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.name}
+          handover={canHandOver(selected) ? "install" : canReturn(selected) ? "sales" : null}
+          onHandover={(target) => moveToPipeline(selected, target)}
           onClose={() => setSelected(null)}
           onUpdate={(patch) => {
             updateJob(selected.id, patch);
@@ -270,6 +383,7 @@ export default function Pipeline() {
       <NewJobDialog
         open={newJobOpen}
         onOpenChange={setNewJobOpen}
+        defaultPipelineId={activePipelineId}
         onCreate={(job) => setJobList((prev) => [job, ...prev])}
       />
       <ManageJobFieldsDialog
@@ -281,11 +395,128 @@ export default function Pipeline() {
       <ManageStagesDialog
         open={manageStagesOpen}
         onOpenChange={setManageStagesOpen}
+        pipelineId={activePipelineId}
         onRename={handleStageRename}
       />
     </>
   );
 }
+
+/** One list covering both pipelines so you can see where every job sits. */
+function AllJobsView({
+  jobs,
+  pipelines,
+  colorFor,
+  onSelect,
+  onOpenPipeline,
+}: {
+  jobs: Job[];
+  pipelines: { id: string; name: string; stages: { name: string }[] }[];
+  colorFor: (n: string) => string;
+  onSelect: (j: Job) => void;
+  onOpenPipeline: (id: string) => void;
+}) {
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const filtered = jobs.filter(
+    (j) => !q || j.customer.toLowerCase().includes(q) || j.service.toLowerCase().includes(q) || j.stage.toLowerCase().includes(q),
+  );
+
+  return (
+    <div className="flex-1 overflow-auto px-8 py-6">
+      <div className="grid gap-3 sm:grid-cols-3 mb-5">
+        {pipelines.map((p) => {
+          const list = jobs.filter((j) => (j.pipelineId ?? "sales") === p.id);
+          return (
+            <button
+              key={p.id}
+              onClick={() => onOpenPipeline(p.id)}
+              className="text-left border-hairline rounded-lg bg-card p-3 hover:bg-surface-hover transition-colors"
+            >
+              <div className="text-xs text-muted-foreground">{p.name}</div>
+              <div className="text-lg font-medium tabular-nums mt-0.5">
+                {list.length} <span className="text-sm text-muted-foreground font-normal">jobs</span>
+              </div>
+              <div className="text-xs text-muted-foreground tabular-nums mt-0.5">
+                £{list.reduce((s, j) => s + j.value, 0).toLocaleString()} in play
+              </div>
+            </button>
+          );
+        })}
+        <div className="border-hairline rounded-lg bg-card p-3">
+          <div className="text-xs text-muted-foreground">Total value</div>
+          <div className="text-lg font-medium tabular-nums mt-0.5">
+            £{jobs.reduce((s, j) => s + j.value, 0).toLocaleString()}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">{jobs.length} jobs in total</div>
+        </div>
+      </div>
+
+      <div className="relative mb-3 w-72">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search customer, service, stage…"
+          className="h-8 w-full pl-8 pr-3 text-sm rounded-md border-hairline bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+      </div>
+
+      <div className="border-hairline rounded-lg overflow-hidden bg-card">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b-hairline bg-surface/40">
+              {["Customer", "Service", "Pipeline", "Stage", "Value", "Days here"].map((h, i) => (
+                <th
+                  key={h}
+                  className={`font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 ${i > 3 ? "text-right" : "text-left"}`}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">No jobs match that search.</td>
+              </tr>
+            ) : (
+              filtered.map((job) => {
+                const pipe = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"));
+                return (
+                  <tr
+                    key={job.id}
+                    onClick={() => onSelect(job)}
+                    className="border-b-hairline last:border-0 hover:bg-surface-hover cursor-pointer transition-colors"
+                  >
+                    <td className="px-3 py-3 font-medium">{job.customer}</td>
+                    <td className="px-3 py-3 text-muted-foreground">{job.service}</td>
+                    <td className="px-3 py-3">
+                      <Pill tone={pipe?.id === "install" ? "info" : "neutral"}>
+                        {pipe?.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+                        {pipe?.name ?? "Sales"}
+                      </Pill>
+                    </td>
+                    <td className="px-3 py-3">
+                      <span className="inline-flex items-center gap-1.5">
+                        <StatusDot color={colorToCss(colorFor(job.stage))} />
+                        {job.stage}
+                      </span>
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums font-medium">£{job.value.toLocaleString()}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{job.daysInStage}d</td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 
 function BoardCard({
   job,
@@ -293,6 +524,8 @@ function BoardCard({
   cardFields,
   editing,
   dragging,
+  handover,
+  onHandover,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
@@ -305,6 +538,8 @@ function BoardCard({
   cardFields: ReturnType<typeof useJobFieldSchema>[0];
   editing: boolean;
   dragging: boolean;
+  handover?: "install" | "sales" | null;
+  onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSaveEdit: (patch: Partial<Job>) => void;
@@ -312,6 +547,7 @@ function BoardCard({
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
 }) {
+
   const [customer, setCustomer] = useState(job.customer);
   const [service, setService] = useState(job.service);
   const [value, setValue] = useState<string>(String(job.value));
@@ -435,7 +671,24 @@ function BoardCard({
           </span>
         </div>
       )}
+      {handover && onHandover && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onHandover(handover); }}
+          className={`mt-2.5 w-full h-7 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors ${
+            handover === "install"
+              ? "bg-primary text-primary-foreground hover:opacity-90"
+              : "border-hairline text-muted-foreground hover:text-foreground hover:bg-background"
+          }`}
+        >
+          {handover === "install" ? (
+            <><ArrowRight className="w-3 h-3" /> Send to installation</>
+          ) : (
+            <><Undo2 className="w-3 h-3" /> Return to sales</>
+          )}
+        </button>
+      )}
     </div>
+
   );
 }
 
@@ -698,12 +951,18 @@ function JobDrawer({
   job,
   stageNames,
   colorFor,
+  pipelineName,
+  handover,
+  onHandover,
   onClose,
   onUpdate,
 }: {
   job: Job;
   stageNames: string[];
   colorFor: (n: string) => string;
+  pipelineName?: string;
+  handover?: "install" | "sales" | null;
+  onHandover?: (target: "install" | "sales") => void;
   onClose: () => void;
   onUpdate: (patch: Partial<Job>) => void;
 }) {
@@ -718,28 +977,53 @@ function JobDrawer({
       <div className="fixed inset-0 bg-black/25 z-40 animate-fade-in" onClick={onClose} />
       <aside className="fixed top-0 right-0 h-screen w-[480px] bg-background border-l-hairline z-50 flex flex-col animate-slide-in-right">
         <header className="h-14 px-5 flex items-center justify-between border-b-hairline shrink-0 gap-2">
-          <Select value={job.stage} onValueChange={(v) => onUpdate({ stage: v as PipelineStage })}>
-            <SelectTrigger className="h-8 w-auto border-hairline gap-2">
-              <span className="inline-flex items-center gap-2">
-                <StatusDot color={colorToCss(colorFor(job.stage))} />
-                <SelectValue />
-              </span>
-            </SelectTrigger>
-            <SelectContent>
-              {stageNames.map((s) => (
-                <SelectItem key={s} value={s}>
-                  <span className="inline-flex items-center gap-2">
-                    <StatusDot color={colorToCss(colorFor(s))} />
-                    {s}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex items-center gap-2 min-w-0">
+            {pipelineName && (
+              <Pill tone={job.pipelineId === "install" ? "info" : "neutral"}>
+                {job.pipelineId === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+                {pipelineName}
+              </Pill>
+            )}
+            <Select value={job.stage} onValueChange={(v) => onUpdate({ stage: v as PipelineStage })}>
+              <SelectTrigger className="h-8 w-auto border-hairline gap-2">
+                <span className="inline-flex items-center gap-2">
+                  <StatusDot color={colorToCss(colorFor(job.stage))} />
+                  <SelectValue />
+                </span>
+              </SelectTrigger>
+              <SelectContent>
+                {stageNames.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    <span className="inline-flex items-center gap-2">
+                      <StatusDot color={colorToCss(colorFor(s))} />
+                      {s}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <button onClick={onClose} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-surface-hover">
             <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </header>
+        {handover && onHandover && (
+          <div className="px-5 py-2.5 border-b-hairline bg-surface/40 flex items-center gap-2">
+            <span className="text-xs text-muted-foreground flex-1">
+              {handover === "install"
+                ? "Sale won — hand this job over when you're ready to deliver it."
+                : "Not ready to install yet? Put it back with the sales team."}
+            </span>
+            <Button size="sm" className="h-7" variant={handover === "install" ? "default" : "outline"} onClick={() => onHandover(handover)}>
+              {handover === "install" ? (
+                <><ArrowRight className="w-3 h-3" /> Send to installation</>
+              ) : (
+                <><Undo2 className="w-3 h-3" /> Return to sales</>
+              )}
+            </Button>
+          </div>
+        )}
+
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className="space-y-2">
             <InlineEdit
