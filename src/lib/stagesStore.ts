@@ -7,35 +7,94 @@ export interface Stage {
   color: string; // hsl values without the wrapper, e.g. "199 89% 48%" OR a full hsl(var(--token)) string
 }
 
-const STAGES_KEY = "pipeline-stages-v1";
+export interface Pipeline {
+  id: string;
+  name: string;
+  stages: Stage[];
+}
+
+export type PipelineId = "sales" | "install" | string;
+
+const PIPELINES_KEY = "pipelines-v2";
+const LEGACY_STAGES_KEY = "pipeline-stages-v1";
 const RENAMES_KEY = "pipeline-stage-renames-v1";
 
 interface State {
-  stages: Stage[];
+  pipelines: Pipeline[];
   renames: Record<string, string>;
+}
+
+const SALES_STAGE_NAMES = ["New enquiry", "Quote sent", "Won"];
+/** Installation keeps the original seed stage names so existing jobs slot straight in. */
+const INSTALL_STAGE_NAMES = ["To schedule", "Job booked", "In progress", "Completed", "Invoiced", "Paid"];
+
+const FALLBACK_COLORS: Record<string, string> = {
+  "New enquiry": "hsl(var(--info))",
+  "Quote sent": "hsl(var(--warning))",
+  Won: "142 71% 45%",
+  "To schedule": "239 84% 67%",
+  "Job booked": "hsl(var(--info))",
+  "In progress": "hsl(var(--warning))",
+  Completed: "hsl(var(--success))",
+  Invoiced: "hsl(var(--warning))",
+  Paid: "hsl(var(--success))",
+};
+
+function colorForSeed(name: string): string {
+  return (seedStageColors as Record<string, string>)[name] ?? FALLBACK_COLORS[name] ?? "215 16% 47%";
+}
+
+function mkStage(name: string, prefix: string): Stage {
+  return { id: `${prefix}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name, color: colorForSeed(name) };
 }
 
 function defaultState(): State {
   return {
-    stages: seedStages.map((s) => ({ id: s, name: s, color: seedStageColors[s] })),
+    pipelines: [
+      { id: "sales", name: "Sales", stages: SALES_STAGE_NAMES.map((n) => mkStage(n, "sales")) },
+      { id: "install", name: "Installation", stages: INSTALL_STAGE_NAMES.map((n) => mkStage(n, "install")) },
+    ],
     renames: {},
   };
 }
 
+/** Old single-list setup: keep any custom stages the user made by folding them into the two pipelines. */
+function migrateFromLegacy(legacy: Stage[]): Pipeline[] {
+  const base = defaultState().pipelines;
+  const known = new Set([...SALES_STAGE_NAMES, ...INSTALL_STAGE_NAMES, ...seedStages]);
+  const extras = legacy.filter((s) => !known.has(s.name));
+  const salesNames = new Set(["New enquiry", "Quote sent", "Won"]);
+  return base.map((p) => {
+    if (p.id !== "install") return p;
+    // Custom stages the user added previously land at the end of installation.
+    const carried = extras.filter((s) => !salesNames.has(s.name));
+    return { ...p, stages: [...p.stages, ...carried] };
+  });
+}
+
 function load(): State {
+  let renames: Record<string, string> = {};
   try {
-    const raw = localStorage.getItem(STAGES_KEY);
     const renRaw = localStorage.getItem(RENAMES_KEY);
+    if (renRaw) renames = JSON.parse(renRaw) as Record<string, string>;
+  } catch {
+    /* ignore */
+  }
+  try {
+    const raw = localStorage.getItem(PIPELINES_KEY);
     if (raw) {
-      return {
-        stages: JSON.parse(raw) as Stage[],
-        renames: renRaw ? (JSON.parse(renRaw) as Record<string, string>) : {},
-      };
+      const parsed = JSON.parse(raw) as Pipeline[];
+      if (Array.isArray(parsed) && parsed.length) return { pipelines: parsed, renames };
+    }
+    const legacyRaw = localStorage.getItem(LEGACY_STAGES_KEY);
+    if (legacyRaw) {
+      const legacy = JSON.parse(legacyRaw) as Stage[];
+      if (Array.isArray(legacy) && legacy.length) return { pipelines: migrateFromLegacy(legacy), renames };
     }
   } catch {
     /* ignore */
   }
-  return defaultState();
+  return { ...defaultState(), renames };
 }
 
 let state: State = typeof window !== "undefined" ? load() : defaultState();
@@ -43,7 +102,7 @@ const listeners = new Set<() => void>();
 
 function persist() {
   try {
-    localStorage.setItem(STAGES_KEY, JSON.stringify(state.stages));
+    localStorage.setItem(PIPELINES_KEY, JSON.stringify(state.pipelines));
     localStorage.setItem(RENAMES_KEY, JSON.stringify(state.renames));
   } catch {
     /* ignore */
@@ -59,6 +118,27 @@ export function resolveStageName(name: string): string {
     cur = state.renames[cur];
   }
   return cur;
+}
+
+export function getPipelines(): Pipeline[] {
+  return state.pipelines;
+}
+
+/** Which pipeline a stage name belongs to. Unknown stages fall back to the first pipeline. */
+export function pipelineIdForStage(stageName: string): PipelineId {
+  const resolved = resolveStageName(stageName);
+  const hit = state.pipelines.find((p) => p.stages.some((s) => s.name === resolved));
+  return hit?.id ?? state.pipelines[0]?.id ?? "sales";
+}
+
+export function firstStageOf(pipelineId: PipelineId): string {
+  const p = state.pipelines.find((x) => x.id === pipelineId);
+  return p?.stages[0]?.name ?? "";
+}
+
+export function lastStageOf(pipelineId: PipelineId): string {
+  const p = state.pipelines.find((x) => x.id === pipelineId);
+  return p?.stages[p.stages.length - 1]?.name ?? "";
 }
 
 export const STAGE_COLOR_PRESETS: { label: string; value: string }[] = [
@@ -80,7 +160,11 @@ export function colorToCss(value: string): string {
   return `hsl(${value})`;
 }
 
-export function useStages() {
+/**
+ * Stage helpers. Pass a pipeline id to scope stages/edits to one pipeline;
+ * with no id you get every stage across all pipelines (used by automations).
+ */
+export function useStages(pipelineId?: PipelineId) {
   const [snap, setSnap] = useState(state);
 
   useEffect(() => {
@@ -91,42 +175,71 @@ export function useStages() {
     };
   }, []);
 
+  const targetId = pipelineId ?? snap.pipelines[0]?.id ?? "sales";
+  const allStages = snap.pipelines.flatMap((p) => p.stages);
+  const scoped = pipelineId
+    ? snap.pipelines.find((p) => p.id === pipelineId)?.stages ?? []
+    : allStages;
+
+  const mutate = (fn: (stages: Stage[]) => Stage[]) => {
+    state.pipelines = state.pipelines.map((p) => (p.id === targetId ? { ...p, stages: fn(p.stages) } : p));
+    persist();
+  };
+
   return {
-    stages: snap.stages,
-    stageNames: snap.stages.map((s) => s.name),
-    colorFor: (name: string) => snap.stages.find((s) => s.name === name)?.color ?? "215 16% 47%",
+    pipelines: snap.pipelines,
+    pipeline: snap.pipelines.find((p) => p.id === targetId),
+    stages: scoped,
+    stageNames: scoped.map((s) => s.name),
+    allStageNames: allStages.map((s) => s.name),
+    colorFor: (name: string) => allStages.find((s) => s.name === name)?.color ?? "215 16% 47%",
+    pipelineIdForStage,
     renameStage: (oldName: string, newName: string) => {
       const trimmed = newName.trim();
       if (!trimmed || trimmed === oldName) return;
-      state.stages = state.stages.map((st) => (st.name === oldName ? { ...st, name: trimmed } : st));
+      state.pipelines = state.pipelines.map((p) => ({
+        ...p,
+        stages: p.stages.map((st) => (st.name === oldName ? { ...st, name: trimmed } : st)),
+      }));
       state.renames = { ...state.renames, [oldName]: trimmed };
       persist();
     },
+    renamePipeline: (name: string) => {
+      const trimmed = name.trim();
+      if (!trimmed) return;
+      state.pipelines = state.pipelines.map((p) => (p.id === targetId ? { ...p, name: trimmed } : p));
+      persist();
+    },
     setStageColor: (id: string, color: string) => {
-      state.stages = state.stages.map((st) => (st.id === id ? { ...st, color } : st));
+      state.pipelines = state.pipelines.map((p) => ({
+        ...p,
+        stages: p.stages.map((st) => (st.id === id ? { ...st, color } : st)),
+      }));
       persist();
     },
     addStage: (name: string, color: string) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      state.stages = [...state.stages, { id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: trimmed, color }];
-      persist();
+      mutate((stages) => [
+        ...stages,
+        { id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, name: trimmed, color },
+      ]);
     },
     removeStage: (id: string) => {
-      state.stages = state.stages.filter((st) => st.id !== id);
-      persist();
+      mutate((stages) => (stages.length <= 1 ? stages : stages.filter((st) => st.id !== id)));
     },
     moveStage: (id: string, dir: -1 | 1) => {
-      const i = state.stages.findIndex((st) => st.id === id);
-      const j = i + dir;
-      if (i < 0 || j < 0 || j >= state.stages.length) return;
-      const next = [...state.stages];
-      [next[i], next[j]] = [next[j], next[i]];
-      state.stages = next;
-      persist();
+      mutate((stages) => {
+        const i = stages.findIndex((st) => st.id === id);
+        const j = i + dir;
+        if (i < 0 || j < 0 || j >= stages.length) return stages;
+        const next = [...stages];
+        [next[i], next[j]] = [next[j], next[i]];
+        return next;
+      });
     },
     resetToDefault: () => {
-      state = defaultState();
+      state = { ...defaultState(), renames: {} };
       persist();
     },
   };

@@ -28,7 +28,7 @@ import {
 
 
 // Stuck thresholds — how long a job sits before we flag it
-const stuckThresholds: Record<PipelineStage, number> = {
+const stuckThresholds: Partial<Record<PipelineStage, number>> = {
   "New enquiry": 2,
   "Quote sent": 4,
   "Job booked": 7,
@@ -252,7 +252,7 @@ export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
           </thead>
           <tbody>
             {m.byStage.map((s) => {
-              const threshold = stuckThresholds[s.stage];
+              const threshold = stuckThresholds[s.stage] ?? 5;
               const ratio = s.avgDays / threshold;
               const tone: "success" | "warning" | "danger" = ratio < 0.7 ? "success" : ratio < 1 ? "warning" : "danger";
               const label = ratio < 0.7 ? "On track" : ratio < 1 ? "Watch" : "Bottleneck";
@@ -348,9 +348,9 @@ export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
             </thead>
             <tbody>
               {m.stuck
-                .sort((a, b) => b.daysInStage / stuckThresholds[b.stage] - a.daysInStage / stuckThresholds[a.stage])
+                .sort((a, b) => b.daysInStage / (stuckThresholds[b.stage] ?? 5) - a.daysInStage / (stuckThresholds[a.stage] ?? 5))
                 .map((j) => {
-                  const over = j.daysInStage - stuckThresholds[j.stage];
+                  const over = j.daysInStage - (stuckThresholds[j.stage] ?? 5);
                   return (
                     <tr
                       key={j.id}

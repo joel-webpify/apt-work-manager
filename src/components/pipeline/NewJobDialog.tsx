@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Btn } from "@/components/layout/PageShell";
-import { contacts, stages, type Job, type PipelineStage, type Trade } from "@/data/mockData";
+import { contacts, type Job, type PipelineStage, type Trade } from "@/data/mockData";
+import { useStages } from "@/lib/stagesStore";
 import { useJobFieldSchema } from "@/lib/jobFields";
 import JobFieldInput from "./JobFieldInput";
 
@@ -10,12 +11,17 @@ const trades: Trade[] = ["Plumbing", "Electrical", "Window cleaning", "Landscapi
 export default function NewJobDialog({
   open,
   onOpenChange,
+  defaultPipelineId = "sales",
   onCreate,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  defaultPipelineId?: string;
   onCreate: (job: Job) => void;
 }) {
+  const { pipelines } = useStages();
+  const [pipelineId, setPipelineId] = useState<string>(defaultPipelineId);
+  const pipelineStages = pipelines.find((p) => p.id === pipelineId)?.stages ?? [];
   const [contactId, setContactId] = useState<string>("");
   const [customCustomer, setCustomCustomer] = useState("");
   const [service, setService] = useState("");
@@ -23,6 +29,15 @@ export default function NewJobDialog({
   const [value, setValue] = useState<string>("");
   const [estimatedHours, setEstimatedHours] = useState<string>("2");
   const [stage, setStage] = useState<PipelineStage>("New enquiry");
+
+  // Keep pipeline/stage in step with the board you opened this from.
+  useEffect(() => {
+    if (!open) return;
+    setPipelineId(defaultPipelineId);
+    const first = pipelines.find((p) => p.id === defaultPipelineId)?.stages[0]?.name;
+    if (first) setStage(first as PipelineStage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, defaultPipelineId]);
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
   const [notes, setNotes] = useState("");
@@ -31,7 +46,7 @@ export default function NewJobDialog({
 
   const reset = () => {
     setContactId(""); setCustomCustomer(""); setService(""); setTrade("General");
-    setValue(""); setEstimatedHours("2"); setStage("New enquiry");
+    setValue(""); setEstimatedHours("2");
     setAddress(""); setPostcode(""); setNotes("");
     setCustomValues({});
   };
@@ -49,6 +64,7 @@ export default function NewJobDialog({
       trade,
       value: numericValue,
       stage,
+      pipelineId,
       daysInStage: 0,
       address: address.trim() || contact?.postcode || "—",
       postcode: postcode.trim() || (contact?.postcode?.split(" ")[0] ?? ""),
@@ -94,7 +110,23 @@ export default function NewJobDialog({
             <Input value={service} onChange={setService} placeholder="e.g. Boiler service" />
           </Field>
 
+          <Field label="Pipeline">
+            <select
+              value={pipelineId}
+              onChange={(e) => {
+                const id = e.target.value;
+                setPipelineId(id);
+                const first = pipelines.find((p) => p.id === id)?.stages[0]?.name;
+                if (first) setStage(first as PipelineStage);
+              }}
+              className="w-full h-9 rounded-md border-hairline bg-background px-2 text-sm"
+            >
+              {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+
           <div className="grid grid-cols-2 gap-3">
+
             <Field label="Trade">
               <select
                 value={trade}
@@ -110,7 +142,7 @@ export default function NewJobDialog({
                 onChange={(e) => setStage(e.target.value as PipelineStage)}
                 className="w-full h-9 rounded-md border-hairline bg-background px-2 text-sm"
               >
-                {stages.map((s) => <option key={s} value={s}>{s}</option>)}
+                {pipelineStages.map((s) => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             </Field>
           </div>

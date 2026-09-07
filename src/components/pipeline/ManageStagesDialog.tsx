@@ -9,20 +9,28 @@ import { useStages, STAGE_COLOR_PRESETS, colorToCss } from "@/lib/stagesStore";
 export default function ManageStagesDialog({
   open,
   onOpenChange,
+  pipelineId,
   onRename,
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  /** Which pipeline's stages we're editing. */
+  pipelineId: string;
   /** Notify parent so it can rewrite jobs whose stage was renamed. */
   onRename?: (oldName: string, newName: string) => void;
 }) {
-  const { stages, renameStage, setStageColor, addStage, removeStage, moveStage, resetToDefault } = useStages();
+  const { pipeline, stages, renameStage, renamePipeline, setStageColor, addStage, removeStage, moveStage, resetToDefault } =
+    useStages(pipelineId);
+  const [pipelineDraft, setPipelineDraft] = useState("");
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(STAGE_COLOR_PRESETS[0].value);
 
   useEffect(() => {
-    if (open) setDrafts(Object.fromEntries(stages.map((s) => [s.id, s.name])));
+    if (open) {
+      setDrafts(Object.fromEntries(stages.map((s) => [s.id, s.name])));
+      setPipelineDraft(pipeline?.name ?? "");
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
@@ -43,10 +51,20 @@ export default function ManageStagesDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Manage pipeline stages</DialogTitle>
+          <DialogTitle>{pipeline?.name ?? "Pipeline"} stages</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground w-28 shrink-0">Pipeline name</span>
+            <Input
+              value={pipelineDraft}
+              onChange={(e) => setPipelineDraft(e.target.value)}
+              onBlur={() => renamePipeline(pipelineDraft)}
+              onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              className="h-8 flex-1"
+            />
+          </div>
           <div className="border-hairline rounded-lg divide-y divide-border">
             {stages.map((s, idx) => (
               <div key={s.id} className="flex items-center gap-2 p-2.5">
@@ -98,7 +116,7 @@ export default function ManageStagesDialog({
 
         <DialogFooter className="justify-between">
           <Button variant="ghost" size="sm" onClick={resetToDefault} className="text-muted-foreground">
-            <RotateCcw className="w-3.5 h-3.5" /> Reset to defaults
+            <RotateCcw className="w-3.5 h-3.5" /> Reset both pipelines
           </Button>
           <Button onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
