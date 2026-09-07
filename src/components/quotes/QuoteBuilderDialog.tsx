@@ -257,6 +257,20 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
   const included = draft.items.filter((i) => lineKind(i) === "included");
   const optional = draft.items.filter((i) => lineKind(i) === "optional");
 
+  const contactList = useMemo(
+    () =>
+      mergeWithMock(seedContacts, applyExtrasTo(importedContacts, contactExtras)).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    [importedContacts, contactExtras],
+  );
+  const picked = contactList.find(
+    (c) => c.id === draft.contactId || (!draft.contactId && c.name === draft.customer),
+  );
+  const pickedContactId = draft.contactId && picked ? picked.id : "__manual";
+  const pickedEmail = picked?.email;
+
+
   const moveOptions = [
     { value: "included", label: "Always included" },
     ...groups.map((g, idx) => ({
