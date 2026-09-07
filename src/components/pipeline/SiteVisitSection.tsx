@@ -11,6 +11,8 @@ import {
   type FieldRecord,
 } from "@/lib/fieldStore";
 import { paymentLabel } from "@/lib/visitSummary";
+import { answerText, isAnswered, surveyForJob, useSurveys } from "@/lib/surveysStore";
+import { useJobs } from "@/lib/jobsStore";
 
 function stamp(iso?: string) {
   if (!iso) return "—";
@@ -24,6 +26,9 @@ function stamp(iso?: string) {
 
 export default function SiteVisitSection({ jobId }: { jobId: string }) {
   const all = useJobRecords(jobId).filter((r) => hasAnyWork(r.record));
+  const [jobs] = useJobs();
+  useSurveys();
+  const survey = surveyForJob(jobId, jobs.find((j) => j.id === jobId)?.service);
 
   if (all.length === 0) {
     return (
@@ -40,17 +45,41 @@ export default function SiteVisitSection({ jobId }: { jobId: string }) {
   return (
     <div className="space-y-5">
       {all.map(({ employeeId, record }) => (
-        <WorkerVisit key={employeeId} employeeId={employeeId} rec={record} multiple={all.length > 1} />
+        <WorkerVisit
+          key={employeeId}
+          employeeId={employeeId}
+          rec={record}
+          multiple={all.length > 1}
+          survey={survey}
+        />
       ))}
     </div>
   );
 }
 
-function WorkerVisit({ employeeId, rec, multiple }: { employeeId: string; rec: FieldRecord; multiple: boolean }) {
+function WorkerVisit({
+  employeeId,
+  rec,
+  multiple,
+  survey,
+}: {
+  employeeId: string;
+  rec: FieldRecord;
+  multiple: boolean;
+  survey?: ReturnType<typeof surveyForJob>;
+}) {
   const who = employees.find((e) => e.id === employeeId);
   const ticked = FIELD_CHECKLIST.filter((c) => rec.checklist[c.id]);
   const outcome = visitOutcomes.find((o) => o.id === rec.outcome);
   const mins = timeOnSiteMinutes(rec);
+  const answers = rec.survey?.answers ?? {};
+  const surveyRows = survey
+    ? survey.sections.flatMap((sec) =>
+        sec.questions
+          .filter((q) => isAnswered(q, answers[q.id]))
+          .map((q) => ({ id: q.id, label: q.label, value: answerText(q, answers[q.id]) })),
+      )
+    : [];
 
   return (
     <div className={multiple ? "rounded-lg border-hairline p-3 space-y-4" : "space-y-4"}>
@@ -171,6 +200,27 @@ function WorkerVisit({ employeeId, rec, multiple }: { employeeId: string; rec: F
                 </div>
               ))}
           </div>
+        </div>
+      )}
+
+      {surveyRows.length > 0 && (
+        <div>
+          <div className="text-xs text-muted-foreground mb-1.5">
+            Site visit survey{survey ? ` — ${survey.name}` : ""}
+          </div>
+          <div className="space-y-1 text-sm">
+            {surveyRows.map((r) => (
+              <div key={r.id} className="flex justify-between gap-3">
+                <span className="text-muted-foreground">{r.label}</span>
+                <span className="text-right">{r.value}</span>
+              </div>
+            ))}
+          </div>
+          {rec.surveyQuoteId && (
+            <Link to="/quotes" className="text-xs text-primary hover:underline mt-1 inline-block">
+              Draft quote {rec.surveyQuoteId} from this survey
+            </Link>
+          )}
         </div>
       )}
 
