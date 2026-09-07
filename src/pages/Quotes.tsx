@@ -320,6 +320,9 @@ export default function Quotes() {
                     <Btn onClick={() => copyCustomerLink(q)} title="Copy the link the customer opens">
                       <Link2 className="w-3.5 h-3.5" /> Link
                     </Btn>
+                    <Btn onClick={() => openCustomerLink(q)} title="Open the customer's page in a new tab">
+                      <ExternalLink className="w-3.5 h-3.5" /> Open
+                    </Btn>
                     {(q.status === "Draft" || q.status === "Sent") && (
                       <Btn onClick={() => handleAcceptQuote(q)} title="Mark accepted — creates a job">
                         <ThumbsUp className="w-3.5 h-3.5" /> Accept
