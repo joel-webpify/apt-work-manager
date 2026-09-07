@@ -1,3 +1,8 @@
+import productWindowClean from "@/assets/products/window-clean.jpg";
+import productPlumbing from "@/assets/products/plumbing.jpg";
+import productConsumerUnit from "@/assets/products/consumer-unit.jpg";
+import productGrass from "@/assets/products/artificial-grass.jpg";
+
 export type LifecycleState = "Lead" | "Customer" | "Lapsed";
 export type ContactType = "Residential" | "Commercial";
 export type PipelineStage =
@@ -510,6 +515,8 @@ export interface Product {
   price: number; // unit price excl. VAT
   taxRate: number; // % e.g. 20
   sku?: string;
+  /** Optional catalogue photo shown in the quote builder and on customer quotes. */
+  imageUrl?: string;
   active: boolean;
 }
 
@@ -523,6 +530,7 @@ export const products: Product[] = [
     price: 35,
     taxRate: 20,
     sku: "WC-STD",
+    imageUrl: productWindowClean,
     active: true,
   },
   {
@@ -534,6 +542,7 @@ export const products: Product[] = [
     price: 4.5,
     taxRate: 20,
     sku: "WC-COM",
+    imageUrl: productWindowClean,
     active: true,
   },
   {
@@ -545,6 +554,7 @@ export const products: Product[] = [
     price: 65,
     taxRate: 20,
     sku: "PL-LAB",
+    imageUrl: productPlumbing,
     active: true,
   },
   {
@@ -577,6 +587,7 @@ export const products: Product[] = [
     price: 520,
     taxRate: 20,
     sku: "EL-CU10",
+    imageUrl: productConsumerUnit,
     active: true,
   },
   {
@@ -588,6 +599,7 @@ export const products: Product[] = [
     price: 58,
     taxRate: 20,
     sku: "LS-AGP",
+    imageUrl: productGrass,
     active: true,
   },
   {
@@ -618,6 +630,8 @@ export interface QuoteLineItem {
   unit: ProductUnit;
   unitPrice: number;
   taxRate: number;
+  /** Photo carried over from the catalogue (or pasted in the builder). */
+  imageUrl?: string;
   discount?: number; // %
   kind?: QuoteLineKind;
   groupId?: string; // choice lines only — alternatives share a group
