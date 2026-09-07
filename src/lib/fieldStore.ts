@@ -67,6 +67,10 @@ export interface FieldRecord {
   extraWorkValue: string;
   /** Quote raised from the extra work spotted on site. */
   extraWorkQuoteId?: string;
+  /** Answers to the survey attached to this job. */
+  survey?: { surveyId: string; answers: import("./surveysStore").SurveyAnswers };
+  /** Quote drafted from the survey findings. */
+  surveyQuoteId?: string;
   signature?: { name: string; dataUrl: string; at: string };
   outcome?: VisitOutcome;
   outcomeNote?: string;
