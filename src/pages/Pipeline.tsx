@@ -1118,7 +1118,7 @@ function JobDrawer({
           </Section>
 
           <Section title="Costs & materials">
-            <JobCostsCard job={job} />
+            <JobCostsCard jobId={job.id} jobValue={job.value} />
           </Section>
 
 
