@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/select";
 import {
   products as seedProducts,
+  contacts as seedContacts,
   type Quote,
   type QuoteLineItem,
   type QuoteStatus,
@@ -39,8 +40,15 @@ import {
   type QuoteLineKind,
   type Product,
 } from "@/data/mockData";
+import {
+  useImportedContacts,
+  useContactExtras,
+  applyExtrasTo,
+  mergeWithMock,
+} from "@/lib/contactsStore";
 import { ProductPickerDialog } from "./ProductPickerDialog";
 import { fmt, lineKind, resolveItems, totals, hasCustomerChoices, lineTotal } from "@/lib/quoteUtils";
+
 
 const statuses: QuoteStatus[] = ["Draft", "Sent", "Accepted", "Declined", "Expired"];
 const units: ProductUnit[] = ["each", "hour", "day", "sqm", "m", "visit"];
@@ -254,8 +262,26 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
     return out;
   }, [draft.items]);
 
+  const importedContacts = useImportedContacts();
+  const contactExtras = useContactExtras();
+
   const included = draft.items.filter((i) => lineKind(i) === "included");
   const optional = draft.items.filter((i) => lineKind(i) === "optional");
+
+
+  const contactList = useMemo(
+    () =>
+      mergeWithMock(seedContacts, applyExtrasTo(importedContacts, contactExtras)).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    [importedContacts, contactExtras],
+  );
+  const picked = contactList.find(
+    (c) => c.id === draft.contactId || (!draft.contactId && c.name === draft.customer),
+  );
+  const pickedContactId = draft.contactId && picked ? picked.id : "__manual";
+  const pickedEmail = picked?.email;
+
 
   const moveOptions = [
     { value: "included", label: "Always included" },
@@ -491,12 +517,48 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Customer</Label>
-                <Input
-                  value={draft.customer}
-                  onChange={(e) => setDraft({ ...draft, customer: e.target.value })}
-                  placeholder="Customer name"
-                />
+                <Select
+                  value={pickedContactId}
+                  onValueChange={(v) => {
+                    if (v === "__manual") {
+                      setDraft({ ...draft, contactId: undefined, customer: "" });
+                      return;
+                    }
+                    const c = contactList.find((x) => x.id === v);
+                    if (c) setDraft({ ...draft, contactId: c.id, customer: c.name });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pick a customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactList.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                        {c.email ? ` · ${c.email}` : ""}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__manual">Type a name instead…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!draft.contactId && (
+                  <Input
+                    value={draft.customer}
+                    onChange={(e) => setDraft({ ...draft, customer: e.target.value, contactId: undefined })}
+                    placeholder="Customer name"
+                  />
+                )}
+                {pickedEmail ? (
+                  <p className="text-xs text-muted-foreground">
+                    Quote link signs in with {pickedEmail}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Pick a saved customer so you can test the customer sign-in.
+                  </p>
+                )}
               </div>
+
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select
