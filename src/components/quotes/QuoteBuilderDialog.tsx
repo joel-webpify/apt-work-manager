@@ -254,8 +254,12 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
     return out;
   }, [draft.items]);
 
+  const importedContacts = useImportedContacts();
+  const contactExtras = useContactExtras();
+
   const included = draft.items.filter((i) => lineKind(i) === "included");
   const optional = draft.items.filter((i) => lineKind(i) === "optional");
+
 
   const contactList = useMemo(
     () =>
