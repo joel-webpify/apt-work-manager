@@ -371,7 +371,7 @@ export function surveyFindings(survey: Survey | undefined, answers: SurveyAnswer
   if (!survey) return [];
   return allQuestions(survey)
     .filter((q) => (q.priceable || answers[q.id]?.flagged) && isVisible(q, answers))
-    .map((q) => {
+    .map((q): SurveyFinding | undefined => {
       const a = answers[q.id];
       if (!a) return undefined;
       const answered = isAnswered(q, a);
