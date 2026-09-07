@@ -20,6 +20,8 @@ import {
   type VisitOutcome,
 } from "@/lib/fieldStore";
 import { addQuote } from "@/lib/quotesStore";
+import { surveyFindings, surveyForJob } from "@/lib/surveysStore";
+import { getMaterials, markBilled } from "@/lib/materialsStore";
 import { buildVisitSummary } from "@/lib/visitSummary";
 import SignaturePad from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
@@ -72,6 +74,54 @@ export default function WrapUpSheet({
       }),
     [job, workerName, record],
   );
+
+  const survey = surveyForJob(job.id, job.service);
+  const findings = surveyFindings(survey, record.survey?.answers ?? {});
+  const billableMaterials = getMaterials(job.id).filter((m) => m.chargeable && !m.billedOn);
+
+  /** Everything the survey and the materials list say we can charge for. */
+  const raiseSurveyQuote = () => {
+    if (!findings.length && !billableMaterials.length) return;
+    const id = `Q-S${Date.now().toString().slice(-5)}`;
+    const stamp = Date.now();
+    addQuote({
+      id,
+      number: id,
+      contactId: job.contactId,
+      customer: job.customer,
+      jobId: job.id,
+      status: "Draft",
+      issueDate: todayISO(),
+      validUntil: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10),
+      items: [
+        ...findings.map((f, i) => ({
+          id: `li-s${stamp}-${i}`,
+          name: f.label,
+          description: f.description,
+          qty: 1,
+          unit: f.unit,
+          unitPrice: f.price,
+          taxRate: 20,
+          imageUrl: f.photo,
+        })),
+        ...billableMaterials.map((m, i) => ({
+          id: `li-m${stamp}-${i}`,
+          name: m.name || "Materials",
+          description: m.supplier ? `Supplied by ${m.supplier}` : m.note,
+          qty: m.qty,
+          unit: m.unit,
+          unitPrice: m.price,
+          taxRate: m.taxRate,
+        })),
+      ],
+      notes: `From the site visit by ${workerName} at ${job.address}${
+        survey ? ` using "${survey.name}"` : ""
+      }.`,
+    });
+    markBilled(job.id, billableMaterials.map((m) => m.id), id);
+    patch({ surveyQuoteId: id });
+    toast({ title: "Quote drafted from the survey", description: `${id} is waiting in the office.` });
+  };
 
   const canFinish = Boolean(record.outcome) && (gaps.length === 0 || skipReason.trim().length > 0);
 
@@ -293,6 +343,40 @@ export default function WrapUpSheet({
                   className="mt-2 h-11 w-full rounded-lg border-hairline bg-surface hover:bg-surface-hover text-sm font-medium"
                 >
                   Draft a quote for £{record.extraWorkValue || "0"}
+                </button>
+              )}
+            </Block>
+          )}
+
+          {(findings.length > 0 || billableMaterials.length > 0) && (
+            <Block step="4" title="Survey answers and materials on a quote">
+              <ul className="text-sm space-y-1">
+                {findings.map((f) => (
+                  <li key={f.questionId} className="flex justify-between gap-2">
+                    <span>{f.label}</span>
+                    <span className="text-muted-foreground">£{f.price.toFixed(2)}</span>
+                  </li>
+                ))}
+                {billableMaterials.map((m) => (
+                  <li key={m.id} className="flex justify-between gap-2">
+                    <span>
+                      {m.qty} × {m.name || "Materials"}
+                    </span>
+                    <span className="text-muted-foreground">£{(m.qty * m.price).toFixed(2)}</span>
+                  </li>
+                ))}
+              </ul>
+              {record.surveyQuoteId ? (
+                <p className="text-sm mt-2 inline-flex items-center gap-1.5 text-[hsl(var(--success))]">
+                  <Check className="w-4 h-4" /> Draft quote {record.surveyQuoteId} is with the office.
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={raiseSurveyQuote}
+                  className="mt-2 h-11 w-full rounded-lg border-hairline bg-surface hover:bg-surface-hover text-sm font-medium"
+                >
+                  Draft a quote from the site visit
                 </button>
               )}
             </Block>

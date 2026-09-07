@@ -3,12 +3,14 @@ import { PageHeader, PageBody } from "@/components/layout/PageShell";
 import { ProductsTab } from "@/components/forms/ProductsTab";
 import ChannelGroupsTab from "@/components/settings/ChannelGroupsTab";
 import PipelinesTab from "@/components/settings/PipelinesTab";
+import SurveysTab from "@/components/settings/SurveysTab";
 
-type Tab = "products" | "pipelines" | "channels";
+type Tab = "products" | "pipelines" | "surveys" | "channels";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "products", label: "Products & services" },
   { id: "pipelines", label: "Pipelines & stages" },
+  { id: "surveys", label: "Site visit surveys" },
   { id: "channels", label: "Channel grouping" },
 ];
 
@@ -42,6 +44,7 @@ export default function Settings() {
 
         {tab === "products" && <ProductsTab />}
         {tab === "pipelines" && <PipelinesTab />}
+        {tab === "surveys" && <SurveysTab />}
         {tab === "channels" && <ChannelGroupsTab />}
       </PageBody>
     </>

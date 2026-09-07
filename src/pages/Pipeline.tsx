@@ -18,6 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import SiteVisitSection from "@/components/pipeline/SiteVisitSection";
+import JobCostsCard from "@/components/pipeline/JobCostsCard";
 import FieldOpportunities from "@/components/pipeline/FieldOpportunities";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -1114,6 +1115,10 @@ function JobDrawer({
 
           <Section title="Site visit">
             <SiteVisitSection jobId={job.id} />
+          </Section>
+
+          <Section title="Costs & materials">
+            <JobCostsCard jobId={job.id} jobValue={job.value} />
           </Section>
 
 
