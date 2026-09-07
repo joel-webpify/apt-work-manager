@@ -44,6 +44,7 @@ const blank = (): Product => ({
   price: 0,
   taxRate: 20,
   sku: "",
+  imageUrl: "",
   active: true,
 });
 
@@ -140,13 +141,27 @@ export function ProductsTab() {
             key={p.id}
             className="grid grid-cols-[2.4fr_1.2fr_0.8fr_1fr_0.8fr_0.6fr_auto] px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
           >
-            <div className="min-w-0">
+            <div className="min-w-0 flex items-center gap-2.5">
+              {p.imageUrl ? (
+                <img
+                  src={p.imageUrl}
+                  alt={p.name}
+                  loading="lazy"
+                  className="w-8 h-8 rounded-md object-cover border-hairline shrink-0"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-md border-hairline bg-surface shrink-0 flex items-center justify-center">
+                  <Package className="w-3.5 h-3.5 text-muted-foreground opacity-60" />
+                </div>
+              )}
+              <div className="min-w-0">
               <div className="font-medium truncate">{p.name}</div>
               {p.sku && (
                 <div className="text-xs text-muted-foreground tabular-nums">
                   {p.sku}
                 </div>
               )}
+              </div>
             </div>
             <div className="text-muted-foreground">{p.trade}</div>
             <div className="text-muted-foreground">/ {p.unit}</div>
@@ -211,6 +226,44 @@ export function ProductsTab() {
                 rows={2}
                 placeholder="Shown on quotes & invoices"
               />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="p-img">Photo</Label>
+              <div className="flex items-start gap-2">
+                <div className="w-16 h-16 shrink-0 rounded-md overflow-hidden border-hairline bg-surface flex items-center justify-center">
+                  {draft.imageUrl ? (
+                    <img
+                      src={draft.imageUrl}
+                      alt={draft.name || "Product photo"}
+                      loading="lazy"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <Package className="w-4 h-4 text-muted-foreground opacity-60" />
+                  )}
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <Input
+                    id="p-img"
+                    value={draft.imageUrl ?? ""}
+                    onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })}
+                    placeholder="Paste a photo link"
+                  />
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    className="text-xs"
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const r = new FileReader();
+                      r.onload = () =>
+                        setDraft((d) => ({ ...d, imageUrl: String(r.result) }));
+                      r.readAsDataURL(f);
+                    }}
+                  />
+                </div>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
