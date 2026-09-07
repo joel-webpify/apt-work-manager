@@ -491,12 +491,48 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
             <div className="grid sm:grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <Label>Customer</Label>
-                <Input
-                  value={draft.customer}
-                  onChange={(e) => setDraft({ ...draft, customer: e.target.value })}
-                  placeholder="Customer name"
-                />
+                <Select
+                  value={pickedContactId}
+                  onValueChange={(v) => {
+                    if (v === "__manual") {
+                      setDraft({ ...draft, contactId: undefined, customer: "" });
+                      return;
+                    }
+                    const c = contactList.find((x) => x.id === v);
+                    if (c) setDraft({ ...draft, contactId: c.id, customer: c.name });
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pick a customer" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactList.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.name}
+                        {c.email ? ` · ${c.email}` : ""}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="__manual">Type a name instead…</SelectItem>
+                  </SelectContent>
+                </Select>
+                {!draft.contactId && (
+                  <Input
+                    value={draft.customer}
+                    onChange={(e) => setDraft({ ...draft, customer: e.target.value, contactId: undefined })}
+                    placeholder="Customer name"
+                  />
+                )}
+                {pickedEmail ? (
+                  <p className="text-xs text-muted-foreground">
+                    Quote link signs in with {pickedEmail}
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Pick a saved customer so you can test the customer sign-in.
+                  </p>
+                )}
               </div>
+
               <div className="space-y-1.5">
                 <Label>Status</Label>
                 <Select
