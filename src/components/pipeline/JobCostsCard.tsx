@@ -1,9 +1,8 @@
 import { jobCosts, useMaterials } from "@/lib/materialsStore";
 import { useLabourRate } from "@/lib/surveysStore";
 import { timeOnSiteMinutes, useJobRecords } from "@/lib/fieldStore";
-import { fmt } from "@/lib/quoteUtils";
+import { fmt, quoteTotal } from "@/lib/quoteUtils";
 import { useQuotes } from "@/lib/quotesStore";
-import { quoteTotals } from "@/lib/quoteUtils";
 import MaterialsList from "@/components/field/MaterialsList";
 
 /** What the job cost against what it's worth. */
@@ -15,7 +14,7 @@ export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobVa
 
   const labourMinutes = records.reduce((sum, r) => sum + (timeOnSiteMinutes(r.record) ?? 0), 0);
   const jobQuote = quotes.find((q) => q.jobId === jobId && q.status !== "Declined");
-  const quoteValue = jobQuote ? quoteTotals(jobQuote.items, jobQuote.selection).total : jobValue ?? 0;
+  const quoteValue = jobQuote ? quoteTotal(jobQuote) : jobValue ?? 0;
 
   const c = jobCosts({ quoteValue, materials, labourMinutes, labourRate: rate });
 
