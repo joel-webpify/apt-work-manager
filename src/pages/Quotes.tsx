@@ -14,6 +14,7 @@ import {
   Link2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { copyText, openInBrowser, quoteLink } from "@/lib/shareLinks";
 import {
   quoteStatusTones,
   invoiceStatusTones,
