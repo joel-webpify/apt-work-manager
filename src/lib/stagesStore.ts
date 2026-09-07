@@ -73,20 +73,6 @@ function defaultState(): State {
   };
 }
 
-/** Old single-list setup: keep any custom stages the user made by folding them into the two pipelines. */
-function migrateFromLegacy(legacy: Stage[]): Pipeline[] {
-  const base = defaultState().pipelines;
-  const known = new Set([...SALES_STAGE_NAMES, ...INSTALL_STAGE_NAMES, ...seedStages]);
-  const extras = legacy.filter((s) => !known.has(s.name));
-  const salesNames = new Set(["New enquiry", "Quote sent", "Won"]);
-  return base.map((p) => {
-    if (p.id !== "install") return p;
-    // Custom stages the user added previously land at the end of installation.
-    const carried = extras.filter((s) => !salesNames.has(s.name));
-    return { ...p, stages: [...p.stages, ...carried] };
-  });
-}
-
 function load(): State {
   let renames: Record<string, string> = {};
   try {
@@ -100,11 +86,6 @@ function load(): State {
     if (raw) {
       const parsed = JSON.parse(raw) as Pipeline[];
       if (Array.isArray(parsed) && parsed.length) return { pipelines: parsed, renames };
-    }
-    const legacyRaw = localStorage.getItem(LEGACY_STAGES_KEY);
-    if (legacyRaw) {
-      const legacy = JSON.parse(legacyRaw) as Stage[];
-      if (Array.isArray(legacy) && legacy.length) return { pipelines: migrateFromLegacy(legacy), renames };
     }
   } catch {
     /* ignore */
@@ -126,14 +107,18 @@ function persist() {
 }
 
 export function resolveStageName(name: string): string {
-  let cur = name;
+  let cur = LEGACY_STAGE_MAP[name] ?? name;
   const seen = new Set<string>();
   while (state.renames[cur] && !seen.has(cur)) {
     seen.add(cur);
     cur = state.renames[cur];
   }
+  // A stage that no longer exists anywhere falls back to a sensible one.
+  const exists = state.pipelines.some((p) => p.stages.some((s) => s.name === cur));
+  if (!exists) cur = LEGACY_STAGE_MAP[cur] ?? cur;
   return cur;
 }
+
 
 export function getPipelines(): Pipeline[] {
   return state.pipelines;
