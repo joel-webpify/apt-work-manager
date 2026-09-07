@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { stages as seedStages, stageColors as seedStageColors } from "@/data/mockData";
+import { stageColors as seedStageColors } from "@/data/mockData";
 
 export interface Stage {
   id: string;
