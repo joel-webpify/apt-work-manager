@@ -15,8 +15,7 @@ export interface Pipeline {
 
 export type PipelineId = "sales" | "install" | string;
 
-const PIPELINES_KEY = "pipelines-v2";
-const LEGACY_STAGES_KEY = "pipeline-stages-v1";
+const PIPELINES_KEY = "pipelines-v3";
 const RENAMES_KEY = "pipeline-stage-renames-v1";
 
 interface State {
@@ -24,29 +23,45 @@ interface State {
   renames: Record<string, string>;
 }
 
-const SALES_STAGE_NAMES = ["New enquiry", "Quote sent", "Won"];
-/** Installation keeps the original seed stage names so existing jobs slot straight in. */
-const INSTALL_STAGE_NAMES = ["To schedule", "Job booked", "In progress", "Completed", "Invoiced", "Paid"];
+const SALES_STAGE_NAMES = [
+  "New enquiry",
+  "Contacted",
+  "Site visit booked",
+  "Quote sent",
+  "Following up",
+  "Won",
+];
+/** Delivery only — money (invoiced / paid) lives in Quotes & invoices. */
+const INSTALL_STAGE_NAMES = ["To schedule", "Job booked", "In progress", "Completed"];
+
+/** Stages that no longer exist land on their nearest surviving stage. */
+const LEGACY_STAGE_MAP: Record<string, string> = {
+  Invoiced: "Completed",
+  Paid: "Completed",
+  "Follow-up": "Following up",
+};
 
 const FALLBACK_COLORS: Record<string, string> = {
   "New enquiry": "hsl(var(--info))",
+  Contacted: "199 89% 48%",
+  "Site visit booked": "271 91% 65%",
   "Quote sent": "hsl(var(--warning))",
+  "Following up": "25 95% 53%",
   Won: "142 71% 45%",
   "To schedule": "239 84% 67%",
   "Job booked": "hsl(var(--info))",
   "In progress": "hsl(var(--warning))",
   Completed: "hsl(var(--success))",
-  Invoiced: "hsl(var(--warning))",
-  Paid: "hsl(var(--success))",
 };
 
 function colorForSeed(name: string): string {
-  return (seedStageColors as Record<string, string>)[name] ?? FALLBACK_COLORS[name] ?? "215 16% 47%";
+  return FALLBACK_COLORS[name] ?? (seedStageColors as Record<string, string>)[name] ?? "215 16% 47%";
 }
 
 function mkStage(name: string, prefix: string): Stage {
   return { id: `${prefix}-${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`, name, color: colorForSeed(name) };
 }
+
 
 function defaultState(): State {
   return {
