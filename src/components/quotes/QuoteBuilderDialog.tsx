@@ -47,6 +47,7 @@ import {
   mergeWithMock,
 } from "@/lib/contactsStore";
 import { ProductPickerDialog } from "./ProductPickerDialog";
+import SiteVisitImportPanel from "./SiteVisitImportPanel";
 import { fmt, lineKind, resolveItems, totals, hasCustomerChoices, lineTotal } from "@/lib/quoteUtils";
 
 
@@ -166,6 +167,24 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
       taxRate: p.taxRate,
       imageUrl: p.imageUrl,
     });
+  };
+
+  /** Survey findings and materials from the site visit, dropped into a section. */
+  const addSiteVisitLines = (
+    lines: Omit<QuoteLineItem, "id">[],
+    target: "included" | "optional" | "choice",
+  ) => {
+    const stamp = Date.now();
+    const gid = target === "choice" ? `g-${stamp}-${Math.random().toString(36).slice(2, 5)}` : undefined;
+    const built: QuoteLineItem[] = lines.map((l, i) => ({
+      ...l,
+      id: `li-sv${stamp}-${i}`,
+      kind: target === "choice" ? "choice" : target,
+      groupId: gid,
+      groupLabel: gid ? "From the site visit" : undefined,
+      defaultSelected: target === "choice" ? i === 0 : false,
+    }));
+    setDraft((d) => ({ ...d, items: [...d.items.filter((x) => !isBlank(x)), ...built] }));
   };
 
   /** Add a new "customer picks one" group with two blank options. */
@@ -693,6 +712,13 @@ export function QuoteBuilderDialog({ open, onOpenChange, initial, onSave, mode }
               </>
             )}
           </section>
+
+          <SiteVisitImportPanel
+            jobId={draft.jobId}
+            contactId={draft.contactId}
+            onPickJob={(jid) => setDraft((d) => ({ ...d, jobId: jid }))}
+            onAdd={addSiteVisitLines}
+          />
 
           {/* Step 3 — totals & notes */}
           <section className="space-y-3">
