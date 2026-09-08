@@ -6,13 +6,15 @@
  * These helpers deal with both.
  */
 
-/** The address a customer can actually open. */
+/**
+ * The address a customer can actually open.
+ * We keep whatever address the app is currently served from: while the site
+ * isn't published yet, the tidied-up "live" address doesn't exist and the
+ * link would land on a missing page.
+ */
 export function publicOrigin(): string {
   if (typeof window === "undefined") return "";
-  const { protocol, host } = window.location;
-  // Strip the editor-only preview prefix so the link points at the live site.
-  const clean = host.replace(/^id-preview--/, "").replace(/^preview--/, "");
-  return `${protocol}//${clean}`;
+  return window.location.origin;
 }
 
 /** Full shareable link for a path like "/quote/Q-2041". */
