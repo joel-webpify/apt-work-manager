@@ -14,7 +14,15 @@
  */
 export function publicOrigin(): string {
   if (typeof window === "undefined") return "";
-  return window.location.origin;
+  const { origin, hostname } = window.location;
+
+  // Editor preview links require a Lovable account and can appear blank to a
+  // customer. Always hand out the published, public address from previews.
+  if (hostname.includes("-preview--") || hostname === "localhost") {
+    return "https://apt-work-manager.lovable.app";
+  }
+
+  return origin;
 }
 
 /** Full shareable link for a path like "/quote/Q-2041". */
