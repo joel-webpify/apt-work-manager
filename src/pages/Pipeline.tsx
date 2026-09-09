@@ -143,6 +143,12 @@ export default function Pipeline() {
   const boardJobs = useMemo(() => jobList.filter((j) => j.pipelineId === activePipelineId), [jobList, activePipelineId]);
   const setJobList = setJobListInternal;
 
+  const [onlyAttention, setOnlyAttention] = useState(false);
+  const shownJobs = useMemo(
+    () => (onlyAttention ? boardJobs.filter(needsAttention) : boardJobs),
+    [boardJobs, onlyAttention],
+  );
+
   const [selected, setSelected] = useState<Job | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
