@@ -441,7 +441,7 @@ export default function Pipeline() {
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
           <div className="flex gap-3 px-8 py-6 h-full min-w-max">
             {stageNames.map((stage) => {
-              const stageJobs = boardJobs.filter((j) => j.stage === stage);
+              const stageJobs = shownJobs.filter((j) => j.stage === stage);
               const total = stageJobs.reduce((s, j) => s + j.value, 0);
               const isOver = dragOverStage === stage;
               const stageColor = colorToCss(colorFor(stage));
