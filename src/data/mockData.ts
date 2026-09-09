@@ -110,6 +110,9 @@ export interface Job {
   customFields?: Record<string, string | number | boolean>;
   /** Per-job checklist of milestones. */
   milestones?: { id: string; label: string; done: boolean }[];
+  /** The single next thing to do on this job, plus when it's due (ISO date). */
+  nextAction?: string;
+  nextActionDue?: string;
 }
 
 export const employees: Employee[] = [
