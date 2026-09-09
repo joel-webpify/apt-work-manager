@@ -453,6 +453,14 @@ export default function Pipeline() {
                         cardFields={cardFields}
                         editing={editingCardId === job.id}
                         dragging={draggingId === job.id}
+                        justMoved={recentlyMoved.includes(job.id)}
+                        pipelines={pipelines}
+                        colorFor={colorFor}
+                        onMove={(stage, pipelineId) => moveJob(job, stage, pipelineId)}
+                        onStep={(dir) => stepJob(job, dir)}
+                        nextStepOpen={nextStepFor === job.id}
+                        onNextStepOpenChange={(o) => setNextStepFor(o ? job.id : null)}
+                        onSaveNextStep={(text, due) => updateJob(job.id, { nextAction: text, nextActionDue: due })}
                         handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
                         onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
