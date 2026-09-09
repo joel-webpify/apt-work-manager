@@ -82,6 +82,36 @@ const seedStuckThresholds: Partial<Record<PipelineStage, number>> = {
 };
 const stuckFor = (s: string) => seedStuckThresholds[s as PipelineStage] ?? 7;
 
+const niceDate = () => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+/** How the next step on a job is doing. */
+type DueState = "none" | "overdue" | "today" | "later";
+function dueState(job: Job): DueState {
+  if (!job.nextAction?.trim()) return "none";
+  if (!job.nextActionDue) return "later";
+  const t = todayISO();
+  if (job.nextActionDue < t) return "overdue";
+  if (job.nextActionDue === t) return "today";
+  return "later";
+}
+function dueLabel(job: Job): string {
+  if (!job.nextActionDue) return "no date";
+  const t = todayISO();
+  if (job.nextActionDue === t) return "today";
+  const d = new Date(job.nextActionDue + "T00:00:00");
+  const days = Math.round((d.getTime() - new Date(t + "T00:00:00").getTime()) / 86400000);
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "1 day late";
+  if (days < 0) return `${-days} days late`;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
+/** Overdue, no next step at all, or parked in a stage too long. */
+function needsAttention(job: Job): boolean {
+  const s = dueState(job);
+  return s === "overdue" || s === "none" || job.daysInStage >= stuckFor(job.stage);
+}
+
 type PipelineTab = "sales" | "install" | "all";
 
 export default function Pipeline() {
