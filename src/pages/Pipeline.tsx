@@ -410,11 +410,20 @@ export default function Pipeline() {
           <List className="w-3.5 h-3.5" /> All jobs
           <span className="text-xs text-muted-foreground">{counts.all}</span>
         </button>
-        {tab !== "all" && attentionCount > 0 && (
-          <span className="ml-auto text-xs text-[hsl(var(--destructive))] inline-flex items-center gap-1.5">
+        {tab !== "all" && (
+          <button
+            onClick={() => setOnlyAttention((v) => !v)}
+            className={`ml-auto h-7 px-2 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-hairline transition-colors ${
+              onlyAttention
+                ? "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="Overdue, no next step, or sitting too long"
+          >
             <AlertCircle className="w-3.5 h-3.5" />
-            {attentionCount} {attentionCount === 1 ? "job needs" : "jobs need"} attention
-          </span>
+            Needs attention
+            <span className="tabular-nums">{attentionCount}</span>
+          </button>
         )}
       </div>
 
