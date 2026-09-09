@@ -652,12 +652,158 @@ function AllJobsView({
 }
 
 
+type PipelineLite = { id: string; name: string; stages: { name: string }[] };
+
+/** Pick any stage — on this board or the other one — in a single tap. */
+function MoveJobMenu({
+  job,
+  pipelines,
+  colorFor,
+  onMove,
+  trigger,
+  align = "start",
+}: {
+  job: Job;
+  pipelines: PipelineLite[];
+  colorFor: (n: string) => string;
+  onMove: (stage: string, pipelineId: string) => void;
+  trigger: React.ReactNode;
+  align?: "start" | "end";
+}) {
+  const currentPipe = job.pipelineId ?? "sales";
+  const ordered = [...pipelines].sort((a, b) => (a.id === currentPipe ? -1 : b.id === currentPipe ? 1 : 0));
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        {trigger}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-60" onClick={(e) => e.stopPropagation()}>
+        {ordered.map((p, idx) => (
+          <div key={p.id}>
+            {idx > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
+              {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+              {p.name}
+            </DropdownMenuLabel>
+            {p.stages.map((s) => {
+              const here = p.id === currentPipe && s.name === job.stage;
+              return (
+                <DropdownMenuItem
+                  key={`${p.id}-${s.name}`}
+                  disabled={here}
+                  onClick={() => onMove(s.name, p.id)}
+                  className="cursor-pointer gap-2"
+                >
+                  <StatusDot color={colorToCss(colorFor(s.name))} />
+                  <span className="flex-1 truncate">{s.name}</span>
+                  {here && <Check className="w-3 h-3 text-muted-foreground" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The one thing to do next on a job, and when. */
+function NextStepEditor({
+  job,
+  open,
+  onOpenChange,
+  onSave,
+  trigger,
+}: {
+  job: Job;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSave: (text: string, due?: string) => void;
+  trigger: React.ReactNode;
+}) {
+  const [text, setText] = useState(job.nextAction ?? "");
+  const [due, setDue] = useState(job.nextActionDue ?? "");
+
+  useEffect(() => {
+    if (open) {
+      setText(job.nextAction ?? "");
+      setDue(job.nextActionDue ?? "");
+    }
+  }, [open, job.nextAction, job.nextActionDue]);
+
+  const save = () => {
+    onSave(text.trim(), due || undefined);
+    onOpenChange(false);
+  };
+  const quick = (days: number) =>
+    setDue(new Date(Date.now() + days * 86400000).toISOString().slice(0, 10));
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+        {trigger}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="text-xs font-medium">Next step for {job.customer}</div>
+        <Input
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+          placeholder="Ring to book the survey…"
+          className="h-8 text-sm"
+        />
+        <div className="flex items-center gap-1.5">
+          <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-8 text-xs" />
+        </div>
+        <div className="flex gap-1">
+          {[
+            { label: "Today", d: 0 },
+            { label: "Tomorrow", d: 1 },
+            { label: "In 3 days", d: 3 },
+            { label: "Next week", d: 7 },
+          ].map((o) => (
+            <button
+              key={o.label}
+              onClick={() => quick(o.d)}
+              className="h-6 px-1.5 rounded text-[11px] border-hairline text-muted-foreground hover:text-foreground hover:bg-surface-hover"
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 pt-0.5">
+          <Button size="sm" className="h-7 flex-1" onClick={save}>Save</Button>
+          {job.nextAction && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-muted-foreground"
+              onClick={() => { onSave("", undefined); onOpenChange(false); }}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function BoardCard({
   job,
   stageColor,
   cardFields,
   editing,
   dragging,
+  justMoved,
+  pipelines,
+  colorFor,
+  onMove,
+  onStep,
+  nextStepOpen,
+  onNextStepOpenChange,
+  onSaveNextStep,
   handover,
   onHandover,
   onStartEdit,
@@ -672,6 +818,14 @@ function BoardCard({
   cardFields: ReturnType<typeof useJobFieldSchema>[0];
   editing: boolean;
   dragging: boolean;
+  justMoved?: boolean;
+  pipelines: PipelineLite[];
+  colorFor: (n: string) => string;
+  onMove: (stage: string, pipelineId: string) => void;
+  onStep: (dir: -1 | 1) => void;
+  nextStepOpen: boolean;
+  onNextStepOpenChange: (o: boolean) => void;
+  onSaveNextStep: (text: string, due?: string) => void;
   handover?: "install" | "sales" | null;
   onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
