@@ -881,25 +881,86 @@ function BoardCard({
     );
   }
 
+  const due = dueState(job);
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onSelect}
-      className={`group w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-all relative overflow-hidden cursor-grab active:cursor-grabbing ${dragging ? "opacity-40" : ""}`}
+      className={`group w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-all relative overflow-hidden cursor-grab active:cursor-grabbing ${dragging ? "opacity-40" : ""} ${justMoved ? "ring-1 ring-primary" : ""}`}
     >
       <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ backgroundColor: stageColor }} />
-      <button
-        onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-background"
-        title="Quick edit"
-        aria-label="Quick edit"
-      >
-        <Pencil className="w-3 h-3 text-muted-foreground" />
-      </button>
-      <div className="text-sm font-medium truncate pr-5">{job.customer}</div>
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); onStep(-1); }}
+          className="p-1 rounded hover:bg-background"
+          title="Move back a stage"
+          aria-label="Move back a stage"
+        >
+          <ChevronLeft className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <MoveJobMenu
+          job={job}
+          pipelines={pipelines}
+          colorFor={colorFor}
+          onMove={onMove}
+          align="end"
+          trigger={
+            <button className="p-1 rounded hover:bg-background" title="Move to…" aria-label="Move to a stage">
+              <MoveRight className="w-3 h-3 text-muted-foreground" />
+            </button>
+          }
+        />
+        <button
+          onClick={(e) => { e.stopPropagation(); onStep(1); }}
+          className="p-1 rounded hover:bg-background"
+          title="Move forward a stage"
+          aria-label="Move forward a stage"
+        >
+          <ChevronRight className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
+          className="p-1 rounded hover:bg-background"
+          title="Quick edit"
+          aria-label="Quick edit"
+        >
+          <Pencil className="w-3 h-3 text-muted-foreground" />
+        </button>
+      </div>
+      <div className="text-sm font-medium truncate pr-20">{job.customer}</div>
       <div className="text-xs text-muted-foreground mt-0.5 truncate">{job.service}</div>
+      <div className="mt-2">
+        <NextStepEditor
+          job={job}
+          open={nextStepOpen}
+          onOpenChange={onNextStepOpenChange}
+          onSave={onSaveNextStep}
+          trigger={
+            <button
+              className={`w-full text-left text-xs inline-flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-background transition-colors ${
+                due === "overdue"
+                  ? "text-[hsl(var(--destructive))] font-medium"
+                  : due === "none"
+                    ? "text-muted-foreground italic"
+                    : "text-foreground"
+              }`}
+            >
+              {due === "none" ? (
+                <><Flag className="w-3 h-3 shrink-0" /> Add next step</>
+              ) : (
+                <>
+                  <CalendarClock className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{job.nextAction}</span>
+                  <span className="ml-auto shrink-0 text-[10px] whitespace-nowrap opacity-80">{dueLabel(job)}</span>
+                </>
+              )}
+            </button>
+          }
+        />
+      </div>
       <div className="flex items-center justify-between mt-2.5">
         <span className="text-sm font-medium tabular-nums">£{job.value}</span>
         <span className="text-xs text-muted-foreground">{job.daysInStage}d</span>
