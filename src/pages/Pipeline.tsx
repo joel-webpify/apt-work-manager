@@ -145,23 +145,6 @@ export default function Pipeline() {
     if (r) topToast({ title: "Automatic update", description: r.message });
   };
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {
-    e.preventDefault();
-    const jobId = e.dataTransfer.getData("text/plain") || draggingId;
-    if (!jobId) return;
-    const prevJob = jobList.find((j) => j.id === jobId);
-    setJobList((prev) =>
-      prev.map((j) =>
-        j.id === jobId && j.stage !== stage
-          ? { ...j, stage: stage as PipelineStage, pipelineId: activePipelineId, daysInStage: 0 }
-          : j,
-      ),
-    );
-    setDraggingId(null);
-    setDragOverStage(null);
-    if (prevJob && prevJob.stage !== stage) runLifecycle(jobId, stage);
-  };
-
   const handleStageRename = (oldName: string, newName: string) => {
     setJobList((prev) =>
       prev.map((j) => (j.stage === oldName ? { ...j, stage: newName as PipelineStage } : j)),
@@ -171,34 +154,142 @@ export default function Pipeline() {
   const updateJob = (id: string, patch: Partial<Job>) => {
     const prevJob = jobList.find((j) => j.id === id);
     setJobList((prev) => prev.map((j) => (j.id === id ? { ...j, ...patch } : j)));
+    if (selected?.id === id) setSelected((s) => (s ? { ...s, ...patch } : s));
     if (patch.stage && prevJob && prevJob.stage !== patch.stage) runLifecycle(id, patch.stage);
   };
 
-  // ---- Handover between pipelines -------------------------------------------
+  // ---- Moving jobs ----------------------------------------------------------
   const salesLastStage = lastStageOf("sales");
   const installFirstStage = firstStageOf("install");
   const salesFirstStage = firstStageOf("sales");
 
-  const moveToPipeline = (job: Job, target: "sales" | "install") => {
-    const stage = (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as PipelineStage;
-    const note = target === "install" ? "Handed over to installation" : "Sent back to sales";
-    updateJob(job.id, {
-      pipelineId: target,
-      stage,
+  /** Jobs that just arrived somewhere new, so you can spot them on the board. */
+  const [recentlyMoved, setRecentlyMoved] = useState<string[]>([]);
+  const flash = (id: string) => {
+    setRecentlyMoved((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    window.setTimeout(() => setRecentlyMoved((prev) => prev.filter((x) => x !== id)), 5000);
+  };
+  /** Card whose "next step" editor should pop open (after a move). */
+  const [nextStepFor, setNextStepFor] = useState<string | null>(null);
+
+  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "timeline">;
+  const snapshotOf = (job: Job): Snapshot => ({
+    pipelineId: job.pipelineId,
+    stage: job.stage,
+    daysInStage: job.daysInStage,
+    nextAction: job.nextAction,
+    nextActionDue: job.nextActionDue,
+    timeline: job.timeline,
+  });
+
+  const applyMove = (jobId: string, pipelineId: string, stage: string, note: string) => {
+    const patch = (j: Job): Job => ({
+      ...j,
+      pipelineId,
+      stage: stage as PipelineStage,
       daysInStage: 0,
+      nextAction: undefined,
+      nextActionDue: undefined,
+      timeline: [...(j.timeline ?? []), { type: "note" as const, text: note, date: niceDate() }],
+    });
+    setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
+    setSelected((s) => (s && s.id === jobId ? patch(s) : s));
+  };
+
+  const restore = (jobId: string, snap: Snapshot) => {
+    const patch = (j: Job): Job => ({
+      ...j,
+      ...snap,
       timeline: [
-        ...(job.timeline ?? []),
-        { type: "note" as const, text: note, date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) },
+        ...(snap.timeline ?? []),
+        { type: "note" as const, text: "Handover undone", date: niceDate() },
       ],
     });
-    topToast({
-      title: note,
-      description:
-        target === "install"
-          ? `${job.customer} is now in the installation pipeline at “${stage}”.`
-          : `${job.customer} is back in the sales pipeline at “${stage}”.`,
-    });
-    if (selected?.id === job.id) setSelected((s) => (s ? { ...s, pipelineId: target, stage } : s));
+    setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
+    setSelected((s) => (s && s.id === jobId ? patch(s) : s));
+    topToast({ title: "Put back", description: `Returned to “${snap.stage}”.` });
+  };
+
+  /**
+   * The one way a job changes stage or side. Handles the timeline note, the
+   * automatic handover when a sale is won, and keeps the open panel in sync.
+   */
+  const moveJob = (job: Job, stage: string, pipelineId?: string, note?: string) => {
+    const target = pipelineId ?? job.pipelineId ?? pipeFor(stage);
+    const from = job.pipelineId ?? "sales";
+    if (job.stage === stage && from === target) return;
+    const snap = snapshotOf(job);
+    const crossed = target !== from;
+    const label =
+      note ??
+      (crossed
+        ? target === "install"
+          ? "Handed over to installation"
+          : "Sent back to sales"
+        : `Moved to ${stage}`);
+
+    applyMove(job.id, target, stage, label);
+    runLifecycle(job.id, stage);
+
+    // Winning a sale hands the job to installation by itself — undoable.
+    if (!crossed && target === "sales" && stage === salesLastStage && installFirstStage) {
+      applyMove(job.id, "install", installFirstStage, "Won — handed over to installation");
+      runLifecycle(job.id, installFirstStage);
+      flash(job.id);
+      topToast({
+        title: "Handed over to installation",
+        description: `${job.customer} is won and now sitting in “${installFirstStage}”.`,
+        action: (
+          <ToastAction altText="Undo the handover" onClick={() => restore(job.id, snap)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
+    if (crossed) {
+      flash(job.id);
+      topToast({
+        title: label,
+        description:
+          target === "install"
+            ? `${job.customer} is now in the installation pipeline at “${stage}”.`
+            : `${job.customer} is back with sales at “${stage}”.`,
+        action: (
+          <ToastAction altText="Undo the move" onClick={() => restore(job.id, snap)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    } else {
+      setNextStepFor(job.id);
+    }
+  };
+
+  const moveToPipeline = (job: Job, target: "sales" | "install") =>
+    moveJob(
+      job,
+      (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as string,
+      target,
+    );
+
+  const stepJob = (job: Job, dir: -1 | 1) => {
+    const list = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"))?.stages ?? [];
+    const i = list.findIndex((s) => s.name === job.stage);
+    const next = list[i + dir];
+    if (i < 0 || !next) return;
+    moveJob(job, next.name);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {
+    e.preventDefault();
+    const jobId = e.dataTransfer.getData("text/plain") || draggingId;
+    setDraggingId(null);
+    setDragOverStage(null);
+    if (!jobId) return;
+    const job = jobList.find((j) => j.id === jobId);
+    if (job) moveJob(job, stage, activePipelineId);
   };
 
   const canHandOver = (job: Job) => job.pipelineId === "sales" && job.stage === salesLastStage;
@@ -209,7 +300,8 @@ export default function Pipeline() {
     install: jobList.filter((j) => j.pipelineId === "install").length,
     all: jobList.length,
   };
-  const waitingHandover = jobList.filter(canHandOver).length;
+  const attentionCount = boardJobs.filter(needsAttention).length;
+
 
   return (
     <>
