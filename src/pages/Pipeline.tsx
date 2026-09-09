@@ -372,9 +372,10 @@ export default function Pipeline() {
           <List className="w-3.5 h-3.5" /> All jobs
           <span className="text-xs text-muted-foreground">{counts.all}</span>
         </button>
-        {tab === "sales" && waitingHandover > 0 && (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {waitingHandover} won {waitingHandover === 1 ? "job" : "jobs"} ready to hand over
+        {tab !== "all" && attentionCount > 0 && (
+          <span className="ml-auto text-xs text-[hsl(var(--destructive))] inline-flex items-center gap-1.5">
+            <AlertCircle className="w-3.5 h-3.5" />
+            {attentionCount} {attentionCount === 1 ? "job needs" : "jobs need"} attention
           </span>
         )}
       </div>
