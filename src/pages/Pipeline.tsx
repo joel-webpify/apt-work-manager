@@ -1112,7 +1112,7 @@ function JobsListView({
     const q = query.trim().toLowerCase();
     return jobs
       .filter((j) => (stageFilter === "All" ? true : j.stage === stageFilter))
-      .filter((j) => (onlyStuck ? j.daysInStage >= stuckFor(j.stage) : true))
+      .filter((j) => (onlyStuck ? needsAttention(j) : true))
       .filter((j) =>
         q
           ? j.customer.toLowerCase().includes(q) || j.service.toLowerCase().includes(q) || j.address.toLowerCase().includes(q) || (j.invoiceId ?? "").toLowerCase().includes(q)
@@ -1128,7 +1128,7 @@ function JobsListView({
   }, [jobs, query, stageFilter, onlyStuck, sortKey, sortDir]);
 
   const totalValue = filtered.reduce((s, j) => s + j.value, 0);
-  const stuckCount = filtered.filter((j) => j.daysInStage >= stuckFor(j.stage)).length;
+  const stuckCount = filtered.filter(needsAttention).length;
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -1171,12 +1171,12 @@ function JobsListView({
           onClick={() => setOnlyStuck((v) => !v)}
           className={`h-8 px-2.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-hairline transition-colors ${onlyStuck ? "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))]" : "bg-background text-muted-foreground hover:text-foreground"}`}
         >
-          <AlertCircle className="w-3.5 h-3.5" /> Stuck only
+          <AlertCircle className="w-3.5 h-3.5" /> Needs attention
         </button>
 
         <div className="ml-auto text-xs text-muted-foreground tabular-nums">
           {filtered.length} jobs · £{totalValue.toLocaleString()} total
-          {stuckCount > 0 && <span className="ml-2 text-[hsl(var(--destructive))]">· {stuckCount} stuck</span>}
+          {stuckCount > 0 && <span className="ml-2 text-[hsl(var(--destructive))]">· {stuckCount} need attention</span>}
         </div>
       </div>
 
