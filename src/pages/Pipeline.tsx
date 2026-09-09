@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2 } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock } from "lucide-react";
+import { ToastAction } from "@/components/ui/toast";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
@@ -82,6 +84,36 @@ const seedStuckThresholds: Partial<Record<PipelineStage, number>> = {
 };
 const stuckFor = (s: string) => seedStuckThresholds[s as PipelineStage] ?? 7;
 
+const niceDate = () => new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+const todayISO = () => new Date().toISOString().slice(0, 10);
+
+/** How the next step on a job is doing. */
+type DueState = "none" | "overdue" | "today" | "later";
+function dueState(job: Job): DueState {
+  if (!job.nextAction?.trim()) return "none";
+  if (!job.nextActionDue) return "later";
+  const t = todayISO();
+  if (job.nextActionDue < t) return "overdue";
+  if (job.nextActionDue === t) return "today";
+  return "later";
+}
+function dueLabel(job: Job): string {
+  if (!job.nextActionDue) return "no date";
+  const t = todayISO();
+  if (job.nextActionDue === t) return "today";
+  const d = new Date(job.nextActionDue + "T00:00:00");
+  const days = Math.round((d.getTime() - new Date(t + "T00:00:00").getTime()) / 86400000);
+  if (days === 1) return "tomorrow";
+  if (days === -1) return "1 day late";
+  if (days < 0) return `${-days} days late`;
+  return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+}
+/** Overdue, no next step at all, or parked in a stage too long. */
+function needsAttention(job: Job): boolean {
+  const s = dueState(job);
+  return s === "overdue" || s === "none" || job.daysInStage >= stuckFor(job.stage);
+}
+
 type PipelineTab = "sales" | "install" | "all";
 
 export default function Pipeline() {
@@ -110,6 +142,12 @@ export default function Pipeline() {
   );
   const boardJobs = useMemo(() => jobList.filter((j) => j.pipelineId === activePipelineId), [jobList, activePipelineId]);
   const setJobList = setJobListInternal;
+
+  const [onlyAttention, setOnlyAttention] = useState(false);
+  const shownJobs = useMemo(
+    () => (onlyAttention ? boardJobs.filter(needsAttention) : boardJobs),
+    [boardJobs, onlyAttention],
+  );
 
   const [selected, setSelected] = useState<Job | null>(null);
   const [draggingId, setDraggingId] = useState<string | null>(null);
@@ -145,23 +183,6 @@ export default function Pipeline() {
     if (r) topToast({ title: "Automatic update", description: r.message });
   };
 
-  const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {
-    e.preventDefault();
-    const jobId = e.dataTransfer.getData("text/plain") || draggingId;
-    if (!jobId) return;
-    const prevJob = jobList.find((j) => j.id === jobId);
-    setJobList((prev) =>
-      prev.map((j) =>
-        j.id === jobId && j.stage !== stage
-          ? { ...j, stage: stage as PipelineStage, pipelineId: activePipelineId, daysInStage: 0 }
-          : j,
-      ),
-    );
-    setDraggingId(null);
-    setDragOverStage(null);
-    if (prevJob && prevJob.stage !== stage) runLifecycle(jobId, stage);
-  };
-
   const handleStageRename = (oldName: string, newName: string) => {
     setJobList((prev) =>
       prev.map((j) => (j.stage === oldName ? { ...j, stage: newName as PipelineStage } : j)),
@@ -171,34 +192,142 @@ export default function Pipeline() {
   const updateJob = (id: string, patch: Partial<Job>) => {
     const prevJob = jobList.find((j) => j.id === id);
     setJobList((prev) => prev.map((j) => (j.id === id ? { ...j, ...patch } : j)));
+    if (selected?.id === id) setSelected((s) => (s ? { ...s, ...patch } : s));
     if (patch.stage && prevJob && prevJob.stage !== patch.stage) runLifecycle(id, patch.stage);
   };
 
-  // ---- Handover between pipelines -------------------------------------------
+  // ---- Moving jobs ----------------------------------------------------------
   const salesLastStage = lastStageOf("sales");
   const installFirstStage = firstStageOf("install");
   const salesFirstStage = firstStageOf("sales");
 
-  const moveToPipeline = (job: Job, target: "sales" | "install") => {
-    const stage = (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as PipelineStage;
-    const note = target === "install" ? "Handed over to installation" : "Sent back to sales";
-    updateJob(job.id, {
-      pipelineId: target,
-      stage,
+  /** Jobs that just arrived somewhere new, so you can spot them on the board. */
+  const [recentlyMoved, setRecentlyMoved] = useState<string[]>([]);
+  const flash = (id: string) => {
+    setRecentlyMoved((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    window.setTimeout(() => setRecentlyMoved((prev) => prev.filter((x) => x !== id)), 5000);
+  };
+  /** Card whose "next step" editor should pop open (after a move). */
+  const [nextStepFor, setNextStepFor] = useState<string | null>(null);
+
+  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "timeline">;
+  const snapshotOf = (job: Job): Snapshot => ({
+    pipelineId: job.pipelineId,
+    stage: job.stage,
+    daysInStage: job.daysInStage,
+    nextAction: job.nextAction,
+    nextActionDue: job.nextActionDue,
+    timeline: job.timeline,
+  });
+
+  const applyMove = (jobId: string, pipelineId: string, stage: string, note: string) => {
+    const patch = (j: Job): Job => ({
+      ...j,
+      pipelineId,
+      stage: stage as PipelineStage,
       daysInStage: 0,
+      nextAction: undefined,
+      nextActionDue: undefined,
+      timeline: [...(j.timeline ?? []), { type: "note" as const, text: note, date: niceDate() }],
+    });
+    setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
+    setSelected((s) => (s && s.id === jobId ? patch(s) : s));
+  };
+
+  const restore = (jobId: string, snap: Snapshot) => {
+    const patch = (j: Job): Job => ({
+      ...j,
+      ...snap,
       timeline: [
-        ...(job.timeline ?? []),
-        { type: "note" as const, text: note, date: new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short" }) },
+        ...(snap.timeline ?? []),
+        { type: "note" as const, text: "Handover undone", date: niceDate() },
       ],
     });
-    topToast({
-      title: note,
-      description:
-        target === "install"
-          ? `${job.customer} is now in the installation pipeline at “${stage}”.`
-          : `${job.customer} is back in the sales pipeline at “${stage}”.`,
-    });
-    if (selected?.id === job.id) setSelected((s) => (s ? { ...s, pipelineId: target, stage } : s));
+    setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
+    setSelected((s) => (s && s.id === jobId ? patch(s) : s));
+    topToast({ title: "Put back", description: `Returned to “${snap.stage}”.` });
+  };
+
+  /**
+   * The one way a job changes stage or side. Handles the timeline note, the
+   * automatic handover when a sale is won, and keeps the open panel in sync.
+   */
+  const moveJob = (job: Job, stage: string, pipelineId?: string, note?: string) => {
+    const target = pipelineId ?? job.pipelineId ?? pipeFor(stage);
+    const from = job.pipelineId ?? "sales";
+    if (job.stage === stage && from === target) return;
+    const snap = snapshotOf(job);
+    const crossed = target !== from;
+    const label =
+      note ??
+      (crossed
+        ? target === "install"
+          ? "Handed over to installation"
+          : "Sent back to sales"
+        : `Moved to ${stage}`);
+
+    applyMove(job.id, target, stage, label);
+    runLifecycle(job.id, stage);
+
+    // Winning a sale hands the job to installation by itself — undoable.
+    if (!crossed && target === "sales" && stage === salesLastStage && installFirstStage) {
+      applyMove(job.id, "install", installFirstStage, "Won — handed over to installation");
+      runLifecycle(job.id, installFirstStage);
+      flash(job.id);
+      topToast({
+        title: "Handed over to installation",
+        description: `${job.customer} is won and now sitting in “${installFirstStage}”.`,
+        action: (
+          <ToastAction altText="Undo the handover" onClick={() => restore(job.id, snap)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+      return;
+    }
+
+    if (crossed) {
+      flash(job.id);
+      topToast({
+        title: label,
+        description:
+          target === "install"
+            ? `${job.customer} is now in the installation pipeline at “${stage}”.`
+            : `${job.customer} is back with sales at “${stage}”.`,
+        action: (
+          <ToastAction altText="Undo the move" onClick={() => restore(job.id, snap)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    } else {
+      setNextStepFor(job.id);
+    }
+  };
+
+  const moveToPipeline = (job: Job, target: "sales" | "install") =>
+    moveJob(
+      job,
+      (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as string,
+      target,
+    );
+
+  const stepJob = (job: Job, dir: -1 | 1) => {
+    const list = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"))?.stages ?? [];
+    const i = list.findIndex((s) => s.name === job.stage);
+    const next = list[i + dir];
+    if (i < 0 || !next) return;
+    moveJob(job, next.name);
+  };
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>, stage: string) => {
+    e.preventDefault();
+    const jobId = e.dataTransfer.getData("text/plain") || draggingId;
+    setDraggingId(null);
+    setDragOverStage(null);
+    if (!jobId) return;
+    const job = jobList.find((j) => j.id === jobId);
+    if (job) moveJob(job, stage, activePipelineId);
   };
 
   const canHandOver = (job: Job) => job.pipelineId === "sales" && job.stage === salesLastStage;
@@ -209,7 +338,8 @@ export default function Pipeline() {
     install: jobList.filter((j) => j.pipelineId === "install").length,
     all: jobList.length,
   };
-  const waitingHandover = jobList.filter(canHandOver).length;
+  const attentionCount = boardJobs.filter(needsAttention).length;
+
 
   return (
     <>
@@ -280,10 +410,20 @@ export default function Pipeline() {
           <List className="w-3.5 h-3.5" /> All jobs
           <span className="text-xs text-muted-foreground">{counts.all}</span>
         </button>
-        {tab === "sales" && waitingHandover > 0 && (
-          <span className="ml-auto text-xs text-muted-foreground">
-            {waitingHandover} won {waitingHandover === 1 ? "job" : "jobs"} ready to hand over
-          </span>
+        {tab !== "all" && (
+          <button
+            onClick={() => setOnlyAttention((v) => !v)}
+            className={`ml-auto h-7 px-2 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-hairline transition-colors ${
+              onlyAttention
+                ? "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))]"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            title="Overdue, no next step, or sitting too long"
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            Needs attention
+            <span className="tabular-nums">{attentionCount}</span>
+          </button>
         )}
       </div>
 
@@ -301,7 +441,7 @@ export default function Pipeline() {
         <div className="flex-1 overflow-x-auto overflow-y-hidden">
           <div className="flex gap-3 px-8 py-6 h-full min-w-max">
             {stageNames.map((stage) => {
-              const stageJobs = boardJobs.filter((j) => j.stage === stage);
+              const stageJobs = shownJobs.filter((j) => j.stage === stage);
               const total = stageJobs.reduce((s, j) => s + j.value, 0);
               const isOver = dragOverStage === stage;
               const stageColor = colorToCss(colorFor(stage));
@@ -328,6 +468,14 @@ export default function Pipeline() {
                         cardFields={cardFields}
                         editing={editingCardId === job.id}
                         dragging={draggingId === job.id}
+                        justMoved={recentlyMoved.includes(job.id)}
+                        pipelines={pipelines}
+                        colorFor={colorFor}
+                        onMove={(stage, pipelineId) => moveJob(job, stage, pipelineId)}
+                        onStep={(dir) => stepJob(job, dir)}
+                        nextStepOpen={nextStepFor === job.id}
+                        onNextStepOpenChange={(o) => setNextStepFor(o ? job.id : null)}
+                        onSaveNextStep={(text, due) => updateJob(job.id, { nextAction: text, nextActionDue: due })}
                         handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
                         onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
@@ -371,6 +519,8 @@ export default function Pipeline() {
             (pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.stages ?? stageDefs).map((s) => s.name)
           }
           colorFor={colorFor}
+          pipelines={pipelines}
+          onMove={(stage, pipelineId) => moveJob(selected, stage, pipelineId)}
           pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.name}
           handover={canHandOver(selected) ? "install" : canReturn(selected) ? "sales" : null}
           onHandover={(target) => moveToPipeline(selected, target)}
@@ -467,10 +617,10 @@ function AllJobsView({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-hairline bg-surface/40">
-              {["Customer", "Service", "Pipeline", "Stage", "Value", "Days here"].map((h, i) => (
+              {["Customer", "Service", "Pipeline", "Stage", "Next step", "Value", "Days here"].map((h, i) => (
                 <th
                   key={h}
-                  className={`font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 ${i > 3 ? "text-right" : "text-left"}`}
+                  className={`font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 ${i > 4 ? "text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -480,7 +630,7 @@ function AllJobsView({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">No jobs match that search.</td>
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">No jobs match that search.</td>
               </tr>
             ) : (
               filtered.map((job) => {
@@ -505,6 +655,18 @@ function AllJobsView({
                         {job.stage}
                       </span>
                     </td>
+                    <td className="px-3 py-3 max-w-[200px]">
+                      {job.nextAction ? (
+                        <div className="min-w-0">
+                          <div className="text-xs truncate">{job.nextAction}</div>
+                          <div className={`text-[11px] mt-0.5 ${dueState(job) === "overdue" ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
+                            {dueLabel(job)}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Nothing set</span>
+                      )}
+                    </td>
                     <td className="px-3 py-3 text-right tabular-nums font-medium">£{job.value.toLocaleString()}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{job.daysInStage}d</td>
                   </tr>
@@ -519,12 +681,158 @@ function AllJobsView({
 }
 
 
+type PipelineLite = { id: string; name: string; stages: { name: string }[] };
+
+/** Pick any stage — on this board or the other one — in a single tap. */
+function MoveJobMenu({
+  job,
+  pipelines,
+  colorFor,
+  onMove,
+  trigger,
+  align = "start",
+}: {
+  job: Job;
+  pipelines: PipelineLite[];
+  colorFor: (n: string) => string;
+  onMove: (stage: string, pipelineId: string) => void;
+  trigger: React.ReactNode;
+  align?: "start" | "end";
+}) {
+  const currentPipe = job.pipelineId ?? "sales";
+  const ordered = [...pipelines].sort((a, b) => (a.id === currentPipe ? -1 : b.id === currentPipe ? 1 : 0));
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        {trigger}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-60" onClick={(e) => e.stopPropagation()}>
+        {ordered.map((p, idx) => (
+          <div key={p.id}>
+            {idx > 0 && <DropdownMenuSeparator />}
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
+              {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+              {p.name}
+            </DropdownMenuLabel>
+            {p.stages.map((s) => {
+              const here = p.id === currentPipe && s.name === job.stage;
+              return (
+                <DropdownMenuItem
+                  key={`${p.id}-${s.name}`}
+                  disabled={here}
+                  onClick={() => onMove(s.name, p.id)}
+                  className="cursor-pointer gap-2"
+                >
+                  <StatusDot color={colorToCss(colorFor(s.name))} />
+                  <span className="flex-1 truncate">{s.name}</span>
+                  {here && <Check className="w-3 h-3 text-muted-foreground" />}
+                </DropdownMenuItem>
+              );
+            })}
+          </div>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/** The one thing to do next on a job, and when. */
+function NextStepEditor({
+  job,
+  open,
+  onOpenChange,
+  onSave,
+  trigger,
+}: {
+  job: Job;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSave: (text: string, due?: string) => void;
+  trigger: React.ReactNode;
+}) {
+  const [text, setText] = useState(job.nextAction ?? "");
+  const [due, setDue] = useState(job.nextActionDue ?? "");
+
+  useEffect(() => {
+    if (open) {
+      setText(job.nextAction ?? "");
+      setDue(job.nextActionDue ?? "");
+    }
+  }, [open, job.nextAction, job.nextActionDue]);
+
+  const save = () => {
+    onSave(text.trim(), due || undefined);
+    onOpenChange(false);
+  };
+  const quick = (days: number) =>
+    setDue(new Date(Date.now() + days * 86400000).toISOString().slice(0, 10));
+
+  return (
+    <Popover open={open} onOpenChange={onOpenChange}>
+      <PopoverTrigger asChild onClick={(e) => e.stopPropagation()}>
+        {trigger}
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-72 p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
+        <div className="text-xs font-medium">Next step for {job.customer}</div>
+        <Input
+          autoFocus
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && save()}
+          placeholder="Ring to book the survey…"
+          className="h-8 text-sm"
+        />
+        <div className="flex items-center gap-1.5">
+          <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-8 text-xs" />
+        </div>
+        <div className="flex gap-1">
+          {[
+            { label: "Today", d: 0 },
+            { label: "Tomorrow", d: 1 },
+            { label: "In 3 days", d: 3 },
+            { label: "Next week", d: 7 },
+          ].map((o) => (
+            <button
+              key={o.label}
+              onClick={() => quick(o.d)}
+              className="h-6 px-1.5 rounded text-[11px] border-hairline text-muted-foreground hover:text-foreground hover:bg-surface-hover"
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+        <div className="flex gap-1.5 pt-0.5">
+          <Button size="sm" className="h-7 flex-1" onClick={save}>Save</Button>
+          {job.nextAction && (
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-7 text-muted-foreground"
+              onClick={() => { onSave("", undefined); onOpenChange(false); }}
+            >
+              Clear
+            </Button>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function BoardCard({
   job,
   stageColor,
   cardFields,
   editing,
   dragging,
+  justMoved,
+  pipelines,
+  colorFor,
+  onMove,
+  onStep,
+  nextStepOpen,
+  onNextStepOpenChange,
+  onSaveNextStep,
   handover,
   onHandover,
   onStartEdit,
@@ -539,6 +847,14 @@ function BoardCard({
   cardFields: ReturnType<typeof useJobFieldSchema>[0];
   editing: boolean;
   dragging: boolean;
+  justMoved?: boolean;
+  pipelines: PipelineLite[];
+  colorFor: (n: string) => string;
+  onMove: (stage: string, pipelineId: string) => void;
+  onStep: (dir: -1 | 1) => void;
+  nextStepOpen: boolean;
+  onNextStepOpenChange: (o: boolean) => void;
+  onSaveNextStep: (text: string, due?: string) => void;
   handover?: "install" | "sales" | null;
   onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
@@ -594,25 +910,86 @@ function BoardCard({
     );
   }
 
+  const due = dueState(job);
+
   return (
     <div
       draggable
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onClick={onSelect}
-      className={`group w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-all relative overflow-hidden cursor-grab active:cursor-grabbing ${dragging ? "opacity-40" : ""}`}
+      className={`group w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-all relative overflow-hidden cursor-grab active:cursor-grabbing ${dragging ? "opacity-40" : ""} ${justMoved ? "ring-1 ring-primary" : ""}`}
     >
       <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ backgroundColor: stageColor }} />
-      <button
-        onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-background"
-        title="Quick edit"
-        aria-label="Quick edit"
-      >
-        <Pencil className="w-3 h-3 text-muted-foreground" />
-      </button>
-      <div className="text-sm font-medium truncate pr-5">{job.customer}</div>
+      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <button
+          onClick={(e) => { e.stopPropagation(); onStep(-1); }}
+          className="p-1 rounded hover:bg-background"
+          title="Move back a stage"
+          aria-label="Move back a stage"
+        >
+          <ChevronLeft className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <MoveJobMenu
+          job={job}
+          pipelines={pipelines}
+          colorFor={colorFor}
+          onMove={onMove}
+          align="end"
+          trigger={
+            <button className="p-1 rounded hover:bg-background" title="Move to…" aria-label="Move to a stage">
+              <MoveRight className="w-3 h-3 text-muted-foreground" />
+            </button>
+          }
+        />
+        <button
+          onClick={(e) => { e.stopPropagation(); onStep(1); }}
+          className="p-1 rounded hover:bg-background"
+          title="Move forward a stage"
+          aria-label="Move forward a stage"
+        >
+          <ChevronRight className="w-3 h-3 text-muted-foreground" />
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
+          className="p-1 rounded hover:bg-background"
+          title="Quick edit"
+          aria-label="Quick edit"
+        >
+          <Pencil className="w-3 h-3 text-muted-foreground" />
+        </button>
+      </div>
+      <div className="text-sm font-medium truncate pr-20">{job.customer}</div>
       <div className="text-xs text-muted-foreground mt-0.5 truncate">{job.service}</div>
+      <div className="mt-2">
+        <NextStepEditor
+          job={job}
+          open={nextStepOpen}
+          onOpenChange={onNextStepOpenChange}
+          onSave={onSaveNextStep}
+          trigger={
+            <button
+              className={`w-full text-left text-xs inline-flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-background transition-colors ${
+                due === "overdue"
+                  ? "text-[hsl(var(--destructive))] font-medium"
+                  : due === "none"
+                    ? "text-muted-foreground italic"
+                    : "text-foreground"
+              }`}
+            >
+              {due === "none" ? (
+                <><Flag className="w-3 h-3 shrink-0" /> Add next step</>
+              ) : (
+                <>
+                  <CalendarClock className="w-3 h-3 shrink-0" />
+                  <span className="truncate">{job.nextAction}</span>
+                  <span className="ml-auto shrink-0 text-[10px] whitespace-nowrap opacity-80">{dueLabel(job)}</span>
+                </>
+              )}
+            </button>
+          }
+        />
+      </div>
       <div className="flex items-center justify-between mt-2.5">
         <span className="text-sm font-medium tabular-nums">£{job.value}</span>
         <span className="text-xs text-muted-foreground">{job.daysInStage}d</span>
@@ -749,7 +1126,7 @@ function JobsListView({
     const q = query.trim().toLowerCase();
     return jobs
       .filter((j) => (stageFilter === "All" ? true : j.stage === stageFilter))
-      .filter((j) => (onlyStuck ? j.daysInStage >= stuckFor(j.stage) : true))
+      .filter((j) => (onlyStuck ? needsAttention(j) : true))
       .filter((j) =>
         q
           ? j.customer.toLowerCase().includes(q) || j.service.toLowerCase().includes(q) || j.address.toLowerCase().includes(q) || (j.invoiceId ?? "").toLowerCase().includes(q)
@@ -765,7 +1142,7 @@ function JobsListView({
   }, [jobs, query, stageFilter, onlyStuck, sortKey, sortDir]);
 
   const totalValue = filtered.reduce((s, j) => s + j.value, 0);
-  const stuckCount = filtered.filter((j) => j.daysInStage >= stuckFor(j.stage)).length;
+  const stuckCount = filtered.filter(needsAttention).length;
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -808,12 +1185,12 @@ function JobsListView({
           onClick={() => setOnlyStuck((v) => !v)}
           className={`h-8 px-2.5 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-hairline transition-colors ${onlyStuck ? "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))]" : "bg-background text-muted-foreground hover:text-foreground"}`}
         >
-          <AlertCircle className="w-3.5 h-3.5" /> Stuck only
+          <AlertCircle className="w-3.5 h-3.5" /> Needs attention
         </button>
 
         <div className="ml-auto text-xs text-muted-foreground tabular-nums">
           {filtered.length} jobs · £{totalValue.toLocaleString()} total
-          {stuckCount > 0 && <span className="ml-2 text-[hsl(var(--destructive))]">· {stuckCount} stuck</span>}
+          {stuckCount > 0 && <span className="ml-2 text-[hsl(var(--destructive))]">· {stuckCount} need attention</span>}
         </div>
       </div>
 
@@ -952,6 +1329,8 @@ function JobDrawer({
   job,
   stageNames,
   colorFor,
+  pipelines,
+  onMove,
   pipelineName,
   handover,
   onHandover,
@@ -961,6 +1340,8 @@ function JobDrawer({
   job: Job;
   stageNames: string[];
   colorFor: (n: string) => string;
+  pipelines: PipelineLite[];
+  onMove: (stage: string, pipelineId: string) => void;
   pipelineName?: string;
   handover?: "install" | "sales" | null;
   onHandover?: (target: "install" | "sales") => void;
@@ -968,6 +1349,8 @@ function JobDrawer({
   onUpdate: (patch: Partial<Job>) => void;
 }) {
   const [schema] = useJobFieldSchema();
+  const [nextStepOpen, setNextStepOpen] = useState(false);
+  const due = dueState(job);
   const setFieldValue = (fieldId: string, value: string | number | boolean) => {
     const next = { ...(job.customFields ?? {}), [fieldId]: value };
     onUpdate({ customFields: next });
@@ -985,29 +1368,51 @@ function JobDrawer({
                 {pipelineName}
               </Pill>
             )}
-            <Select value={job.stage} onValueChange={(v) => onUpdate({ stage: v as PipelineStage })}>
-              <SelectTrigger className="h-8 w-auto border-hairline gap-2">
-                <span className="inline-flex items-center gap-2">
+            <MoveJobMenu
+              job={job}
+              pipelines={pipelines}
+              colorFor={colorFor}
+              onMove={onMove}
+              trigger={
+                <button className="h-8 px-2.5 rounded-md border-hairline inline-flex items-center gap-2 text-sm hover:bg-surface-hover transition-colors">
                   <StatusDot color={colorToCss(colorFor(job.stage))} />
-                  <SelectValue />
-                </span>
-              </SelectTrigger>
-              <SelectContent>
-                {stageNames.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    <span className="inline-flex items-center gap-2">
-                      <StatusDot color={colorToCss(colorFor(s))} />
-                      {s}
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                  <span className="truncate max-w-[150px]">{job.stage}</span>
+                  <MoveRight className="w-3.5 h-3.5 text-muted-foreground" />
+                </button>
+              }
+            />
           </div>
           <button onClick={onClose} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-surface-hover">
             <X className="w-4 h-4" strokeWidth={1.75} />
           </button>
         </header>
+
+        <div className="px-5 py-2.5 border-b-hairline flex items-center gap-2">
+          <NextStepEditor
+            job={job}
+            open={nextStepOpen}
+            onOpenChange={setNextStepOpen}
+            onSave={(text, dueDate) => onUpdate({ nextAction: text, nextActionDue: dueDate })}
+            trigger={
+              <button
+                className={`flex-1 min-w-0 text-left text-xs inline-flex items-center gap-1.5 h-7 px-2 rounded-md border-hairline hover:bg-surface-hover transition-colors ${
+                  due === "overdue" ? "text-[hsl(var(--destructive))] font-medium" : due === "none" ? "text-muted-foreground italic" : ""
+                }`}
+              >
+                {due === "none" ? (
+                  <><Flag className="w-3 h-3" /> Add the next step</>
+                ) : (
+                  <>
+                    <CalendarClock className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{job.nextAction}</span>
+                    <span className="ml-auto shrink-0 opacity-80">{dueLabel(job)}</span>
+                  </>
+                )}
+              </button>
+            }
+          />
+        </div>
+
         {handover && onHandover && (
           <div className="px-5 py-2.5 border-b-hairline bg-surface/40 flex items-center gap-2">
             <span className="text-xs text-muted-foreground flex-1">
@@ -1024,6 +1429,7 @@ function JobDrawer({
             </Button>
           </div>
         )}
+
 
         <div className="flex-1 overflow-y-auto p-5 space-y-5">
           <div className="space-y-2">
