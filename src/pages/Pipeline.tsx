@@ -617,10 +617,10 @@ function AllJobsView({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b-hairline bg-surface/40">
-              {["Customer", "Service", "Pipeline", "Stage", "Value", "Days here"].map((h, i) => (
+              {["Customer", "Service", "Pipeline", "Stage", "Next step", "Value", "Days here"].map((h, i) => (
                 <th
                   key={h}
-                  className={`font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 ${i > 3 ? "text-right" : "text-left"}`}
+                  className={`font-medium text-muted-foreground text-xs uppercase tracking-wide px-3 h-9 ${i > 4 ? "text-right" : "text-left"}`}
                 >
                   {h}
                 </th>
@@ -630,7 +630,7 @@ function AllJobsView({
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-sm text-muted-foreground">No jobs match that search.</td>
+                <td colSpan={7} className="px-4 py-12 text-center text-sm text-muted-foreground">No jobs match that search.</td>
               </tr>
             ) : (
               filtered.map((job) => {
@@ -654,6 +654,18 @@ function AllJobsView({
                         <StatusDot color={colorToCss(colorFor(job.stage))} />
                         {job.stage}
                       </span>
+                    </td>
+                    <td className="px-3 py-3 max-w-[200px]">
+                      {job.nextAction ? (
+                        <div className="min-w-0">
+                          <div className="text-xs truncate">{job.nextAction}</div>
+                          <div className={`text-[11px] mt-0.5 ${dueState(job) === "overdue" ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
+                            {dueLabel(job)}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground italic">Nothing set</span>
+                      )}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums font-medium">£{job.value.toLocaleString()}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{job.daysInStage}d</td>
