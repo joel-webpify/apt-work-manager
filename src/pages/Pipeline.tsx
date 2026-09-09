@@ -519,6 +519,8 @@ export default function Pipeline() {
             (pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.stages ?? stageDefs).map((s) => s.name)
           }
           colorFor={colorFor}
+          pipelines={pipelines}
+          onMove={(stage, pipelineId) => moveJob(selected, stage, pipelineId)}
           pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.name}
           handover={canHandOver(selected) ? "install" : canReturn(selected) ? "sales" : null}
           onHandover={(target) => moveToPipeline(selected, target)}
