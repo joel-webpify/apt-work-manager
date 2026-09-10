@@ -68,6 +68,7 @@ export default function NewJobDialog({
       value: numericValue,
       stage,
       pipelineId,
+      visitType,
       daysInStage: 0,
       address: address.trim() || contact?.postcode || "—",
       postcode: postcode.trim() || (contact?.postcode?.split(" ")[0] ?? ""),
