@@ -25,6 +25,7 @@ import { getMaterials, markBilled } from "@/lib/materialsStore";
 import { buildVisitSummary } from "@/lib/visitSummary";
 import SignaturePad from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
+import { visitGaps, visitTypeLabel, type VisitType } from "@/lib/visitTypes";
 
 const methods: { id: PaymentMethod; label: string }[] = [
   { id: "card", label: "Card" },
