@@ -914,6 +914,8 @@ function BoardCard({
   }
 
   const due = dueState(job);
+  const currentPipe = job.pipelineId ?? "sales";
+
 
   return (
     <div
