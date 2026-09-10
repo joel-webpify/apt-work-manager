@@ -116,12 +116,24 @@ export default function NewJobDialog({
               onChange={(e) => {
                 const id = e.target.value;
                 setPipelineId(id);
+                setVisitType(id === "sales" ? "survey" : "work");
                 const first = pipelines.find((p) => p.id === id)?.stages[0]?.name;
                 if (first) setStage(first as PipelineStage);
               }}
               className="w-full h-9 rounded-md border-hairline bg-background px-2 text-sm"
             >
               {pipelines.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </Field>
+
+          <Field label="What happens on site">
+            <select
+              value={visitType}
+              onChange={(e) => setVisitType(e.target.value as VisitType)}
+              className="w-full h-9 rounded-md border-hairline bg-background px-2 text-sm"
+            >
+              <option value="survey">Survey visit — look at it and price it up</option>
+              <option value="work">Work — do the job</option>
             </select>
           </Field>
 
