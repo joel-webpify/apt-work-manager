@@ -281,7 +281,8 @@ export default function WrapUpSheet({
             )}
           </Block>
 
-          {/* 3. Get paid */}
+          {/* 3. Get paid — only when work was actually done */}
+          {visitType === "work" && (
           <Block step="3" title="Get paid before you leave">
             {record.payment ? (
               <p className="text-sm inline-flex items-center gap-1.5 text-[hsl(var(--success))]">
