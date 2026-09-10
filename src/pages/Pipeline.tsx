@@ -924,43 +924,66 @@ function BoardCard({
       className={`group w-full text-left bg-card border-hairline rounded-lg p-3 hover:bg-surface-hover transition-all relative overflow-hidden cursor-grab active:cursor-grabbing ${dragging ? "opacity-40" : ""} ${justMoved ? "ring-1 ring-primary" : ""}`}
     >
       <div className="absolute left-0 top-0 bottom-0 w-0.5" style={{ backgroundColor: stageColor }} />
-      <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-        <button
-          onClick={(e) => { e.stopPropagation(); onStep(-1); }}
-          className="p-1 rounded hover:bg-background"
-          title="Move back a stage"
-          aria-label="Move back a stage"
-        >
-          <ChevronLeft className="w-3 h-3 text-muted-foreground" />
-        </button>
-        <MoveJobMenu
-          job={job}
-          pipelines={pipelines}
-          colorFor={colorFor}
-          onMove={onMove}
-          align="end"
-          trigger={
-            <button className="p-1 rounded hover:bg-background" title="Move to…" aria-label="Move to a stage">
-              <MoveRight className="w-3 h-3 text-muted-foreground" />
+      <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <button
+              draggable={false}
+              className="p-1.5 rounded-md hover:bg-background border-hairline bg-card/80 backdrop-blur-sm"
+              title="Card actions"
+              aria-label="Card actions"
+            >
+              <MoreHorizontal className="w-3.5 h-3.5 text-muted-foreground" />
             </button>
-          }
-        />
-        <button
-          onClick={(e) => { e.stopPropagation(); onStep(1); }}
-          className="p-1 rounded hover:bg-background"
-          title="Move forward a stage"
-          aria-label="Move forward a stage"
-        >
-          <ChevronRight className="w-3 h-3 text-muted-foreground" />
-        </button>
-        <button
-          onClick={(e) => { e.stopPropagation(); onStartEdit(); }}
-          className="p-1 rounded hover:bg-background"
-          title="Quick edit"
-          aria-label="Quick edit"
-        >
-          <Pencil className="w-3 h-3 text-muted-foreground" />
-        </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-52" onClick={(e) => e.stopPropagation()}>
+            <DropdownMenuItem draggable={false} onClick={() => onStep(-1)} className="text-xs gap-2 cursor-pointer">
+              <ChevronLeft className="w-3.5 h-3.5" /> Move back a stage
+            </DropdownMenuItem>
+            <DropdownMenuItem draggable={false} onClick={() => onStep(1)} className="text-xs gap-2 cursor-pointer">
+              <ChevronRight className="w-3.5 h-3.5" /> Move forward a stage
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuSub>
+              <DropdownMenuSubTrigger className="text-xs gap-2 cursor-pointer" draggable={false}>
+                <MoveRight className="w-3.5 h-3.5" /> Move to…
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="w-56">
+                {[...pipelines]
+                  .sort((a, b) => (a.id === currentPipe ? -1 : b.id === currentPipe ? 1 : 0))
+                  .map((p, idx) => (
+                    <div key={p.id}>
+                      {idx > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
+                        {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+                        {p.name}
+                      </DropdownMenuLabel>
+                      {p.stages.map((s) => {
+                        const here = p.id === currentPipe && s.name === job.stage;
+                        return (
+                          <DropdownMenuItem
+                            key={`${p.id}-${s.name}`}
+                            disabled={here}
+                            draggable={false}
+                            onClick={() => onMove(s.name, p.id)}
+                            className="cursor-pointer gap-2 text-xs"
+                          >
+                            <StatusDot color={colorToCss(colorFor(s.name))} />
+                            <span className="flex-1 truncate">{s.name}</span>
+                            {here && <Check className="w-3 h-3 text-muted-foreground" />}
+                          </DropdownMenuItem>
+                        );
+                      })}
+                    </div>
+                  ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem draggable={false} onClick={() => onStartEdit()} className="text-xs gap-2 cursor-pointer">
+              <Pencil className="w-3.5 h-3.5" /> Quick edit
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       <div className="text-sm font-medium truncate pr-20">{job.customer}</div>
       <div className="text-xs text-muted-foreground mt-0.5 truncate">{job.service}</div>
