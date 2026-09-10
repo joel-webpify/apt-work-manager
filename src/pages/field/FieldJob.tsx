@@ -120,6 +120,19 @@ export default function FieldJob() {
         </Link>
         <h1 className="text-lg font-semibold mt-1.5 leading-tight">{job.customer}</h1>
         <p className="text-sm text-muted-foreground">{job.service}</p>
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <VisitBadge type={kind} />
+          {!locked && (
+            <button
+              type="button"
+              onClick={() => setVisitType(id, kind === "survey" ? "work" : "survey")}
+              className="h-7 px-2.5 rounded-full border-hairline bg-surface hover:bg-surface-hover text-[11px] font-medium"
+            >
+              {kind === "survey" ? "This is actual work" : "This is a survey visit"}
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-1.5">{visitTypeBlurb[kind]}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5" /> {job.address}
