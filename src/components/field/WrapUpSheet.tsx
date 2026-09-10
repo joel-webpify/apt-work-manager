@@ -486,7 +486,11 @@ export default function WrapUpSheet({
               className="h-12 w-full rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
             >
               <Lock className="w-4 h-4" />
-              {record.outcome ? "Finish and lock the sheet" : "Pick how it went first"}
+              {record.outcome
+                ? visitType === "survey"
+                  ? "Send the survey to the office"
+                  : "Finish and lock the sheet"
+                : "Pick how it went first"}
             </button>
           </div>
         </div>
