@@ -175,6 +175,7 @@ export default function MyDay() {
           </div>
           <div className="text-base font-semibold mt-1 leading-tight">{focus.job.customer}</div>
           <div className="text-sm text-muted-foreground">{focus.job.service}</div>
+          <VisitBadge type={visitTypeFor(focus.job)} className="mt-1.5" />
           <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5" /> {focus.job.address}
           </div>
