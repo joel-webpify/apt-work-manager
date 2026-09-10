@@ -39,6 +39,8 @@ import WrapUpSheet from "@/components/field/WrapUpSheet";
 import QuickChips, { appendLine } from "@/components/field/QuickChips";
 import VoiceNoteButton from "@/components/field/VoiceNoteButton";
 import { useToast } from "@/hooks/use-toast";
+import VisitBadge from "@/components/field/VisitBadge";
+import { setVisitType, visitTypeBlurb, visitTypeFor } from "@/lib/visitTypes";
 
 const nextStep: Record<FieldStatus, { id: Exclude<FieldStatus, "not-started">; label: string } | null> = {
   "not-started": { id: "on-my-way", label: "I'm on my way" },
