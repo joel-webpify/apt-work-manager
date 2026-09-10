@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock, MoreHorizontal } from "lucide-react";
 import { ToastAction } from "@/components/ui/toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
