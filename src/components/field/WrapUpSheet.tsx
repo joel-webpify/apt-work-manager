@@ -43,6 +43,7 @@ export default function WrapUpSheet({
   record,
   employeeId,
   workerName,
+  visitType = "work",
   onClose,
 }: {
   job: Job;
@@ -50,10 +51,11 @@ export default function WrapUpSheet({
   record: FieldRecord;
   employeeId: string;
   workerName: string;
+  visitType?: VisitType;
   onClose: () => void;
 }) {
   const { toast } = useToast();
-  const gaps = wrapUpGaps(record);
+  const gaps = visitType === "survey" ? visitGaps(record, "survey") : wrapUpGaps(record);
   const [skipReason, setSkipReason] = useState(record.skipReason ?? "");
   const [amount, setAmount] = useState(String(record.payment?.amount ?? job.value ?? ""));
   const [method, setMethod] = useState<PaymentMethod>(record.payment?.method ?? "card");
