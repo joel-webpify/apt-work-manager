@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Clock, CheckCircle2, PoundSterling, Camera }
 import { employees, type Job, type JobAssignment } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { useFieldRecords, useFieldUser } from "@/lib/fieldStore";
+import VisitBadge from "@/components/field/VisitBadge";
+import { visitTypeFor } from "@/lib/visitTypes";
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
