@@ -5,6 +5,8 @@ import { employees, type Job, type JobAssignment } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { useFieldRecords, useFieldUser, fieldStatusLabel, emptyRecord } from "@/lib/fieldStore";
 import { openMaps, routeUrl } from "@/lib/mapLinks";
+import { visitTypeFor, type VisitType } from "@/lib/visitTypes";
+import VisitBadge from "@/components/field/VisitBadge";
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
@@ -65,13 +67,21 @@ export default function MyDay() {
   }, [myStops]);
 
   const [date, setDate] = useState(initialDate);
+  const [kind, setKind] = useState<VisitType | "all">("all");
 
-  const dayStops = useMemo(
+  const allDayStops = useMemo(
     () =>
       myStops
         .filter((s) => s.assignment.date === date)
         .sort((a, b) => a.assignment.start.localeCompare(b.assignment.start)),
     [myStops, date],
+  );
+
+  const surveyCount = allDayStops.filter((s) => visitTypeFor(s.job) === "survey").length;
+  const workCount = allDayStops.length - surveyCount;
+  const dayStops = useMemo(
+    () => (kind === "all" ? allDayStops : allDayStops.filter((s) => visitTypeFor(s.job) === kind)),
+    [allDayStops, kind],
   );
 
   const totalHours = dayStops.reduce((sum, s) => sum + s.assignment.duration, 0);
@@ -137,6 +147,26 @@ export default function MyDay() {
         </button>
       </div>
 
+      {/* survey visits vs actual work */}
+      <div className="px-4 py-3 border-b-hairline flex gap-1.5">
+        {([
+          { id: "all" as const, label: `Everything (${allDayStops.length})` },
+          { id: "survey" as const, label: `Survey visits (${surveyCount})` },
+          { id: "work" as const, label: `Work (${workCount})` },
+        ]).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setKind(t.id)}
+            className={`h-9 px-3 rounded-full text-xs font-medium border-hairline ${
+              kind === t.id ? "bg-primary text-primary-foreground" : "bg-surface hover:bg-surface-hover"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* the job you're on right now */}
       {focus && focusRec && (
         <div className="mx-4 mt-4 rounded-xl border-hairline bg-surface p-4">
@@ -145,6 +175,7 @@ export default function MyDay() {
           </div>
           <div className="text-base font-semibold mt-1 leading-tight">{focus.job.customer}</div>
           <div className="text-sm text-muted-foreground">{focus.job.service}</div>
+          <VisitBadge type={visitTypeFor(focus.job)} className="mt-1.5" />
           <div className="mt-1 text-xs text-muted-foreground inline-flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5" /> {focus.job.address}
           </div>
@@ -202,6 +233,7 @@ export default function MyDay() {
                   </div>
                   <div className="text-base font-medium mt-0.5 truncate">{job.customer}</div>
                   <div className="text-sm text-muted-foreground truncate">{job.service}</div>
+                  <VisitBadge type={visitTypeFor(job)} className="mt-1.5" />
                 </div>
                 <span
                   className={`shrink-0 h-6 px-2 rounded-full text-[11px] font-medium inline-flex items-center ${

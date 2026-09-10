@@ -25,6 +25,7 @@ import { getMaterials, markBilled } from "@/lib/materialsStore";
 import { buildVisitSummary } from "@/lib/visitSummary";
 import SignaturePad from "./SignaturePad";
 import { useToast } from "@/hooks/use-toast";
+import { visitGaps, visitTypeLabel, type VisitType } from "@/lib/visitTypes";
 
 const methods: { id: PaymentMethod; label: string }[] = [
   { id: "card", label: "Card" },
@@ -43,6 +44,7 @@ export default function WrapUpSheet({
   record,
   employeeId,
   workerName,
+  visitType = "work",
   onClose,
 }: {
   job: Job;
@@ -50,10 +52,11 @@ export default function WrapUpSheet({
   record: FieldRecord;
   employeeId: string;
   workerName: string;
+  visitType?: VisitType;
   onClose: () => void;
 }) {
   const { toast } = useToast();
-  const gaps = wrapUpGaps(record);
+  const gaps = visitType === "survey" ? visitGaps(record, "survey") : wrapUpGaps(record);
   const [skipReason, setSkipReason] = useState(record.skipReason ?? "");
   const [amount, setAmount] = useState(String(record.payment?.amount ?? job.value ?? ""));
   const [method, setMethod] = useState<PaymentMethod>(record.payment?.method ?? "card");
@@ -214,7 +217,9 @@ export default function WrapUpSheet({
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">Wrap up</div>
+            <div className="text-sm font-semibold truncate">
+              {visitType === "survey" ? "Finish the survey" : "Wrap up"} · {visitTypeLabel[visitType]}
+            </div>
             <div className="text-[11px] text-muted-foreground truncate">
               {job.customer} · {job.service}
             </div>
@@ -281,7 +286,8 @@ export default function WrapUpSheet({
             )}
           </Block>
 
-          {/* 3. Get paid */}
+          {/* 3. Get paid — only when work was actually done */}
+          {visitType === "work" && (
           <Block step="3" title="Get paid before you leave">
             {record.payment ? (
               <p className="text-sm inline-flex items-center gap-1.5 text-[hsl(var(--success))]">
@@ -327,6 +333,7 @@ export default function WrapUpSheet({
               </div>
             )}
           </Block>
+          )}
 
           {/* 4. Extra work → quote */}
           {record.extraWorkNote.trim() && (
@@ -481,7 +488,11 @@ export default function WrapUpSheet({
               className="h-12 w-full rounded-lg bg-primary text-primary-foreground text-sm font-semibold inline-flex items-center justify-center gap-2 disabled:opacity-40"
             >
               <Lock className="w-4 h-4" />
-              {record.outcome ? "Finish and lock the sheet" : "Pick how it went first"}
+              {record.outcome
+                ? visitType === "survey"
+                  ? "Send the survey to the office"
+                  : "Finish and lock the sheet"
+                : "Pick how it went first"}
             </button>
           </div>
         </div>

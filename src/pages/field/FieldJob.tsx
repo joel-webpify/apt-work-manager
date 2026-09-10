@@ -39,6 +39,8 @@ import WrapUpSheet from "@/components/field/WrapUpSheet";
 import QuickChips, { appendLine } from "@/components/field/QuickChips";
 import VoiceNoteButton from "@/components/field/VoiceNoteButton";
 import { useToast } from "@/hooks/use-toast";
+import VisitBadge from "@/components/field/VisitBadge";
+import { setVisitType, visitTypeBlurb, visitTypeFor } from "@/lib/visitTypes";
 
 const nextStep: Record<FieldStatus, { id: Exclude<FieldStatus, "not-started">; label: string } | null> = {
   "not-started": { id: "on-my-way", label: "I'm on my way" },
@@ -76,6 +78,7 @@ export default function FieldJob() {
     );
   }
 
+  const kind = visitTypeFor(job);
   const locked = Boolean(record.lockedAt);
   const step = nextStep[record.status];
   const mins = timeOnSiteMinutes(record);
@@ -120,6 +123,19 @@ export default function FieldJob() {
         </Link>
         <h1 className="text-lg font-semibold mt-1.5 leading-tight">{job.customer}</h1>
         <p className="text-sm text-muted-foreground">{job.service}</p>
+        <div className="mt-2 flex items-center gap-2 flex-wrap">
+          <VisitBadge type={kind} />
+          {!locked && (
+            <button
+              type="button"
+              onClick={() => setVisitType(id, kind === "survey" ? "work" : "survey")}
+              className="h-7 px-2.5 rounded-full border-hairline bg-surface hover:bg-surface-hover text-[11px] font-medium"
+            >
+              {kind === "survey" ? "This is actual work" : "This is a survey visit"}
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-muted-foreground mt-1.5">{visitTypeBlurb[kind]}</p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5" /> {job.address}
@@ -192,38 +208,51 @@ export default function FieldJob() {
         <PhotoGrid jobId={id} employeeId={userId} photos={record.photos} status={record.status} readOnly={locked} />
       </FieldSection>
 
+      {kind === "survey" && (
+        <FieldSection
+          title="Survey questions"
+          subtitle={survey ? "The questions the office set for this kind of job." : "No question set picked yet."}
+        >
+          {!locked && (
+            <select
+              value={survey?.id ?? ""}
+              onChange={(e) => setJobSurvey(id, e.target.value || undefined)}
+              className="h-10 w-full rounded-lg border-hairline bg-background px-2.5 text-sm mb-3"
+            >
+              <option value="">No question set</option>
+              {getSurveys().map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          )}
+          {survey && (
+            <SurveyForm jobId={id} employeeId={userId} record={record} survey={survey} readOnly={locked} />
+          )}
+        </FieldSection>
+      )}
+
+      {kind === "work" && (
+        <FieldSection title="Materials used" subtitle="What you used, what it cost and what the customer pays.">
+          <MaterialsList jobId={id} addedBy={me.name} readOnly={locked} />
+        </FieldSection>
+      )}
+
+      {kind === "work" && (
+        <FieldSection title="Job sheet">
+          <JobSheetForm jobId={id} employeeId={userId} record={record} service={job.service} readOnly={locked} />
+        </FieldSection>
+      )}
+
       <FieldSection
-        title="Site visit survey"
-        subtitle={survey ? "The questions the office set for this kind of job." : "No survey set for this job yet."}
+        title={kind === "survey" ? "Anything else to price in?" : "Spotted more work?"}
+        subtitle={
+          kind === "survey"
+            ? "Extras the questions didn't cover — they go on the quote too."
+            : undefined
+        }
       >
-        {!locked && (
-          <select
-            value={survey?.id ?? ""}
-            onChange={(e) => setJobSurvey(id, e.target.value || undefined)}
-            className="h-10 w-full rounded-lg border-hairline bg-background px-2.5 text-sm mb-3"
-          >
-            <option value="">No survey</option>
-            {getSurveys().map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        )}
-        {survey && (
-          <SurveyForm jobId={id} employeeId={userId} record={record} survey={survey} readOnly={locked} />
-        )}
-      </FieldSection>
-
-      <FieldSection title="Materials used" subtitle="What you used, what it cost and what the customer pays.">
-        <MaterialsList jobId={id} addedBy={me.name} readOnly={locked} />
-      </FieldSection>
-
-      <FieldSection title="Job sheet">
-        <JobSheetForm jobId={id} employeeId={userId} record={record} service={job.service} readOnly={locked} />
-      </FieldSection>
-
-      <FieldSection title="Spotted more work?">
         <div className="space-y-2">
           {!locked && (
             <QuickChips
@@ -284,7 +313,7 @@ export default function FieldJob() {
             }`}
           >
             {thinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {locked ? "View wrap up" : "Wrap up"}
+            {locked ? "View wrap up" : kind === "survey" ? "Finish the survey" : "Wrap up"}
           </button>
         </div>
       </div>
@@ -296,6 +325,7 @@ export default function FieldJob() {
           record={record}
           employeeId={userId}
           workerName={me.name}
+          visitType={kind}
           onClose={() => setWrapUp(false)}
         />
       )}

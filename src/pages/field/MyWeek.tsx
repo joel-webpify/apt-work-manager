@@ -4,6 +4,8 @@ import { ChevronLeft, ChevronRight, Clock, CheckCircle2, PoundSterling, Camera }
 import { employees, type Job, type JobAssignment } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { useFieldRecords, useFieldUser } from "@/lib/fieldStore";
+import VisitBadge from "@/components/field/VisitBadge";
+import { visitTypeFor } from "@/lib/visitTypes";
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
@@ -185,6 +187,7 @@ export default function MyWeek() {
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium truncate">{s.job.customer}</span>
                           <span className="block text-xs text-muted-foreground truncate">{s.job.service}</span>
+                          <VisitBadge type={visitTypeFor(s.job)} className="mt-1" />
                         </span>
                         {rec?.lockedAt ? (
                           <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
