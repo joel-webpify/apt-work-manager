@@ -138,6 +138,26 @@ export default function MyDay() {
         </button>
       </div>
 
+      {/* survey visits vs actual work */}
+      <div className="px-4 py-3 border-b-hairline flex gap-1.5">
+        {([
+          { id: "all" as const, label: `Everything (${allDayStops.length})` },
+          { id: "survey" as const, label: `Survey visits (${surveyCount})` },
+          { id: "work" as const, label: `Work (${workCount})` },
+        ]).map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setKind(t.id)}
+            className={`h-9 px-3 rounded-full text-xs font-medium border-hairline ${
+              kind === t.id ? "bg-primary text-primary-foreground" : "bg-surface hover:bg-surface-hover"
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
       {/* the job you're on right now */}
       {focus && focusRec && (
         <div className="mx-4 mt-4 rounded-xl border-hairline bg-surface p-4">
