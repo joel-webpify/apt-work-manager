@@ -5,6 +5,7 @@ import { employees, type Job, type JobAssignment } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { useFieldRecords, useFieldUser, fieldStatusLabel, emptyRecord } from "@/lib/fieldStore";
 import { openMaps, routeUrl } from "@/lib/mapLinks";
+import { visitTypeFor, type VisitType } from "@/lib/visitTypes";
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
