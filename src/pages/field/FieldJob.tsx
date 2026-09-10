@@ -78,6 +78,7 @@ export default function FieldJob() {
     );
   }
 
+  const kind = visitTypeFor(job);
   const locked = Boolean(record.lockedAt);
   const step = nextStep[record.status];
   const mins = timeOnSiteMinutes(record);
