@@ -6,6 +6,7 @@ import { useJobs } from "@/lib/jobsStore";
 import { useFieldRecords, useFieldUser, fieldStatusLabel, emptyRecord } from "@/lib/fieldStore";
 import { openMaps, routeUrl } from "@/lib/mapLinks";
 import { visitTypeFor, type VisitType } from "@/lib/visitTypes";
+import VisitBadge from "@/components/field/VisitBadge";
 
 function pad(n: number) {
   return n < 10 ? `0${n}` : `${n}`;
