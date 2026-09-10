@@ -284,7 +284,7 @@ export default function FieldJob() {
             }`}
           >
             {thinking ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-            {locked ? "View wrap up" : "Wrap up"}
+            {locked ? "View wrap up" : kind === "survey" ? "Finish the survey" : "Wrap up"}
           </button>
         </div>
       </div>
@@ -296,6 +296,7 @@ export default function FieldJob() {
           record={record}
           employeeId={userId}
           workerName={me.name}
+          visitType={kind}
           onClose={() => setWrapUp(false)}
         />
       )}
