@@ -217,7 +217,9 @@ export default function WrapUpSheet({
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">Wrap up</div>
+            <div className="text-sm font-semibold truncate">
+              {visitType === "survey" ? "Finish the survey" : "Wrap up"} · {visitTypeLabel[visitType]}
+            </div>
             <div className="text-[11px] text-muted-foreground truncate">
               {job.customer} · {job.service}
             </div>
