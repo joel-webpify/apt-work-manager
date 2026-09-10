@@ -203,6 +203,7 @@ export default function MyDay() {
                   </div>
                   <div className="text-base font-medium mt-0.5 truncate">{job.customer}</div>
                   <div className="text-sm text-muted-foreground truncate">{job.service}</div>
+                  <VisitBadge type={visitTypeFor(job)} className="mt-1.5" />
                 </div>
                 <span
                   className={`shrink-0 h-6 px-2 rounded-full text-[11px] font-medium inline-flex items-center ${
