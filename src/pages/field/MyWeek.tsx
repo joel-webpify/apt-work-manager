@@ -185,6 +185,7 @@ export default function MyWeek() {
                         <span className="min-w-0 flex-1">
                           <span className="block text-sm font-medium truncate">{s.job.customer}</span>
                           <span className="block text-xs text-muted-foreground truncate">{s.job.service}</span>
+                          <VisitBadge type={visitTypeFor(s.job)} className="mt-1" />
                         </span>
                         {rec?.lockedAt ? (
                           <CheckCircle2 className="w-4 h-4 text-[hsl(var(--success))] shrink-0" />
