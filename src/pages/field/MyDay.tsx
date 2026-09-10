@@ -66,13 +66,21 @@ export default function MyDay() {
   }, [myStops]);
 
   const [date, setDate] = useState(initialDate);
+  const [kind, setKind] = useState<VisitType | "all">("all");
 
-  const dayStops = useMemo(
+  const allDayStops = useMemo(
     () =>
       myStops
         .filter((s) => s.assignment.date === date)
         .sort((a, b) => a.assignment.start.localeCompare(b.assignment.start)),
     [myStops, date],
+  );
+
+  const surveyCount = allDayStops.filter((s) => visitTypeFor(s.job) === "survey").length;
+  const workCount = allDayStops.length - surveyCount;
+  const dayStops = useMemo(
+    () => (kind === "all" ? allDayStops : allDayStops.filter((s) => visitTypeFor(s.job) === kind)),
+    [allDayStops, kind],
   );
 
   const totalHours = dayStops.reduce((sum, s) => sum + s.assignment.duration, 0);
