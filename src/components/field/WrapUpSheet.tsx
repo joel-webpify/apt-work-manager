@@ -328,6 +328,7 @@ export default function WrapUpSheet({
               </div>
             )}
           </Block>
+          )}
 
           {/* 4. Extra work → quote */}
           {record.extraWorkNote.trim() && (
