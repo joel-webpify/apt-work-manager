@@ -5,6 +5,7 @@ import { contacts, type Job, type PipelineStage, type Trade } from "@/data/mockD
 import { useStages } from "@/lib/stagesStore";
 import { useJobFieldSchema } from "@/lib/jobFields";
 import JobFieldInput from "./JobFieldInput";
+import type { VisitType } from "@/lib/visitTypes";
 
 const trades: Trade[] = ["Plumbing", "Electrical", "Window cleaning", "Landscaping", "General"];
 
