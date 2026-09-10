@@ -29,11 +29,13 @@ export default function NewJobDialog({
   const [value, setValue] = useState<string>("");
   const [estimatedHours, setEstimatedHours] = useState<string>("2");
   const [stage, setStage] = useState<PipelineStage>("New enquiry");
+  const [visitType, setVisitType] = useState<VisitType>(defaultPipelineId === "sales" ? "survey" : "work");
 
   // Keep pipeline/stage in step with the board you opened this from.
   useEffect(() => {
     if (!open) return;
     setPipelineId(defaultPipelineId);
+    setVisitType(defaultPipelineId === "sales" ? "survey" : "work");
     const first = pipelines.find((p) => p.id === defaultPipelineId)?.stages[0]?.name;
     if (first) setStage(first as PipelineStage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
