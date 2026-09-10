@@ -96,6 +96,8 @@ export interface Job {
   stage: PipelineStage;
   /** Which pipeline the job currently sits in ("sales" or "install"). */
   pipelineId?: string;
+  /** Is this visit about pricing the job up (survey) or doing the work? */
+  visitType?: "survey" | "work";
   daysInStage: number;
 
   address: string;
