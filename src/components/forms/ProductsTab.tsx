@@ -23,6 +23,7 @@ import {
   products as seedProducts,
   type Product,
   type ProductUnit,
+  type ProductKind,
   type Trade,
 } from "@/data/mockData";
 
@@ -34,13 +35,17 @@ const trades: Trade[] = [
   "General",
 ];
 const units: ProductUnit[] = ["each", "hour", "day", "sqm", "m", "visit"];
+const serviceUnits: ProductUnit[] = ["hour", "day", "visit", "sqm", "m", "each"];
 
-const blank = (): Product => ({
+const kindOf = (p: Product): ProductKind => p.kind ?? "product";
+
+const blank = (kind: ProductKind = "product"): Product => ({
   id: `p-${Date.now()}`,
   name: "",
   description: "",
+  kind,
   trade: "General",
-  unit: "each",
+  unit: kind === "service" ? "hour" : "each",
   price: 0,
   cost: 0,
   quantity: undefined,
@@ -53,6 +58,7 @@ const blank = (): Product => ({
 export function ProductsTab() {
   const [items, setItems] = useState<Product[]>(seedProducts);
   const [query, setQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<ProductKind | "all">("all");
   const [tradeFilter, setTradeFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Product>(blank());
@@ -66,11 +72,12 @@ export function ProductsTab() {
       (p.sku ?? "").toLowerCase().includes(q) ||
       (p.description ?? "").toLowerCase().includes(q);
     const matchT = tradeFilter === "all" || p.trade === tradeFilter;
-    return matchQ && matchT;
+    const matchK = kindFilter === "all" || kindOf(p) === kindFilter;
+    return matchQ && matchT && matchK;
   });
 
   const startNew = () => {
-    setDraft(blank());
+    setDraft(blank(kindFilter === "service" ? "service" : "product"));
     setEditingId(null);
     setOpen(true);
   };
@@ -91,9 +98,51 @@ export function ProductsTab() {
   const remove = (id: string) =>
     setItems((prev) => prev.filter((p) => p.id !== id));
 
+  /** Flipping the toggle also swaps in sensible defaults and drops fields that no longer apply. */
+  const setKind = (kind: ProductKind) =>
+    setDraft((d) =>
+      kind === "service"
+        ? {
+            ...d,
+            kind,
+            unit: serviceUnits.includes(d.unit) ? d.unit : "hour",
+            quantity: undefined,
+            supplier: undefined,
+          }
+        : {
+            ...d,
+            kind,
+            unit: d.unit === "hour" || d.unit === "day" || d.unit === "visit" ? "each" : d.unit,
+            typicalHours: undefined,
+            materialsExtra: undefined,
+          },
+    );
+
+  const draftKind = kindOf(draft);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="inline-flex rounded-lg border-hairline bg-surface p-0.5">
+          {([
+            { id: "all" as const, label: "All" },
+            { id: "product" as const, label: "Products" },
+            { id: "service" as const, label: "Services" },
+          ]).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setKindFilter(t.id)}
+              className={`h-7 px-3 rounded-md text-xs font-medium transition-colors ${
+                kindFilter === t.id
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
@@ -118,12 +167,13 @@ export function ProductsTab() {
         </Select>
         <div className="flex-1" />
         <Btn variant="primary" onClick={startNew}>
-          <Plus className="w-3.5 h-3.5" /> New product
+          <Plus className="w-3.5 h-3.5" />{" "}
+          {kindFilter === "service" ? "New service" : "New product"}
         </Btn>
       </div>
 
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
-        <div className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.6fr_auto] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
+        <div className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.7fr_auto] gap-x-3 px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
           <div>Name</div>
           <div>Trade</div>
           <div>Unit</div>
@@ -143,7 +193,7 @@ export function ProductsTab() {
         {filtered.map((p) => (
           <div
             key={p.id}
-            className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.6fr_auto] px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+            className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.7fr_auto] gap-x-3 px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
           >
             <div className="min-w-0 flex items-center gap-2.5">
               {p.imageUrl ? (
@@ -159,12 +209,17 @@ export function ProductsTab() {
                 </div>
               )}
               <div className="min-w-0">
-              <div className="font-medium truncate">{p.name}</div>
-              {p.sku && (
-                <div className="text-xs text-muted-foreground tabular-nums">
-                  {p.sku}
+                <div className="font-medium truncate">{p.name}</div>
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className={
+                      kindOf(p) === "service" ? "text-primary" : "text-muted-foreground"
+                    }
+                  >
+                    {kindOf(p) === "service" ? "Service" : "Product"}
+                  </span>
+                  {p.sku && <span className="tabular-nums">· {p.sku}</span>}
                 </div>
-              )}
               </div>
             </div>
             <div className="text-muted-foreground">{p.trade}</div>
@@ -179,7 +234,11 @@ export function ProductsTab() {
               {p.taxRate}%
             </div>
             <div className="text-right tabular-nums text-muted-foreground">
-              {p.quantity != null ? p.quantity : "—"}
+              {kindOf(p) === "service"
+                ? ""
+                : p.quantity != null
+                  ? p.quantity
+                  : "—"}
             </div>
             <div>
               {p.active ? (
@@ -212,10 +271,42 @@ export function ProductsTab() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingId ? "Edit product" : "New product or service"}
+              {editingId
+                ? draftKind === "service"
+                  ? "Edit service"
+                  : "Edit product"
+                : "New product or service"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-1">
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                {
+                  id: "product" as const,
+                  label: "Product",
+                  hint: "Something you supply",
+                },
+                {
+                  id: "service" as const,
+                  label: "Service",
+                  hint: "Work you do",
+                },
+              ]).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setKind(o.id)}
+                  className={`text-left rounded-lg border p-2.5 transition-colors ${
+                    draftKind === o.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-surface-hover"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{o.label}</div>
+                  <div className="text-xs text-muted-foreground">{o.hint}</div>
+                </button>
+              ))}
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="p-name">Name</Label>
               <Input
@@ -306,7 +397,7 @@ export function ProductsTab() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {units.map((u) => (
+                    {(draftKind === "service" ? serviceUnits : units).map((u) => (
                       <SelectItem key={u} value={u}>
                         per {u}
                       </SelectItem>
@@ -354,38 +445,97 @@ export function ProductsTab() {
                   }
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-sku">SKU</Label>
-                <Input
-                  id="p-sku"
-                  value={draft.sku ?? ""}
-                  onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
-                />
-              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 items-end">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-qty">Quantity in stock (optional)</Label>
-                <Input
-                  id="p-qty"
-                  type="number"
-                  value={draft.quantity ?? ""}
-                  placeholder="Leave blank if you don't track this"
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      quantity:
-                        e.target.value === "" ? undefined : Number(e.target.value),
-                    })
-                  }
-                />
+
+            <p className="text-xs text-muted-foreground">
+              {draft.price > 0 && (draft.cost ?? 0) > 0
+                ? `You keep £${(draft.price - (draft.cost ?? 0)).toFixed(2)} (${Math.round(((draft.price - (draft.cost ?? 0)) / draft.price) * 100)}%) on each one.`
+                : "Add a cost to see what you keep on each one."}
+            </p>
+
+            {draftKind === "product" ? (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-qty">In stock (optional)</Label>
+                  <Input
+                    id="p-qty"
+                    type="number"
+                    value={draft.quantity ?? ""}
+                    placeholder="Leave blank"
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        quantity:
+                          e.target.value === "" ? undefined : Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-sku">Product code</Label>
+                  <Input
+                    id="p-sku"
+                    value={draft.sku ?? ""}
+                    onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-sup">Supplier</Label>
+                  <Input
+                    id="p-sup"
+                    value={draft.supplier ?? ""}
+                    placeholder="Optional"
+                    onChange={(e) =>
+                      setDraft({ ...draft, supplier: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground pb-2">
-                {draft.price > 0 && (draft.cost ?? 0) > 0
-                  ? `You keep £${(draft.price - (draft.cost ?? 0)).toFixed(2)} (${Math.round(((draft.price - (draft.cost ?? 0)) / draft.price) * 100)}%) on each one.`
-                  : "Add a cost to see what you keep on each one."}
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="p-hours">Typical time on site (hours)</Label>
+                    <Input
+                      id="p-hours"
+                      type="number"
+                      step="0.5"
+                      value={draft.typicalHours ?? ""}
+                      placeholder="Leave blank"
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          typicalHours:
+                            e.target.value === ""
+                              ? undefined
+                              : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="p-sku">Service code</Label>
+                    <Input
+                      id="p-sku"
+                      value={draft.sku ?? ""}
+                      onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="p-matx" className="text-sm">
+                    Materials charged on top
+                  </Label>
+                  <Switch
+                    id="p-matx"
+                    checked={Boolean(draft.materialsExtra)}
+                    onCheckedChange={(v) =>
+                      setDraft({ ...draft, materialsExtra: v })
+                    }
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between pt-1">
               <Label htmlFor="p-active" className="text-sm">
                 Active — available for quotes
@@ -400,7 +550,11 @@ export function ProductsTab() {
           <DialogFooter>
             <Btn onClick={() => setOpen(false)}>Cancel</Btn>
             <Btn variant="primary" onClick={save}>
-              {editingId ? "Save changes" : "Create product"}
+              {editingId
+                ? "Save changes"
+                : draftKind === "service"
+                  ? "Create service"
+                  : "Create product"}
             </Btn>
           </DialogFooter>
         </DialogContent>

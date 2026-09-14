@@ -519,10 +519,14 @@ export const adsCampaigns: AdsCampaign[] = [
 
 export type ProductUnit = "each" | "hour" | "day" | "sqm" | "m" | "visit";
 
+/** Something you supply vs work you do. Missing = product. */
+export type ProductKind = "product" | "service";
+
 export interface Product {
   id: string;
   name: string;
   description?: string;
+  kind?: ProductKind;
   trade: Trade;
   unit: ProductUnit;
   price: number; // unit price excl. VAT
@@ -532,6 +536,12 @@ export interface Product {
   quantity?: number;
   taxRate: number; // % e.g. 20
   sku?: string;
+  /** Products only — who you buy it from. */
+  supplier?: string;
+  /** Services only — typical time on site, in hours. */
+  typicalHours?: number;
+  /** Services only — materials normally charged on top. */
+  materialsExtra?: boolean;
   /** Optional catalogue photo shown in the quote builder and on customer quotes. */
   imageUrl?: string;
   active: boolean;
@@ -540,6 +550,7 @@ export interface Product {
 export const products: Product[] = [
   {
     id: "p1",
+    kind: "service",
     name: "Window cleaning — standard visit",
     description: "Exterior pure-water clean, up to 12 panels.",
     trade: "Window cleaning",
@@ -548,10 +559,12 @@ export const products: Product[] = [
     taxRate: 20,
     sku: "WC-STD",
     imageUrl: productWindowClean,
+    typicalHours: 1,
     active: true,
   },
   {
     id: "p2",
+    kind: "service",
     name: "Window cleaning — commercial frontage",
     description: "Per panel, ground floor commercial.",
     trade: "Window cleaning",
@@ -564,6 +577,7 @@ export const products: Product[] = [
   },
   {
     id: "p3",
+    kind: "service",
     name: "Plumbing labour",
     description: "Standard hourly labour, parts billed separately.",
     trade: "Plumbing",
@@ -572,10 +586,13 @@ export const products: Product[] = [
     taxRate: 20,
     sku: "PL-LAB",
     imageUrl: productPlumbing,
+    typicalHours: 1,
+    materialsExtra: true,
     active: true,
   },
   {
     id: "p4",
+    kind: "service",
     name: "Emergency callout",
     description: "Out-of-hours callout, first hour included.",
     trade: "Plumbing",
@@ -587,16 +604,19 @@ export const products: Product[] = [
   },
   {
     id: "p5",
+    kind: "service",
     name: "Electrical labour",
     trade: "Electrical",
     unit: "hour",
     price: 70,
     taxRate: 20,
     sku: "EL-LAB",
+    materialsExtra: true,
     active: true,
   },
   {
     id: "p6",
+    kind: "product",
     name: "Consumer unit replacement",
     description: "Supply & install 10-way RCBO unit.",
     trade: "Electrical",
@@ -605,10 +625,12 @@ export const products: Product[] = [
     taxRate: 20,
     sku: "EL-CU10",
     imageUrl: productConsumerUnit,
+    supplier: "Edmundson Electrical",
     active: true,
   },
   {
     id: "p7",
+    kind: "product",
     name: "Artificial grass — premium",
     description: "Supply & install per sqm, includes prep.",
     trade: "Landscaping",
@@ -617,10 +639,12 @@ export const products: Product[] = [
     taxRate: 20,
     sku: "LS-AGP",
     imageUrl: productGrass,
+    supplier: "Nomow",
     active: true,
   },
   {
     id: "p8",
+    kind: "service",
     name: "Garden tidy",
     description: "Per labour day, two operatives.",
     trade: "Landscaping",
@@ -628,6 +652,7 @@ export const products: Product[] = [
     price: 280,
     taxRate: 20,
     sku: "LS-TDY",
+    typicalHours: 8,
     active: true,
   },
 ];
