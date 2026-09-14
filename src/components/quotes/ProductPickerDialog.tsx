@@ -79,8 +79,28 @@ export function ProductPickerDialog({ open, onOpenChange, onAdd }: Props) {
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="inline-flex rounded-lg border-hairline bg-surface p-0.5">
+            {([
+              { id: "all" as const, label: "All" },
+              { id: "product" as const, label: "Products" },
+              { id: "service" as const, label: "Services" },
+            ]).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setKind(t.id)}
+                className={`h-7 px-3 rounded-md text-xs font-medium transition-colors ${
+                  kind === t.id
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+          <div className="relative flex-1 min-w-[180px]">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
             <Input
               value={query}
