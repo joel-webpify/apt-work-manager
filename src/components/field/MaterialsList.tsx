@@ -158,7 +158,13 @@ export default function MaterialsList({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => addMaterial(jobId, { addedBy })}
+            onClick={() =>
+              addMaterial(jobId, {
+                addedBy,
+                kind: kind ?? "product",
+                unit: kind === "service" ? "hour" : "each",
+              })
+            }
             className="h-10 px-3 rounded-lg border-hairline bg-background text-sm font-medium inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" /> Add by hand
