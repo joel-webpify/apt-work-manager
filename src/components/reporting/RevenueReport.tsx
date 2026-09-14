@@ -394,6 +394,9 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">
                   {s.jobs} job{s.jobs === 1 ? "" : "s"} · avg {fmtGbp(s.revenue / s.jobs)}
+                  {byService.get(s.name)?.costedCount
+                    ? ` · ${fmtGbp(byService.get(s.name)!.totalCost)} cost · ${byService.get(s.name)!.margin.toFixed(0)}% margin`
+                    : ""}
                 </div>
               </div>
             ))}
@@ -477,6 +480,11 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
                     }}
                   />
                 </div>
+                {byArea.get(p.name)?.costedCount ? (
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {byArea.get(p.name)!.margin.toFixed(0)}% margin · {fmtGbp(byArea.get(p.name)!.profit)} profit
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
