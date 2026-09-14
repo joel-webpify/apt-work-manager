@@ -1092,6 +1092,15 @@ function BoardCard({
       <div className="text-sm font-medium truncate pr-20">{job.customer}</div>
       <div className="text-xs text-muted-foreground mt-0.5 truncate">{job.service}</div>
       <div className="mt-2 flex items-center gap-1">
+        {step && (
+          <button
+            draggable={false}
+            title="Tick this step off"
+            aria-label="Tick this step off"
+            onClick={(e) => { e.stopPropagation(); onToggleNextStep(); }}
+            className="w-4 h-4 shrink-0 rounded border-hairline bg-background hover:bg-primary/10 transition-colors"
+          />
+        )}
         <NextStepEditor
           job={job}
           open={nextStepOpen}
@@ -1112,7 +1121,7 @@ function BoardCard({
               ) : (
                 <>
                   <CalendarClock className="w-3 h-3 shrink-0" />
-                  <span className="truncate">{job.nextAction}</span>
+                  <span className="truncate">{step?.label}</span>
                   <span className="ml-auto shrink-0 text-[10px] whitespace-nowrap opacity-80">{dueLabel(job)}</span>
                 </>
               )}
@@ -1121,6 +1130,18 @@ function BoardCard({
         />
         <AssignMenu job={job} onAssign={onAssignNextStep} />
       </div>
+      {plan.total > 0 && (
+        <div className="mt-1.5">
+          <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+            <span>{plan.done === plan.total ? "Plan complete" : `Step ${plan.done + 1} of ${plan.total}`}</span>
+            <span className="tabular-nums shrink-0">{plan.done}/{plan.total}</span>
+          </div>
+          <div className="h-1 rounded-full bg-surface-hover overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${plan.pct}%`, backgroundColor: stageColor }} />
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between mt-2.5">
         <span className="text-sm font-medium tabular-nums">£{job.value}</span>
         <span className="text-xs text-muted-foreground">{job.daysInStage}d</span>
