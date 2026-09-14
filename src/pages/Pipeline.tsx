@@ -1582,7 +1582,7 @@ function JobDrawer({
               job={job}
               open={nextStepOpen}
               onOpenChange={setNextStepOpen}
-              onSave={(text, dueDate, owner) => onUpdate({ nextAction: text, nextActionDue: dueDate, nextActionOwner: owner })}
+              onSave={(text, dueDate, owner) => onUpdate(setNextStep(job, text, dueDate, owner))}
               trigger={
                 <Button className="h-8 px-3 gap-1.5 text-xs shrink-0">
                   <Flag className="w-3.5 h-3.5" />
@@ -1594,12 +1594,23 @@ function JobDrawer({
         </header>
 
         <div className="px-5 py-3 border-b-hairline bg-surface flex items-center gap-2">
-          <CalendarClock className={`w-4 h-4 shrink-0 ${due === "overdue" ? "text-destructive" : "text-primary"}`} />
-          <span className={`text-sm flex-1 truncate ${due === "none" ? "text-muted-foreground italic" : due === "overdue" ? "text-destructive font-medium" : "font-medium"}`}>
-            {job.nextAction || "No next step set"}
+          {step ? (
+            <button
+              type="button"
+              title="Tick this step off"
+              aria-label="Tick this step off"
+              onClick={() => onUpdate(toggleStep(job, step.id))}
+              className="w-4 h-4 shrink-0 rounded border-hairline bg-background hover:bg-primary/10 transition-colors"
+            />
+          ) : (
+            <CalendarClock className="w-4 h-4 shrink-0 text-primary" />
+          )}
+          <span className={`text-sm flex-1 truncate ${!step ? "text-muted-foreground italic" : due === "overdue" ? "text-destructive font-medium" : "font-medium"}`}>
+            {step?.label || "No next step set"}
           </span>
-          {job.nextAction && <span className="text-xs text-muted-foreground shrink-0">{dueLabel(job)}</span>}
-          <AssignMenu job={job} onAssign={(employeeId) => onUpdate({ nextActionOwner: employeeId })} />
+          {step && <span className="text-xs text-muted-foreground shrink-0">{dueLabel(job)}</span>}
+          <AssignMenu job={job} onAssign={(employeeId) => onUpdate(assignNextStep(job, employeeId))} />
+
         </div>
 
         {handover && onHandover && (
@@ -1649,17 +1660,18 @@ function JobDrawer({
                 </div>
               </Section>
 
-              <Section title="Milestone progress">
+              <Section title="Job plan">
                 <button type="button" onClick={() => setActivePanel("details")} className="w-full rounded-lg border-hairline bg-background p-3 text-left hover:bg-surface-hover transition-colors">
                   <div className="flex items-center justify-between text-xs mb-2">
-                    <span className="font-medium">{nextMilestone ? `Next: ${nextMilestone.label}` : milestones.length ? "All milestones complete" : "No milestones set"}</span>
-                    <span className="text-muted-foreground tabular-nums">{milestones.length ? `${completedMilestones}/${milestones.length}` : "Add milestones"}</span>
+                    <span className="font-medium truncate pr-2">{step ? `Next: ${step.label}` : plan.total ? "Every step is done" : "No steps yet"}</span>
+                    <span className="text-muted-foreground tabular-nums shrink-0">{plan.total ? `${plan.done}/${plan.total}` : "Add steps"}</span>
                   </div>
                   <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
-                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${milestoneProgress}%` }} />
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${plan.pct}%` }} />
                   </div>
                 </button>
               </Section>
+
 
               <Section title="Latest note">
                 <button type="button" onClick={() => setActivePanel("activity")} className="w-full rounded-lg border-hairline bg-background p-3 text-left hover:bg-surface-hover transition-colors">
