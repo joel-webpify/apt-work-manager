@@ -271,10 +271,42 @@ export function ProductsTab() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>
-              {editingId ? "Edit product" : "New product or service"}
+              {editingId
+                ? draftKind === "service"
+                  ? "Edit service"
+                  : "Edit product"
+                : "New product or service"}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-1">
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                {
+                  id: "product" as const,
+                  label: "Product",
+                  hint: "Something you supply",
+                },
+                {
+                  id: "service" as const,
+                  label: "Service",
+                  hint: "Work you do",
+                },
+              ]).map((o) => (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => setKind(o.id)}
+                  className={`text-left rounded-lg border p-2.5 transition-colors ${
+                    draftKind === o.id
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:bg-surface-hover"
+                  }`}
+                >
+                  <div className="text-sm font-medium">{o.label}</div>
+                  <div className="text-xs text-muted-foreground">{o.hint}</div>
+                </button>
+              ))}
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="p-name">Name</Label>
               <Input
