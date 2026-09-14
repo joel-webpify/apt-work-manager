@@ -115,6 +115,8 @@ export interface Job {
   /** The single next thing to do on this job, plus when it's due (ISO date). */
   nextAction?: string;
   nextActionDue?: string;
+  /** Employee id responsible for the next step. */
+  nextActionOwner?: string;
 }
 
 export const employees: Employee[] = [
