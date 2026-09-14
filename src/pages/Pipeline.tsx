@@ -1718,7 +1718,7 @@ function JobDrawer({
             </div>
           </Section>
 
-          <MilestonesSection job={job} onUpdate={onUpdate} colorFor={colorFor} />
+          <JobPlanSection job={job} onUpdate={onUpdate} colorFor={colorFor} />
 
           {schema.length > 0 && (
             <Section title="Custom fields">
