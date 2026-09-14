@@ -519,10 +519,14 @@ export const adsCampaigns: AdsCampaign[] = [
 
 export type ProductUnit = "each" | "hour" | "day" | "sqm" | "m" | "visit";
 
+/** Something you supply vs work you do. Missing = product. */
+export type ProductKind = "product" | "service";
+
 export interface Product {
   id: string;
   name: string;
   description?: string;
+  kind?: ProductKind;
   trade: Trade;
   unit: ProductUnit;
   price: number; // unit price excl. VAT
