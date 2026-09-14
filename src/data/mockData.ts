@@ -526,6 +526,10 @@ export interface Product {
   trade: Trade;
   unit: ProductUnit;
   price: number; // unit price excl. VAT
+  /** What it costs you (excl. VAT) — used for margin. */
+  cost?: number;
+  /** Optional stock level to keep an eye on. */
+  quantity?: number;
   taxRate: number; // % e.g. 20
   sku?: string;
   /** Optional catalogue photo shown in the quote builder and on customer quotes. */

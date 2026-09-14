@@ -42,6 +42,8 @@ const blank = (): Product => ({
   trade: "General",
   unit: "each",
   price: 0,
+  cost: 0,
+  quantity: undefined,
   taxRate: 20,
   sku: "",
   imageUrl: "",
@@ -121,12 +123,14 @@ export function ProductsTab() {
       </div>
 
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
-        <div className="grid grid-cols-[2.4fr_1.2fr_0.8fr_1fr_0.8fr_0.6fr_auto] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
+        <div className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.6fr_auto] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
           <div>Name</div>
           <div>Trade</div>
           <div>Unit</div>
+          <div className="text-right">Cost</div>
           <div className="text-right">Price</div>
           <div className="text-right">Tax</div>
+          <div className="text-right">Qty</div>
           <div>Status</div>
           <div></div>
         </div>
@@ -139,7 +143,7 @@ export function ProductsTab() {
         {filtered.map((p) => (
           <div
             key={p.id}
-            className="grid grid-cols-[2.4fr_1.2fr_0.8fr_1fr_0.8fr_0.6fr_auto] px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+            className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.6fr_auto] px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
           >
             <div className="min-w-0 flex items-center gap-2.5">
               {p.imageUrl ? (
@@ -165,11 +169,17 @@ export function ProductsTab() {
             </div>
             <div className="text-muted-foreground">{p.trade}</div>
             <div className="text-muted-foreground">/ {p.unit}</div>
+            <div className="text-right tabular-nums text-muted-foreground">
+              {p.cost != null && p.cost > 0 ? `£${p.cost.toFixed(2)}` : "—"}
+            </div>
             <div className="text-right tabular-nums font-medium">
               £{p.price.toFixed(2)}
             </div>
             <div className="text-right text-muted-foreground tabular-nums">
               {p.taxRate}%
+            </div>
+            <div className="text-right tabular-nums text-muted-foreground">
+              {p.quantity != null ? p.quantity : "—"}
             </div>
             <div>
               {p.active ? (
@@ -307,6 +317,18 @@ export function ProductsTab() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
+                <Label htmlFor="p-cost">Cost to you (£)</Label>
+                <Input
+                  id="p-cost"
+                  type="number"
+                  step="0.01"
+                  value={draft.cost ?? 0}
+                  onChange={(e) =>
+                    setDraft({ ...draft, cost: Number(e.target.value) || 0 })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="p-price">Price (£)</Label>
                 <Input
                   id="p-price"
@@ -340,6 +362,29 @@ export function ProductsTab() {
                   onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="p-qty">Quantity in stock (optional)</Label>
+                <Input
+                  id="p-qty"
+                  type="number"
+                  value={draft.quantity ?? ""}
+                  placeholder="Leave blank if you don't track this"
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      quantity:
+                        e.target.value === "" ? undefined : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <p className="text-xs text-muted-foreground pb-2">
+                {draft.price > 0 && (draft.cost ?? 0) > 0
+                  ? `You keep £${(draft.price - (draft.cost ?? 0)).toFixed(2)} (${Math.round(((draft.price - (draft.cost ?? 0)) / draft.price) * 100)}%) on each one.`
+                  : "Add a cost to see what you keep on each one."}
+              </p>
             </div>
             <div className="flex items-center justify-between pt-1">
               <Label htmlFor="p-active" className="text-sm">
