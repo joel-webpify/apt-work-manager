@@ -1522,10 +1522,9 @@ function JobDrawer({
   const [nextStepOpen, setNextStepOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<"overview" | "details" | "costs" | "activity">("overview");
   const due = dueState(job);
-  const milestones = job.milestones ?? [];
-  const completedMilestones = milestones.filter((milestone) => milestone.done).length;
-  const nextMilestone = milestones.find((milestone) => !milestone.done);
-  const milestoneProgress = milestones.length ? Math.round((completedMilestones / milestones.length) * 100) : 0;
+  const step = nextStep(job);
+  const plan = planProgress(job);
+
   const setFieldValue = (fieldId: string, value: string | number | boolean) => {
     const next = { ...(job.customFields ?? {}), [fieldId]: value };
     onUpdate({ customFields: next });
