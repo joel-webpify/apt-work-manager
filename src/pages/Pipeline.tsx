@@ -234,14 +234,12 @@ export default function Pipeline() {
   /** Card whose "next step" editor should pop open (after a move). */
   const [nextStepFor, setNextStepFor] = useState<string | null>(null);
 
-  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "nextActionOwner" | "timeline">;
+  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "milestones" | "timeline">;
   const snapshotOf = (job: Job): Snapshot => ({
     pipelineId: job.pipelineId,
     stage: job.stage,
     daysInStage: job.daysInStage,
-    nextAction: job.nextAction,
-    nextActionDue: job.nextActionDue,
-    nextActionOwner: job.nextActionOwner,
+    milestones: job.milestones,
     timeline: job.timeline,
   });
 
@@ -251,11 +249,9 @@ export default function Pipeline() {
       pipelineId,
       stage: stage as PipelineStage,
       daysInStage: 0,
-      nextAction: undefined,
-      nextActionDue: undefined,
-      nextActionOwner: undefined,
       timeline: [...(j.timeline ?? []), { type: "note" as const, text: note, date: niceDate() }],
     });
+
     setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
     setSelected((s) => (s && s.id === jobId ? patch(s) : s));
   };
