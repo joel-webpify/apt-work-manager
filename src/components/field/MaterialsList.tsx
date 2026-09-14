@@ -55,7 +55,7 @@ export default function MaterialsList({
         </p>
       )}
 
-      {list.filter((m) => !isOpen(m.id)).map((m) => (
+      {list.map((m) => (!isOpen(m.id) ? (
         <div key={m.id} className="rounded-lg border-hairline bg-surface px-3 py-2 flex items-center gap-2">
           <div className="min-w-0 flex-1">
             <p className="text-sm font-medium truncate">{m.name || "Untitled"}</p>
@@ -83,11 +83,9 @@ export default function MaterialsList({
             </>
           )}
         </div>
-      ))}
-
-
-      {list.map((m) => (
+      ) : (
         <div key={m.id} className="rounded-lg border-hairline bg-surface p-3 space-y-2">
+
           <div className="flex items-start gap-2">
             <input
               value={m.name}
