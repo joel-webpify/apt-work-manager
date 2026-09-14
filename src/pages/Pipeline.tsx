@@ -682,20 +682,25 @@ function AllJobsView({
                       </span>
                     </td>
                     <td className="px-3 py-3 max-w-[200px]">
-                      {job.nextAction ? (
-                        <div className="min-w-0">
-                          <div className="text-xs truncate flex items-center gap-1.5">
-                            <OwnerAvatar id={job.nextActionOwner} size={16} />
-                            <span className="truncate">{job.nextAction}</span>
+                      {(() => {
+                        const step = nextStep(job);
+                        const p = planProgress(job);
+                        if (!step) return <span className="text-xs text-muted-foreground italic">Nothing set</span>;
+                        return (
+                          <div className="min-w-0">
+                            <div className="text-xs truncate flex items-center gap-1.5">
+                              <OwnerAvatar id={step.owner} size={16} />
+                              <span className="truncate">{step.label}</span>
+                            </div>
+                            <div className={`text-[11px] mt-0.5 ${dueState(job) === "overdue" ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
+                              {dueLabel(job)}
+                              {p.total > 1 && ` · step ${p.done + 1} of ${p.total}`}
+                            </div>
                           </div>
-                          <div className={`text-[11px] mt-0.5 ${dueState(job) === "overdue" ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
-                            {dueLabel(job)}
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-muted-foreground italic">Nothing set</span>
-                      )}
+                        );
+                      })()}
                     </td>
+
                     <td className="px-3 py-3 text-right tabular-nums font-medium">£{job.value.toLocaleString()}</td>
                     <td className="px-3 py-3 text-right tabular-nums text-muted-foreground">{job.daysInStage}d</td>
                   </tr>
