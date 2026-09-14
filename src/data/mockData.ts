@@ -536,6 +536,12 @@ export interface Product {
   quantity?: number;
   taxRate: number; // % e.g. 20
   sku?: string;
+  /** Products only — who you buy it from. */
+  supplier?: string;
+  /** Services only — typical time on site, in hours. */
+  typicalHours?: number;
+  /** Services only — materials normally charged on top. */
+  materialsExtra?: boolean;
   /** Optional catalogue photo shown in the quote builder and on customer quotes. */
   imageUrl?: string;
   active: boolean;
