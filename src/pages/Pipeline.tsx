@@ -764,7 +764,7 @@ function NextStepEditor({
   }, [open, job.nextAction, job.nextActionDue]);
 
   const save = () => {
-    onSave(text.trim(), due || undefined);
+    onSave(text.trim(), due || undefined, owner || undefined);
     onOpenChange(false);
   };
   const quick = (days: number) =>
