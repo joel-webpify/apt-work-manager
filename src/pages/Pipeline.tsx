@@ -1071,7 +1071,7 @@ function BoardCard({
           onSave={onSaveNextStep}
           trigger={
             <button
-              className={`w-full text-left text-xs inline-flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-background transition-colors ${
+              className={`flex-1 min-w-0 text-left text-xs inline-flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-background transition-colors ${
                 due === "overdue"
                   ? "text-[hsl(var(--destructive))] font-medium"
                   : due === "none"
