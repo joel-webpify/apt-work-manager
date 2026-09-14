@@ -34,13 +34,17 @@ const trades: Trade[] = [
   "General",
 ];
 const units: ProductUnit[] = ["each", "hour", "day", "sqm", "m", "visit"];
+const serviceUnits: ProductUnit[] = ["hour", "day", "visit", "sqm", "m", "each"];
 
-const blank = (): Product => ({
+const kindOf = (p: Product): ProductKind => p.kind ?? "product";
+
+const blank = (kind: ProductKind = "product"): Product => ({
   id: `p-${Date.now()}`,
   name: "",
   description: "",
+  kind,
   trade: "General",
-  unit: "each",
+  unit: kind === "service" ? "hour" : "each",
   price: 0,
   cost: 0,
   quantity: undefined,
@@ -53,6 +57,7 @@ const blank = (): Product => ({
 export function ProductsTab() {
   const [items, setItems] = useState<Product[]>(seedProducts);
   const [query, setQuery] = useState("");
+  const [kindFilter, setKindFilter] = useState<ProductKind | "all">("all");
   const [tradeFilter, setTradeFilter] = useState<string>("all");
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<Product>(blank());
