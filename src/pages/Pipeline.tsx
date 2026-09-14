@@ -1639,6 +1639,16 @@ function FieldRow({ label, children }: { label: string; children: React.ReactNod
   );
 }
 
+function OverviewRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div className="grid grid-cols-[20px_100px_1fr] items-start gap-2 px-3 py-3 text-sm">
+      <span className="text-primary mt-0.5">{icon}</span>
+      <span className="text-xs text-muted-foreground mt-0.5">{label}</span>
+      <span className="font-medium text-right break-words">{value}</span>
+    </div>
+  );
+}
+
 function InlineEdit({
   value,
   onSave,
