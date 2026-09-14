@@ -397,7 +397,7 @@ export function ProductsTab() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {units.map((u) => (
+                    {(draftKind === "service" ? serviceUnits : units).map((u) => (
                       <SelectItem key={u} value={u}>
                         per {u}
                       </SelectItem>
