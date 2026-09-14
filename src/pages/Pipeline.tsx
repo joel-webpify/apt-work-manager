@@ -232,6 +232,7 @@ export default function Pipeline() {
       daysInStage: 0,
       nextAction: undefined,
       nextActionDue: undefined,
+      nextActionOwner: undefined,
       timeline: [...(j.timeline ?? []), { type: "note" as const, text: note, date: niceDate() }],
     });
     setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
