@@ -910,6 +910,7 @@ function BoardCard({
   nextStepOpen,
   onNextStepOpenChange,
   onSaveNextStep,
+  onAssignNextStep,
   handover,
   onHandover,
   onStartEdit,
