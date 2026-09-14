@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock, MoreHorizontal } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock, MoreHorizontal, BriefcaseBusiness, Receipt, Activity } from "lucide-react";
 import { ToastAction } from "@/components/ui/toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
@@ -1378,7 +1378,12 @@ function JobDrawer({
 }) {
   const [schema] = useJobFieldSchema();
   const [nextStepOpen, setNextStepOpen] = useState(false);
+  const [activePanel, setActivePanel] = useState<"overview" | "details" | "costs" | "activity">("overview");
   const due = dueState(job);
+  const milestones = job.milestones ?? [];
+  const completedMilestones = milestones.filter((milestone) => milestone.done).length;
+  const nextMilestone = milestones.find((milestone) => !milestone.done);
+  const milestoneProgress = milestones.length ? Math.round((completedMilestones / milestones.length) * 100) : 0;
   const setFieldValue = (fieldId: string, value: string | number | boolean) => {
     const next = { ...(job.customFields ?? {}), [fieldId]: value };
     onUpdate({ customFields: next });
@@ -1387,9 +1392,31 @@ function JobDrawer({
   return (
     <>
       <div className="fixed inset-0 bg-black/25 z-40 animate-fade-in" onClick={onClose} />
-      <aside className="fixed top-0 right-0 h-screen w-[480px] bg-background border-l-hairline z-50 flex flex-col animate-slide-in-right">
-        <header className="h-14 px-5 flex items-center justify-between border-b-hairline shrink-0 gap-2">
-          <div className="flex items-center gap-2 min-w-0">
+      <aside className="fixed top-0 right-0 h-screen w-full sm:w-[560px] bg-background border-l-hairline z-50 flex flex-col animate-slide-in-right">
+        <header className="px-5 pt-5 pb-4 border-b-hairline shrink-0">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <InlineEdit
+                value={job.customer}
+                onSave={(value) => onUpdate({ customer: value })}
+                displayClassName="font-heading text-xl font-semibold leading-tight"
+                inputClassName="h-9 font-heading text-lg font-semibold"
+                placeholder="Customer name"
+              />
+              <InlineEdit
+                value={job.service}
+                onSave={(value) => onUpdate({ service: value })}
+                displayClassName="mt-0.5 text-sm text-muted-foreground"
+                placeholder="Service / job description"
+              />
+            </div>
+            <Button variant="ghost" size="icon" onClick={onClose} className="h-8 w-8 shrink-0" aria-label="Close job">
+              <X className="w-4 h-4" strokeWidth={1.75} />
+            </Button>
+          </div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
             {pipelineName && (
               <Pill tone={job.pipelineId === "install" ? "info" : "neutral"}>
                 {job.pipelineId === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
@@ -1402,43 +1429,35 @@ function JobDrawer({
               colorFor={colorFor}
               onMove={onMove}
               trigger={
-                <button className="h-8 px-2.5 rounded-md border-hairline inline-flex items-center gap-2 text-sm hover:bg-surface-hover transition-colors">
+                <Button variant="outline" className="h-8 px-2.5 gap-2 text-xs max-w-[190px]">
                   <StatusDot color={colorToCss(colorFor(job.stage))} />
                   <span className="truncate max-w-[150px]">{job.stage}</span>
                   <MoveRight className="w-3.5 h-3.5 text-muted-foreground" />
-                </button>
+                </Button>
+              }
+            />
+            </div>
+            <NextStepEditor
+              job={job}
+              open={nextStepOpen}
+              onOpenChange={setNextStepOpen}
+              onSave={(text, dueDate) => onUpdate({ nextAction: text, nextActionDue: dueDate })}
+              trigger={
+                <Button className="h-8 px-3 gap-1.5 text-xs shrink-0">
+                  <Flag className="w-3.5 h-3.5" />
+                  {due === "none" ? "Add next step" : dueLabel(job)}
+                </Button>
               }
             />
           </div>
-          <button onClick={onClose} className="w-7 h-7 rounded-md flex items-center justify-center hover:bg-surface-hover">
-            <X className="w-4 h-4" strokeWidth={1.75} />
-          </button>
         </header>
 
-        <div className="px-5 py-2.5 border-b-hairline flex items-center gap-2">
-          <NextStepEditor
-            job={job}
-            open={nextStepOpen}
-            onOpenChange={setNextStepOpen}
-            onSave={(text, dueDate) => onUpdate({ nextAction: text, nextActionDue: dueDate })}
-            trigger={
-              <button
-                className={`flex-1 min-w-0 text-left text-xs inline-flex items-center gap-1.5 h-7 px-2 rounded-md border-hairline hover:bg-surface-hover transition-colors ${
-                  due === "overdue" ? "text-[hsl(var(--destructive))] font-medium" : due === "none" ? "text-muted-foreground italic" : ""
-                }`}
-              >
-                {due === "none" ? (
-                  <><Flag className="w-3 h-3" /> Add the next step</>
-                ) : (
-                  <>
-                    <CalendarClock className="w-3 h-3 shrink-0" />
-                    <span className="truncate">{job.nextAction}</span>
-                    <span className="ml-auto shrink-0 opacity-80">{dueLabel(job)}</span>
-                  </>
-                )}
-              </button>
-            }
-          />
+        <div className="px-5 py-3 border-b-hairline bg-surface flex items-center gap-2">
+          <CalendarClock className={`w-4 h-4 shrink-0 ${due === "overdue" ? "text-destructive" : "text-primary"}`} />
+          <span className={`text-sm flex-1 truncate ${due === "none" ? "text-muted-foreground italic" : due === "overdue" ? "text-destructive font-medium" : "font-medium"}`}>
+            {job.nextAction || "No next step set"}
+          </span>
+          {job.nextAction && <span className="text-xs text-muted-foreground shrink-0">{dueLabel(job)}</span>}
         </div>
 
         {handover && onHandover && (
@@ -1459,24 +1478,66 @@ function JobDrawer({
         )}
 
 
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          <div className="space-y-2">
-            <InlineEdit
-              value={job.customer}
-              onSave={(v) => onUpdate({ customer: v })}
-              displayClassName="text-lg font-medium"
-              inputClassName="h-9 text-lg font-medium"
-              placeholder="Customer name"
-            />
-            <InlineEdit
-              value={job.service}
-              onSave={(v) => onUpdate({ service: v })}
-              displayClassName="text-sm text-muted-foreground"
-              placeholder="Service / job description"
-            />
-          </div>
+        <nav className="grid grid-cols-4 border-b-hairline px-5 shrink-0" aria-label="Job sections">
+          {([
+            ["overview", "Overview", BriefcaseBusiness],
+            ["details", "Details", StickyNote],
+            ["costs", "Costs", Receipt],
+            ["activity", "Activity", Activity],
+          ] as const).map(([id, label, Icon]) => (
+            <Button
+              key={id}
+              variant="ghost"
+              onClick={() => setActivePanel(id)}
+              className={`h-11 rounded-none gap-1.5 border-b-2 text-xs ${activePanel === id ? "border-primary text-primary" : "border-transparent text-muted-foreground"}`}
+            >
+              <Icon className="w-3.5 h-3.5" /> {label}
+            </Button>
+          ))}
+        </nav>
 
-          <Section title="Job details">
+        <div className="flex-1 overflow-y-auto bg-surface/50">
+          {activePanel === "overview" && (
+            <div className="p-5 space-y-6 animate-fade-in">
+              <Section title="Essential information">
+                <div className="divide-y divide-border rounded-lg border-hairline bg-background">
+                  <OverviewRow icon={<MapPin className="w-4 h-4" />} label="Address" value={[job.address, job.postcode].filter(Boolean).join(", ") || "Not added"} />
+                  <OverviewRow icon={<Wrench className="w-4 h-4" />} label="Trade" value={job.trade ?? "General"} />
+                  <OverviewRow icon={<Clock className="w-4 h-4" />} label="Estimated time" value={job.estimatedHours ? `${job.estimatedHours} hours` : "Not estimated"} />
+                </div>
+              </Section>
+
+              <Section title="Milestone progress">
+                <button type="button" onClick={() => setActivePanel("details")} className="w-full rounded-lg border-hairline bg-background p-3 text-left hover:bg-surface-hover transition-colors">
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <span className="font-medium">{nextMilestone ? `Next: ${nextMilestone.label}` : milestones.length ? "All milestones complete" : "No milestones set"}</span>
+                    <span className="text-muted-foreground tabular-nums">{milestones.length ? `${completedMilestones}/${milestones.length}` : "Add milestones"}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
+                    <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${milestoneProgress}%` }} />
+                  </div>
+                </button>
+              </Section>
+
+              <Section title="Latest note">
+                <button type="button" onClick={() => setActivePanel("activity")} className="w-full rounded-lg border-hairline bg-background p-3 text-left hover:bg-surface-hover transition-colors">
+                  <p className={`text-sm ${job.notes ? "text-foreground" : "text-muted-foreground italic"}`}>{job.notes || "No job notes yet."}</p>
+                  <span className="mt-2 inline-flex text-xs font-medium text-primary">Open activity</span>
+                </button>
+              </Section>
+
+              <Section title="Site visit">
+                <button type="button" onClick={() => setActivePanel("details")} className="w-full flex items-center justify-between rounded-lg border-hairline bg-background px-3 py-2.5 text-sm hover:bg-surface-hover transition-colors">
+                  <span className="text-muted-foreground">Survey answers, photos and field updates</span>
+                  <span className="font-medium text-primary">View</span>
+                </button>
+              </Section>
+            </div>
+          )}
+
+          {activePanel === "details" && (
+            <div className="p-5 space-y-6 animate-fade-in">
+            <Section title="Job details">
             <div className="space-y-2 text-sm">
               <FieldRow label="Trade">
                 <Select value={job.trade ?? "General"} onValueChange={(v) => onUpdate({ trade: v as Trade })}>
@@ -1485,22 +1546,6 @@ function JobDrawer({
                     {TRADES.map((t) => <SelectItem key={t} value={t}>{t}</SelectItem>)}
                   </SelectContent>
                 </Select>
-              </FieldRow>
-              <FieldRow label="Value (£)">
-                <Input
-                  type="number"
-                  value={job.value}
-                  onChange={(e) => onUpdate({ value: parseFloat(e.target.value) || 0 })}
-                  className="h-8 tabular-nums"
-                />
-              </FieldRow>
-              <FieldRow label="Quote (£)">
-                <Input
-                  type="number"
-                  value={job.quoteValue}
-                  onChange={(e) => onUpdate({ quoteValue: parseFloat(e.target.value) || 0 })}
-                  className="h-8 tabular-nums"
-                />
               </FieldRow>
               <FieldRow label="Est. hours">
                 <Input
@@ -1517,15 +1562,6 @@ function JobDrawer({
                 <Input value={job.postcode ?? ""} onChange={(e) => onUpdate({ postcode: e.target.value })} className="h-8" />
               </FieldRow>
             </div>
-          </Section>
-
-          <Section title="Job notes">
-            <Textarea
-              value={job.notes}
-              onChange={(e) => onUpdate({ notes: e.target.value })}
-              rows={3}
-              placeholder="Add notes about this job…"
-            />
           </Section>
 
           <MilestonesSection job={job} onUpdate={onUpdate} colorFor={colorFor} />
@@ -1550,12 +1586,27 @@ function JobDrawer({
           <Section title="Site visit">
             <SiteVisitSection jobId={job.id} />
           </Section>
+            </div>
+          )}
 
-          <Section title="Costs & materials">
+          {activePanel === "costs" && (
+            <div className="p-5 animate-fade-in">
+          <Section title="Quote, costs & materials">
             <JobCostsCard jobId={job.id} jobValue={job.value} />
           </Section>
+            </div>
+          )}
 
-
+          {activePanel === "activity" && (
+            <div className="p-5 space-y-6 animate-fade-in">
+          <Section title="Job notes">
+            <Textarea
+              value={job.notes}
+              onChange={(e) => onUpdate({ notes: e.target.value })}
+              rows={4}
+              placeholder="Add notes about this job…"
+            />
+          </Section>
           <Section title="Communication">
             {job.timeline.length === 0 ? (
               <p className="text-sm text-muted-foreground">No messages yet.</p>
@@ -1571,6 +1622,8 @@ function JobDrawer({
               </div>
             )}
           </Section>
+            </div>
+          )}
         </div>
       </aside>
     </>
