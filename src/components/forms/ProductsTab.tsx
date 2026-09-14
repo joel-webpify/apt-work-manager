@@ -209,12 +209,17 @@ export function ProductsTab() {
                 </div>
               )}
               <div className="min-w-0">
-              <div className="font-medium truncate">{p.name}</div>
-              {p.sku && (
-                <div className="text-xs text-muted-foreground tabular-nums">
-                  {p.sku}
+                <div className="font-medium truncate">{p.name}</div>
+                <div className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <span
+                    className={
+                      kindOf(p) === "service" ? "text-primary" : "text-muted-foreground"
+                    }
+                  >
+                    {kindOf(p) === "service" ? "Service" : "Product"}
+                  </span>
+                  {p.sku && <span className="tabular-nums">· {p.sku}</span>}
                 </div>
-              )}
               </div>
             </div>
             <div className="text-muted-foreground">{p.trade}</div>
