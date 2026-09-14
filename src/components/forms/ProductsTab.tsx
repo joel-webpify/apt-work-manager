@@ -23,6 +23,7 @@ import {
   products as seedProducts,
   type Product,
   type ProductUnit,
+  type ProductKind,
   type Trade,
 } from "@/data/mockData";
 
