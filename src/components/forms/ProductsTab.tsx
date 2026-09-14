@@ -550,7 +550,11 @@ export function ProductsTab() {
           <DialogFooter>
             <Btn onClick={() => setOpen(false)}>Cancel</Btn>
             <Btn variant="primary" onClick={save}>
-              {editingId ? "Save changes" : "Create product"}
+              {editingId
+                ? "Save changes"
+                : draftKind === "service"
+                  ? "Create service"
+                  : "Create product"}
             </Btn>
           </DialogFooter>
         </DialogContent>
