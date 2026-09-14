@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
-import type { ProductUnit } from "@/data/mockData";
+import type { ProductKind, ProductUnit } from "@/data/mockData";
 
 /** Materials used on a job — what they cost you, and what the customer pays. */
 export interface JobMaterial {
   id: string;
   productId?: string;
+  /** Product supplied vs service done. Missing = product. */
+  kind?: ProductKind;
   name: string;
   qty: number;
   unit: ProductUnit;
