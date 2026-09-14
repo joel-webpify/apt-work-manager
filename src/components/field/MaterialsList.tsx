@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Package, Plus, Trash2 } from "lucide-react";
-import { products, type ProductUnit } from "@/data/mockData";
+import { products, type ProductKind, type ProductUnit } from "@/data/mockData";
 import {
   addMaterial,
+  materialKind,
   materialsCharge,
   materialsCost,
   removeMaterial,
@@ -12,29 +13,42 @@ import {
 import { fmt } from "@/lib/quoteUtils";
 
 const units: ProductUnit[] = ["each", "hour", "day", "sqm", "m", "visit"];
+const kindOf = (p: { kind?: ProductKind }): ProductKind => p.kind ?? "product";
 
 export default function MaterialsList({
   jobId,
   addedBy,
   readOnly,
   compact,
+  kind,
 }: {
   jobId: string;
   addedBy?: string;
   readOnly?: boolean;
   compact?: boolean;
+  /** Show only products or only services. Leave out for everything. */
+  kind?: ProductKind;
 }) {
-  const list = useMaterials(jobId);
+  const all = useMaterials(jobId);
+  const list = kind ? all.filter((m) => materialKind(m) === kind) : all;
   const [picking, setPicking] = useState(false);
+  const [pickKind, setPickKind] = useState<ProductKind | "all">(kind ?? "all");
   const cost = materialsCost(list);
   const charge = materialsCharge(list);
 
-  const catalogue = products.filter((p) => p.active);
+  const catalogue = products.filter(
+    (p) => p.active && (pickKind === "all" || kindOf(p) === pickKind),
+  );
+  const noun = kind === "service" ? "Work" : kind === "product" ? "Materials" : "Materials";
 
   return (
     <div className="space-y-3">
       {list.length === 0 && (
-        <p className="text-xs text-muted-foreground">Nothing added yet. Add what you used so the job costs are right.</p>
+        <p className="text-xs text-muted-foreground">
+          {kind === "service"
+            ? "No work added yet. Add the labour or visits done so the job costs are right."
+            : "Nothing added yet. Add what you used so the job costs are right."}
+        </p>
       )}
 
       {list.map((m) => (
@@ -148,7 +162,13 @@ export default function MaterialsList({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => addMaterial(jobId, { addedBy })}
+            onClick={() =>
+              addMaterial(jobId, {
+                addedBy,
+                kind: kind ?? "product",
+                unit: kind === "service" ? "hour" : "each",
+              })
+            }
             className="h-10 px-3 rounded-lg border-hairline bg-background text-sm font-medium inline-flex items-center gap-1.5"
           >
             <Plus className="w-4 h-4" /> Add by hand
@@ -165,36 +185,63 @@ export default function MaterialsList({
 
       {picking && !readOnly && (
         <div className="rounded-lg border-hairline bg-surface p-2 max-h-64 overflow-auto space-y-1">
-          {catalogue.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => {
-                addMaterial(jobId, {
-                  productId: p.id,
-                  name: p.name,
-                  unit: p.unit,
-                  price: p.price,
-                  cost: Math.round(p.price * 0.6 * 100) / 100,
-                  taxRate: p.taxRate,
-                  addedBy,
-                });
-                setPicking(false);
-              }}
-              className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-hover"
-            >
-              <p className="text-sm font-medium">{p.name}</p>
-              <p className="text-[11px] text-muted-foreground">
-                {p.trade} · {fmt(p.price)} per {p.unit}
-              </p>
-            </button>
-          ))}
+          {!kind && (
+            <div className="flex gap-1 px-0.5 pb-1">
+              {(["all", "product", "service"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setPickKind(k)}
+                  className={`h-7 px-2.5 rounded-lg text-[11px] font-medium border-hairline ${
+                    pickKind === k
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground"
+                  }`}
+                >
+                  {k === "all" ? "All" : k === "product" ? "Products" : "Services"}
+                </button>
+              ))}
+            </div>
+          )}
+          {catalogue.length === 0 && (
+            <p className="px-2.5 py-2 text-xs text-muted-foreground">Nothing in the catalogue for this.</p>
+          )}
+          {catalogue.map((p) => {
+            const isService = kindOf(p) === "service";
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  addMaterial(jobId, {
+                    productId: p.id,
+                    kind: kindOf(p),
+                    name: p.name,
+                    qty: isService && p.typicalHours && p.unit === "hour" ? p.typicalHours : 1,
+                    unit: p.unit,
+                    price: p.price,
+                    cost: p.cost ?? Math.round(p.price * 0.6 * 100) / 100,
+                    taxRate: p.taxRate,
+                    supplier: p.supplier,
+                    addedBy,
+                  });
+                  setPicking(false);
+                }}
+                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-hover"
+              >
+                <p className="text-sm font-medium">{p.name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isService ? "Service" : "Product"} · {p.trade} · {fmt(p.price)} per {p.unit}
+                </p>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {list.length > 0 && (
         <div className="flex items-center justify-between rounded-lg bg-surface px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Materials cost</span>
+          <span className="text-muted-foreground">{noun} cost</span>
           <span className="font-semibold">{fmt(cost)}</span>
           <span className="text-muted-foreground">Charged on</span>
           <span className="font-semibold">{fmt(charge)}</span>
