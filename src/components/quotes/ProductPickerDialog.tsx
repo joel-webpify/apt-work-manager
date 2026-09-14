@@ -57,7 +57,8 @@ export function ProductPickerDialog({ open, onOpenChange, onAdd }: Props) {
       p.name.toLowerCase().includes(q) ||
       (p.sku ?? "").toLowerCase().includes(q) ||
       (p.description ?? "").toLowerCase().includes(q);
-    return matchQ && (trade === "all" || p.trade === trade);
+    const matchK = kind === "all" || (p.kind ?? "product") === kind;
+    return matchQ && matchK && (trade === "all" || p.trade === trade);
   });
 
   const toggle = (id: string) =>
