@@ -779,17 +779,20 @@ function NextStepEditor({
   onSave: (text: string, due?: string, owner?: string) => void;
   trigger: React.ReactNode;
 }) {
-  const [text, setText] = useState(job.nextAction ?? "");
-  const [due, setDue] = useState(job.nextActionDue ?? "");
-  const [owner, setOwner] = useState(job.nextActionOwner ?? "");
+  const current = nextStep(job);
+  const [text, setText] = useState(current?.label ?? "");
+  const [due, setDue] = useState(current?.due ?? "");
+  const [owner, setOwner] = useState(current?.owner ?? "");
 
   useEffect(() => {
     if (open) {
-      setText(job.nextAction ?? "");
-      setDue(job.nextActionDue ?? "");
-      setOwner(job.nextActionOwner ?? "");
+      setText(current?.label ?? "");
+      setDue(current?.due ?? "");
+      setOwner(current?.owner ?? "");
     }
-  }, [open, job.nextAction, job.nextActionDue, job.nextActionOwner]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, current?.id, current?.label, current?.due, current?.owner]);
+
 
   const save = () => {
     onSave(text.trim(), due || undefined, owner || undefined);
