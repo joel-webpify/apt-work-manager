@@ -1020,6 +1020,9 @@ function BoardCard({
   }
 
   const due = dueState(job);
+  const step = nextStep(job);
+  const plan = planProgress(job);
+
   const currentPipe = job.pipelineId ?? "sales";
 
 
