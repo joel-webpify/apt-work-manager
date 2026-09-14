@@ -234,7 +234,11 @@ export function ProductsTab() {
               {p.taxRate}%
             </div>
             <div className="text-right tabular-nums text-muted-foreground">
-              {p.quantity != null ? p.quantity : "—"}
+              {kindOf(p) === "service"
+                ? ""
+                : p.quantity != null
+                  ? p.quantity
+                  : "—"}
             </div>
             <div>
               {p.active ? (
