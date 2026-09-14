@@ -98,9 +98,51 @@ export function ProductsTab() {
   const remove = (id: string) =>
     setItems((prev) => prev.filter((p) => p.id !== id));
 
+  /** Flipping the toggle also swaps in sensible defaults and drops fields that no longer apply. */
+  const setKind = (kind: ProductKind) =>
+    setDraft((d) =>
+      kind === "service"
+        ? {
+            ...d,
+            kind,
+            unit: serviceUnits.includes(d.unit) ? d.unit : "hour",
+            quantity: undefined,
+            supplier: undefined,
+          }
+        : {
+            ...d,
+            kind,
+            unit: d.unit === "hour" || d.unit === "day" || d.unit === "visit" ? "each" : d.unit,
+            typicalHours: undefined,
+            materialsExtra: undefined,
+          },
+    );
+
+  const draftKind = kindOf(draft);
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
+        <div className="inline-flex rounded-lg border-hairline bg-surface p-0.5">
+          {([
+            { id: "all" as const, label: "All" },
+            { id: "product" as const, label: "Products" },
+            { id: "service" as const, label: "Services" },
+          ]).map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setKindFilter(t.id)}
+              className={`h-7 px-3 rounded-md text-xs font-medium transition-colors ${
+                kindFilter === t.id
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
