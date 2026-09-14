@@ -1,6 +1,8 @@
 import { useMemo } from "react";
-import { TrendingUp, TrendingDown, PoundSterling, Users, Briefcase, Target, MousePointerClick, Globe, Lightbulb } from "lucide-react";
+import { TrendingUp, TrendingDown, PoundSterling, Users, Briefcase, Target, MousePointerClick, Globe, Lightbulb, PiggyBank, Percent } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
+import { jobs as allJobs } from "@/data/mockData";
+import { useCostReporting } from "@/lib/costReporting";
 import {
   channelMetrics,
   reportTotals,
@@ -16,6 +18,7 @@ export function OverviewReport({ range, onOpenChannel }: { range: DateRange; onO
   const totals = useMemo(() => reportTotals(range), [range]);
   const channels = useMemo(() => channelMetrics(range).sort((a, b) => b.revenue - a.revenue), [range]);
   const trend = useMemo(() => trendSeries(range), [range]);
+  const { totals: costs } = useCostReporting(allJobs);
 
   const paidChannels = channels.filter((c) => c.spend > 0 && c.leads > 0);
   const cheapest = paidChannels.length ? paidChannels.reduce((a, c) => (c.cpl < a.cpl ? c : a)) : null;
@@ -33,8 +36,20 @@ export function OverviewReport({ range, onOpenChannel }: { range: DateRange; onO
       </div>
 
       {/* Headline tiles */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-4 gap-3">
         <Tile icon={<PoundSterling className="w-3.5 h-3.5" />} label="Revenue won" value={fmtGbp(totals.revenue)} delta={11} accent />
+        <Tile
+          icon={<PiggyBank className="w-3.5 h-3.5" />}
+          label="Profit"
+          value={fmtGbp(costs.profit)}
+          sub={`From ${costs.costedCount} job${costs.costedCount === 1 ? "" : "s"} with figures recorded`}
+        />
+        <Tile
+          icon={<Percent className="w-3.5 h-3.5" />}
+          label="Margin"
+          value={`${costs.margin.toFixed(0)}%`}
+          sub="What you keep after materials and work"
+        />
         <Tile icon={<Briefcase className="w-3.5 h-3.5" />} label="Jobs booked" value={fmtNum(totals.jobs)} delta={7} />
         <Tile icon={<Users className="w-3.5 h-3.5" />} label="New leads" value={fmtNum(totals.leads)} delta={14} />
         <Tile icon={<Target className="w-3.5 h-3.5" />} label="Marketing spend" value={fmtGbp(totals.spend)} delta={5} invert />
@@ -184,28 +199,34 @@ function Tile({
   label,
   value,
   delta,
+  sub,
   accent,
   invert,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
-  delta: number;
+  delta?: number;
+  sub?: string;
   accent?: boolean;
   invert?: boolean;
 }) {
-  const good = invert ? delta <= 0 : delta >= 0;
-  const Icon = delta >= 0 ? TrendingUp : TrendingDown;
+  const good = invert ? (delta ?? 0) <= 0 : (delta ?? 0) >= 0;
+  const Icon = (delta ?? 0) >= 0 ? TrendingUp : TrendingDown;
   return (
     <div className={`border-hairline rounded-lg p-4 ${accent ? "bg-surface" : "bg-card"}`}>
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
         {icon} {label}
       </div>
       <div className="text-2xl font-medium tracking-tight mt-1">{value}</div>
-      <div className={`text-xs mt-1 flex items-center gap-1 ${good ? "text-success" : "text-destructive"}`}>
-        <Icon className="w-3 h-3" /> {delta > 0 ? "+" : ""}
-        {delta}% vs previous period
-      </div>
+      {delta === undefined ? (
+        sub ? <div className="text-xs mt-1 text-muted-foreground">{sub}</div> : null
+      ) : (
+        <div className={`text-xs mt-1 flex items-center gap-1 ${good ? "text-success" : "text-destructive"}`}>
+          <Icon className="w-3 h-3" /> {delta > 0 ? "+" : ""}
+          {delta}% vs previous period
+        </div>
+      )}
     </div>
   );
 }

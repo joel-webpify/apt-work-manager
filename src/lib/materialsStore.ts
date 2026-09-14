@@ -61,6 +61,14 @@ export function blankMaterial(): JobMaterial {
   };
 }
 
+/** Listen for any change to materials or the labour choice. */
+export function subscribeMaterials(fn: () => void) {
+  listeners.add(fn);
+  return () => {
+    listeners.delete(fn);
+  };
+}
+
 export function getMaterials(jobId: string): JobMaterial[] {
   return byJob[jobId] ?? [];
 }

@@ -9,11 +9,14 @@ import {
   Calendar,
   Repeat,
   MapPin,
+  Package,
+  PiggyBank,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
 
 import { jobs, contacts, type Job } from "@/data/mockData";
 import { rangeLabels, type DateRange } from "@/lib/reportingData";
+import { groupCosts, useCostReporting } from "@/lib/costReporting";
 
 /* ---------------- derived data ---------------- */
 
@@ -135,6 +138,14 @@ const topPostcodes = postcodeRevenue.slice(0, 6);
 const postcodeTotal = postcodeRevenue.reduce((a, x) => a + x.revenue, 0);
 const postcodeMax = Math.max(...postcodeRevenue.map((x) => x.revenue), 1);
 
+// Won jobs, and the area each one belongs to — shared with the cost reporting
+const wonJobsList = jobs.filter((j) => wonStages.includes(j.stage));
+const contactPostcodes = new Map(contacts.map((c) => [c.id, c.postcode]));
+function postcodeKey(j: Job) {
+  const raw = j.postcode || contactPostcodes.get(j.contactId) || "";
+  return raw.split(" ")[0].toUpperCase() || "Unknown";
+}
+
 // Repeat vs one-off customer revenue (from won jobs)
 const repeatMix = (() => {
   const map = new Map<string, { revenue: number; jobs: number }>();
@@ -175,6 +186,23 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
   const monthMax = Math.max(...months.map((m) => m.v), forecastNext);
   const collectionRate = (paidRevenue / (paidRevenue + invoicedOutstanding)) * 100 || 0;
 
+  const { rows: costRows, totals: costs } = useCostReporting(wonJobsList);
+
+  const byService = useMemo(
+    () => new Map(groupCosts(costRows, (r) => serviceCategory(r.job.service)).map((g) => [g.name, g])),
+    [costRows],
+  );
+  const byArea = useMemo(
+    () => new Map(groupCosts(costRows, (r) => postcodeKey(r.job)).map((g) => [g.name, g])),
+    [costRows],
+  );
+  const byCustomer = useMemo(
+    () => new Map(groupCosts(costRows, (r) => r.job.customer).map((g) => [g.name, g])),
+    [costRows],
+  );
+
+  const expectedProfit = Math.round(forecastNext * (costs.margin / 100));
+
   const momGrowth = useMemo(() => {
     const cur = months[months.length - 1].v;
     const prev = months[months.length - 2].v;
@@ -190,7 +218,7 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
 
 
       {/* Headline KPIs */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Kpi
           icon={<PoundSterling className="w-3.5 h-3.5" />}
           label="Won revenue"
@@ -221,6 +249,34 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
           trend={+4.2}
           sub={`${billedJobs.length} billed jobs`}
         />
+        <Kpi
+          icon={<Package className="w-3.5 h-3.5" />}
+          label="Costs so far"
+          value={fmtGbp(costs.totalCost)}
+          sub={`${fmtGbp(costs.materials)} materials · ${fmtGbp(costs.labour)} work`}
+        />
+        <Kpi
+          icon={<PiggyBank className="w-3.5 h-3.5" />}
+          label="Profit"
+          value={fmtGbp(costs.profit)}
+          sub={`${costs.margin.toFixed(0)}% margin on costed jobs`}
+        />
+      </div>
+
+      {/* How much of the picture is real */}
+      <div className="border-hairline rounded-lg bg-card px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+        <span className="font-medium">Costs recorded on {costs.costedCount} of {costRows.length} won jobs</span>
+        <div className="flex-1 min-w-[120px] h-1.5 bg-surface rounded-full overflow-hidden">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${costs.coverage}%` }} />
+        </div>
+        {costs.uncostedCount > 0 ? (
+          <span className="text-muted-foreground">
+            {costs.uncostedCount} job{costs.uncostedCount === 1 ? "" : "s"} worth {fmtGbp(costs.uncostedValue)} still to be
+            costed — left out of the profit figures
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Every won job has materials or time recorded.</span>
+        )}
       </div>
 
       {/* Trend + forecast */}
@@ -274,12 +330,43 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
             <span className="text-xs font-medium text-primary">May*</span>
           </div>
         </div>
-        <div className="mt-4 pt-3 border-t-hairline grid grid-cols-4 gap-4 text-xs">
+        <div className="mt-4 pt-3 border-t-hairline grid grid-cols-5 gap-4 text-xs">
           <Stat label="MoM growth" value={`${momGrowth >= 0 ? "+" : ""}${momGrowth.toFixed(1)}%`} positive={momGrowth >= 0} />
           <Stat label="Last 6 months" value={fmtGbp(months.reduce((a, m) => a + m.v, 0))} />
           <Stat label="Expected in May" value={fmtGbp(forecastNext)} />
+          <Stat label="Profit expected in May" value={fmtGbp(expectedProfit)} />
           <Stat label="Work in the pipeline" value={fmtGbp(pipelineRevenue + wipRevenue)} muted />
         </div>
+      </div>
+
+      {/* Where the money goes */}
+      <div className="border-hairline rounded-lg bg-card p-5">
+        <div className="text-sm font-medium mb-1">Where the money goes</div>
+        <div className="text-xs text-muted-foreground mb-4">
+          Based on the {costs.costedCount} won job{costs.costedCount === 1 ? "" : "s"} with real figures recorded
+        </div>
+        {costs.revenue > 0 ? (
+          <>
+            <div className="flex h-3 rounded-full overflow-hidden bg-surface">
+              <div className="bg-primary/40" style={{ width: `${(costs.materials / costs.revenue) * 100}%` }} />
+              <div className="bg-primary/70" style={{ width: `${(costs.labour / costs.revenue) * 100}%` }} />
+              <div
+                className="bg-success"
+                style={{ width: `${Math.max(0, (costs.profit / costs.revenue) * 100)}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-4 gap-4 mt-4 text-xs">
+              <Stat label="Materials" value={fmtGbp(costs.materials)} />
+              <Stat label="Work done" value={fmtGbp(costs.labour)} />
+              <Stat label="Profit kept" value={fmtGbp(costs.profit)} positive={costs.profit >= 0} />
+              <Stat label="Margin" value={`${costs.margin.toFixed(0)}%`} muted />
+            </div>
+          </>
+        ) : (
+          <div className="text-xs text-muted-foreground">
+            No materials or time recorded yet — add them on a job to see the split.
+          </div>
+        )}
       </div>
 
       {/* Service mix + Segment + Source */}
@@ -307,6 +394,9 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
                 </div>
                 <div className="text-[10px] text-muted-foreground mt-0.5">
                   {s.jobs} job{s.jobs === 1 ? "" : "s"} · avg {fmtGbp(s.revenue / s.jobs)}
+                  {byService.get(s.name)?.costedCount
+                    ? ` · ${fmtGbp(byService.get(s.name)!.totalCost)} cost · ${byService.get(s.name)!.margin.toFixed(0)}% margin`
+                    : ""}
                 </div>
               </div>
             ))}
@@ -390,6 +480,11 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
                     }}
                   />
                 </div>
+                {byArea.get(p.name)?.costedCount ? (
+                  <div className="text-[10px] text-muted-foreground mt-0.5">
+                    {byArea.get(p.name)!.margin.toFixed(0)}% margin · {fmtGbp(byArea.get(p.name)!.profit)} profit
+                  </div>
+                ) : null}
               </div>
             ))}
           </div>
@@ -457,17 +552,18 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
           <span className="text-sm font-medium">Customers who spend the most</span>
           <span className="text-xs text-muted-foreground">Period to date</span>
         </div>
-        <div className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/40">
+        <div className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr_1fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/40">
           <div>Customer</div>
           <div>Type</div>
           <div className="text-right">Jobs</div>
           <div className="text-right">Avg job</div>
           <div className="text-right">Revenue</div>
+          <div className="text-right">Margin</div>
         </div>
         {topCustomers.map((c, i) => (
           <div
             key={c.name}
-            className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+            className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr_1fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
           >
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs text-muted-foreground tabular-nums w-4">{i + 1}</span>
@@ -479,6 +575,9 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
             <div className="text-right tabular-nums">{c.jobs}</div>
             <div className="text-right tabular-nums text-muted-foreground">{fmtGbp(c.revenue / c.jobs)}</div>
             <div className="text-right tabular-nums font-medium">{fmtGbp(c.revenue)}</div>
+            <div className="text-right tabular-nums text-muted-foreground">
+              {byCustomer.get(c.name)?.costedCount ? `${byCustomer.get(c.name)!.margin.toFixed(0)}%` : "—"}
+            </div>
           </div>
         ))}
       </div>

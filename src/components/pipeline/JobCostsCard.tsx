@@ -4,6 +4,8 @@ import { timeOnSiteMinutes, useJobRecords } from "@/lib/fieldStore";
 import { fmt, quoteTotal } from "@/lib/quoteUtils";
 import { useQuotes } from "@/lib/quotesStore";
 import MaterialsList from "@/components/field/MaterialsList";
+import { jobs as allJobs } from "@/data/mockData";
+import { useCostReporting } from "@/lib/costReporting";
 
 /** What the job cost against what it's worth. */
 export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobValue?: number }) {
@@ -20,6 +22,10 @@ export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobVa
   const c = jobCosts({ quoteValue, materials, labourMinutes, labourRate: rate, labourSource });
   const usingTime = labourSource === "time";
 
+  // How this job compares with the margin you usually achieve.
+  const { totals: usual } = useCostReporting(allJobs);
+  const gap = c.margin - usual.margin;
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -33,6 +39,14 @@ export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobVa
         <Tile label="Profit" value={fmt(c.profit)} tone={c.profit >= 0 ? "good" : "bad"} />
         <Tile label="Margin" value={`${c.margin.toFixed(0)}%`} tone={c.margin >= 20 ? "good" : "bad"} />
       </div>
+
+      {usual.costedCount > 1 && c.quoteValue > 0 ? (
+        <p className="text-[11px] text-muted-foreground">
+          {Math.abs(gap) < 1
+            ? `In line with your usual ${usual.margin.toFixed(0)}% margin.`
+            : `${Math.abs(gap).toFixed(0)} points ${gap > 0 ? "above" : "below"} your usual ${usual.margin.toFixed(0)}% margin.`}
+        </p>
+      ) : null}
 
       <div className="rounded-lg border-hairline bg-surface px-3 py-2.5">
         <p className="text-xs font-semibold mb-1.5">How is the work priced?</p>
