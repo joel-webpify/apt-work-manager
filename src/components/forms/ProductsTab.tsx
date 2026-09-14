@@ -42,6 +42,8 @@ const blank = (): Product => ({
   trade: "General",
   unit: "each",
   price: 0,
+  cost: 0,
+  quantity: undefined,
   taxRate: 20,
   sku: "",
   imageUrl: "",
