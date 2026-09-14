@@ -750,18 +750,20 @@ function NextStepEditor({
   job: Job;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onSave: (text: string, due?: string) => void;
+  onSave: (text: string, due?: string, owner?: string) => void;
   trigger: React.ReactNode;
 }) {
   const [text, setText] = useState(job.nextAction ?? "");
   const [due, setDue] = useState(job.nextActionDue ?? "");
+  const [owner, setOwner] = useState(job.nextActionOwner ?? "");
 
   useEffect(() => {
     if (open) {
       setText(job.nextAction ?? "");
       setDue(job.nextActionDue ?? "");
+      setOwner(job.nextActionOwner ?? "");
     }
-  }, [open, job.nextAction, job.nextActionDue]);
+  }, [open, job.nextAction, job.nextActionDue, job.nextActionOwner]);
 
   const save = () => {
     onSave(text.trim(), due || undefined, owner || undefined);
