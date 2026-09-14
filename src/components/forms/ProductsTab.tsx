@@ -363,6 +363,29 @@ export function ProductsTab() {
                 />
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-3 items-end">
+              <div className="space-y-1.5">
+                <Label htmlFor="p-qty">Quantity in stock (optional)</Label>
+                <Input
+                  id="p-qty"
+                  type="number"
+                  value={draft.quantity ?? ""}
+                  placeholder="Leave blank if you don't track this"
+                  onChange={(e) =>
+                    setDraft({
+                      ...draft,
+                      quantity:
+                        e.target.value === "" ? undefined : Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <p className="text-xs text-muted-foreground pb-2">
+                {draft.price > 0 && (draft.cost ?? 0) > 0
+                  ? `You keep £${(draft.price - (draft.cost ?? 0)).toFixed(2)} (${Math.round(((draft.price - (draft.cost ?? 0)) / draft.price) * 100)}%) on each one.`
+                  : "Add a cost to see what you keep on each one."}
+              </p>
+            </div>
             <div className="flex items-center justify-between pt-1">
               <Label htmlFor="p-active" className="text-sm">
                 Active — available for quotes
