@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Package, Plus, Trash2 } from "lucide-react";
-import { products, type ProductUnit } from "@/data/mockData";
+import { products, type ProductKind, type ProductUnit } from "@/data/mockData";
 import {
   addMaterial,
+  materialKind,
   materialsCharge,
   materialsCost,
   removeMaterial,
@@ -12,24 +13,33 @@ import {
 import { fmt } from "@/lib/quoteUtils";
 
 const units: ProductUnit[] = ["each", "hour", "day", "sqm", "m", "visit"];
+const kindOf = (p: { kind?: ProductKind }): ProductKind => p.kind ?? "product";
 
 export default function MaterialsList({
   jobId,
   addedBy,
   readOnly,
   compact,
+  kind,
 }: {
   jobId: string;
   addedBy?: string;
   readOnly?: boolean;
   compact?: boolean;
+  /** Show only products or only services. Leave out for everything. */
+  kind?: ProductKind;
 }) {
-  const list = useMaterials(jobId);
+  const all = useMaterials(jobId);
+  const list = kind ? all.filter((m) => materialKind(m) === kind) : all;
   const [picking, setPicking] = useState(false);
+  const [pickKind, setPickKind] = useState<ProductKind | "all">(kind ?? "all");
   const cost = materialsCost(list);
   const charge = materialsCharge(list);
 
-  const catalogue = products.filter((p) => p.active);
+  const catalogue = products.filter(
+    (p) => p.active && (pickKind === "all" || kindOf(p) === pickKind),
+  );
+  const noun = kind === "service" ? "Work" : kind === "product" ? "Materials" : "Materials";
 
   return (
     <div className="space-y-3">
