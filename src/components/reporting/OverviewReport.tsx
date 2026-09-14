@@ -38,8 +38,8 @@ export function OverviewReport({ range, onOpenChannel }: { range: DateRange; onO
       {/* Headline tiles */}
       <div className="grid grid-cols-4 gap-3">
         <Tile icon={<PoundSterling className="w-3.5 h-3.5" />} label="Revenue won" value={fmtGbp(totals.revenue)} delta={11} accent />
-        <Tile icon={<PiggyBank className="w-3.5 h-3.5" />} label="Profit" value={fmtGbp(costs.profit)} />
-        <Tile icon={<Percent className="w-3.5 h-3.5" />} label="Margin" value={`${costs.margin.toFixed(0)}%`} />
+        <Tile icon={<PiggyBank className="w-3.5 h-3.5" />} label="Profit" value={fmtGbp(costs.profit)} delta={0} />
+        <Tile icon={<Percent className="w-3.5 h-3.5" />} label="Margin" value={`${costs.margin.toFixed(0)}%`} delta={0} />
         <Tile icon={<Briefcase className="w-3.5 h-3.5" />} label="Jobs booked" value={fmtNum(totals.jobs)} delta={7} />
         <Tile icon={<Users className="w-3.5 h-3.5" />} label="New leads" value={fmtNum(totals.leads)} delta={14} />
         <Tile icon={<Target className="w-3.5 h-3.5" />} label="Marketing spend" value={fmtGbp(totals.spend)} delta={5} invert />
