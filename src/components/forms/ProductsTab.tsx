@@ -167,7 +167,8 @@ export function ProductsTab() {
         </Select>
         <div className="flex-1" />
         <Btn variant="primary" onClick={startNew}>
-          <Plus className="w-3.5 h-3.5" /> New product
+          <Plus className="w-3.5 h-3.5" />{" "}
+          {kindFilter === "service" ? "New service" : "New product"}
         </Btn>
       </div>
 
