@@ -8,7 +8,21 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
-import { useStages, resolveStageName, colorToCss, firstStageOf, lastStageOf } from "@/lib/stagesStore";
+import {
+  planSteps,
+  planProgress,
+  nextStep,
+  setNextStep,
+  assignNextStep,
+  toggleStep,
+  updateStep,
+  removeStep,
+  addStep,
+  reorderSteps,
+  applyPlanPreset,
+  type PlanStep,
+} from "@/lib/jobPlan";
+
 
 import ScheduleView from "@/components/pipeline/ScheduleView";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
@@ -93,18 +107,22 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 /** How the next step on a job is doing. */
 type DueState = "none" | "overdue" | "today" | "later";
 function dueState(job: Job): DueState {
-  if (!job.nextAction?.trim()) return "none";
-  if (!job.nextActionDue) return "later";
+  const step = nextStep(job);
+  if (!step) return "none";
+  if (!step.due) return "later";
   const t = todayISO();
-  if (job.nextActionDue < t) return "overdue";
-  if (job.nextActionDue === t) return "today";
+  if (step.due < t) return "overdue";
+  if (step.due === t) return "today";
   return "later";
 }
 function dueLabel(job: Job): string {
-  if (!job.nextActionDue) return "no date";
+  return stepDueLabel(nextStep(job)?.due);
+}
+function stepDueLabel(dueISO?: string): string {
+  if (!dueISO) return "no date";
   const t = todayISO();
-  if (job.nextActionDue === t) return "today";
-  const d = new Date(job.nextActionDue + "T00:00:00");
+  if (dueISO === t) return "today";
+  const d = new Date(dueISO + "T00:00:00");
   const days = Math.round((d.getTime() - new Date(t + "T00:00:00").getTime()) / 86400000);
   if (days === 1) return "tomorrow";
   if (days === -1) return "1 day late";
@@ -116,6 +134,7 @@ function needsAttention(job: Job): boolean {
   const s = dueState(job);
   return s === "overdue" || s === "none" || job.daysInStage >= stuckFor(job.stage);
 }
+
 
 type PipelineTab = "sales" | "install" | "all";
 
