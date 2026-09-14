@@ -32,12 +32,14 @@ interface Props {
 export function ProductPickerDialog({ open, onOpenChange, onAdd }: Props) {
   const [query, setQuery] = useState("");
   const [trade, setTrade] = useState("all");
+  const [kind, setKind] = useState<ProductKind | "all">("all");
   const [picked, setPicked] = useState<string[]>([]);
 
   useEffect(() => {
     if (open) {
       setQuery("");
       setTrade("all");
+      setKind("all");
       setPicked([]);
     }
   }, [open]);
