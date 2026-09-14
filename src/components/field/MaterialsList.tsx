@@ -175,36 +175,63 @@ export default function MaterialsList({
 
       {picking && !readOnly && (
         <div className="rounded-lg border-hairline bg-surface p-2 max-h-64 overflow-auto space-y-1">
-          {catalogue.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => {
-                addMaterial(jobId, {
-                  productId: p.id,
-                  name: p.name,
-                  unit: p.unit,
-                  price: p.price,
-                  cost: Math.round(p.price * 0.6 * 100) / 100,
-                  taxRate: p.taxRate,
-                  addedBy,
-                });
-                setPicking(false);
-              }}
-              className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-hover"
-            >
-              <p className="text-sm font-medium">{p.name}</p>
-              <p className="text-[11px] text-muted-foreground">
-                {p.trade} · {fmt(p.price)} per {p.unit}
-              </p>
-            </button>
-          ))}
+          {!kind && (
+            <div className="flex gap-1 px-0.5 pb-1">
+              {(["all", "product", "service"] as const).map((k) => (
+                <button
+                  key={k}
+                  type="button"
+                  onClick={() => setPickKind(k)}
+                  className={`h-7 px-2.5 rounded-lg text-[11px] font-medium border-hairline ${
+                    pickKind === k
+                      ? "bg-primary text-primary-foreground border-primary"
+                      : "bg-background text-muted-foreground"
+                  }`}
+                >
+                  {k === "all" ? "All" : k === "product" ? "Products" : "Services"}
+                </button>
+              ))}
+            </div>
+          )}
+          {catalogue.length === 0 && (
+            <p className="px-2.5 py-2 text-xs text-muted-foreground">Nothing in the catalogue for this.</p>
+          )}
+          {catalogue.map((p) => {
+            const isService = kindOf(p) === "service";
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => {
+                  addMaterial(jobId, {
+                    productId: p.id,
+                    kind: kindOf(p),
+                    name: p.name,
+                    qty: isService && p.typicalHours && p.unit === "hour" ? p.typicalHours : 1,
+                    unit: p.unit,
+                    price: p.price,
+                    cost: p.cost ?? Math.round(p.price * 0.6 * 100) / 100,
+                    taxRate: p.taxRate,
+                    supplier: p.supplier,
+                    addedBy,
+                  });
+                  setPicking(false);
+                }}
+                className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-hover"
+              >
+                <p className="text-sm font-medium">{p.name}</p>
+                <p className="text-[11px] text-muted-foreground">
+                  {isService ? "Service" : "Product"} · {p.trade} · {fmt(p.price)} per {p.unit}
+                </p>
+              </button>
+            );
+          })}
         </div>
       )}
 
       {list.length > 0 && (
         <div className="flex items-center justify-between rounded-lg bg-surface px-3 py-2 text-xs">
-          <span className="text-muted-foreground">Materials cost</span>
+          <span className="text-muted-foreground">{noun} cost</span>
           <span className="font-semibold">{fmt(cost)}</span>
           <span className="text-muted-foreground">Charged on</span>
           <span className="font-semibold">{fmt(charge)}</span>
