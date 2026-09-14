@@ -1,4 +1,3 @@
-@import url('https://rsms.me/inter/inter.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -6,28 +5,28 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 0 0% 10%;
+    --foreground: 207 29% 13%;
 
-    --surface: 60 6% 97%;
-    --surface-hover: 60 6% 95%;
+    --surface: 210 25% 97%;
+    --surface-hover: 207 24% 94%;
 
     --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card-foreground: 207 29% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover-foreground: 207 29% 13%;
 
-    --primary: 240 60% 60%;
+    --primary: 204 53% 43%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 60 6% 97%;
-    --secondary-foreground: 0 0% 10%;
+    --secondary: 210 25% 97%;
+    --secondary-foreground: 207 29% 13%;
 
-    --muted: 60 6% 97%;
-    --muted-foreground: 0 0% 42%;
+    --muted: 210 25% 97%;
+    --muted-foreground: 207 12% 42%;
 
-    --accent: 60 6% 95%;
-    --accent-foreground: 0 0% 10%;
+    --accent: 207 24% 94%;
+    --accent-foreground: 207 29% 13%;
 
     --destructive: 9 78% 54%;
     --destructive-foreground: 0 0% 100%;
@@ -36,20 +35,20 @@
     --warning: 33 92% 47%;
     --info: 240 60% 60%;
 
-    --border: 60 4% 91%;
-    --input: 60 4% 91%;
-    --ring: 240 60% 60%;
+    --border: 207 17% 89%;
+    --input: 207 17% 89%;
+    --ring: 204 53% 43%;
 
     --radius: 0.5rem;
 
-    --sidebar-background: 60 6% 97%;
-    --sidebar-foreground: 0 0% 10%;
-    --sidebar-primary: 240 60% 60%;
+    --sidebar-background: 210 25% 97%;
+    --sidebar-foreground: 207 29% 13%;
+    --sidebar-primary: 204 53% 43%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 60 6% 95%;
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 60 4% 91%;
-    --sidebar-ring: 240 60% 60%;
+    --sidebar-accent: 207 24% 94%;
+    --sidebar-accent-foreground: 207 29% 13%;
+    --sidebar-border: 207 17% 89%;
+    --sidebar-ring: 204 53% 43%;
   }
 }
 
@@ -62,7 +61,7 @@
     border-color: hsl(var(--border));
   }
   html {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Figtree', system-ui, -apple-system, sans-serif;
     font-feature-settings: 'cv11', 'ss01';
     -webkit-font-smoothing: antialiased;
   }
@@ -72,6 +71,7 @@
     font-weight: 400;
   }
   h1, h2, h3, h4, h5, h6 {
+    font-family: 'Outfit', system-ui, -apple-system, sans-serif;
     font-weight: 500;
   }
 }
