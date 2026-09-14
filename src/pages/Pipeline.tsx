@@ -498,8 +498,10 @@ export default function Pipeline() {
                         onStep={(dir) => stepJob(job, dir)}
                         nextStepOpen={nextStepFor === job.id}
                         onNextStepOpenChange={(o) => setNextStepFor(o ? job.id : null)}
-                        onSaveNextStep={(text, due, owner) => updateJob(job.id, { nextAction: text, nextActionDue: due, nextActionOwner: owner })}
-                        onAssignNextStep={(employeeId) => updateJob(job.id, { nextActionOwner: employeeId })}
+                        onSaveNextStep={(text, due, owner) => updateJob(job.id, setNextStep(job, text, due, owner))}
+                        onAssignNextStep={(employeeId) => updateJob(job.id, assignNextStep(job, employeeId))}
+                        onToggleNextStep={() => { const s = nextStep(job); if (s) updateJob(job.id, toggleStep(job, s.id)); }}
+
                         handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
                         onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
