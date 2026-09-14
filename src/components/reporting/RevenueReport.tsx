@@ -14,6 +14,7 @@ import { Pill } from "@/components/layout/PageShell";
 
 import { jobs, contacts, type Job } from "@/data/mockData";
 import { rangeLabels, type DateRange } from "@/lib/reportingData";
+import { groupCosts, useCostReporting } from "@/lib/costReporting";
 
 /* ---------------- derived data ---------------- */
 
@@ -174,6 +175,23 @@ function fmtGbp(v: number, opts: { compact?: boolean } = {}) {
 export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
   const monthMax = Math.max(...months.map((m) => m.v), forecastNext);
   const collectionRate = (paidRevenue / (paidRevenue + invoicedOutstanding)) * 100 || 0;
+
+  const { rows: costRows, totals: costs } = useCostReporting(wonJobsList);
+
+  const byService = useMemo(
+    () => new Map(groupCosts(costRows, (r) => serviceCategory(r.job.service)).map((g) => [g.name, g])),
+    [costRows],
+  );
+  const byArea = useMemo(
+    () => new Map(groupCosts(costRows, (r) => postcodeKey(r.job)).map((g) => [g.name, g])),
+    [costRows],
+  );
+  const byCustomer = useMemo(
+    () => new Map(groupCosts(costRows, (r) => r.job.customer).map((g) => [g.name, g])),
+    [costRows],
+  );
+
+  const expectedProfit = Math.round(forecastNext * (costs.margin / 100));
 
   const momGrowth = useMemo(() => {
     const cur = months[months.length - 1].v;
