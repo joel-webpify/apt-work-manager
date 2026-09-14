@@ -8,7 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
+import { useStages, resolveStageName, colorToCss, firstStageOf, lastStageOf } from "@/lib/stagesStore";
 import {
+
   planSteps,
   planProgress,
   nextStep,
