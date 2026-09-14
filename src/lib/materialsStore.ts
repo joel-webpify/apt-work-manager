@@ -106,19 +106,47 @@ export function useMaterials(jobId: string): JobMaterial[] {
   return snap;
 }
 
+/** Product supplied vs service done. Missing = product. */
+export const materialKind = (m: JobMaterial): ProductKind => m.kind ?? "product";
+
+export const productLines = (list: JobMaterial[]) => list.filter((m) => materialKind(m) === "product");
+export const serviceLines = (list: JobMaterial[]) => list.filter((m) => materialKind(m) === "service");
+
 export function materialsCost(list: JobMaterial[]) {
   return list.reduce((sum, m) => sum + m.qty * m.cost, 0);
+}
+
+/** Just the things you supplied. */
+export function productsCost(list: JobMaterial[]) {
+  return materialsCost(productLines(list));
+}
+
+/** Just the work priced from the catalogue. */
+export function servicesCost(list: JobMaterial[]) {
+  return materialsCost(serviceLines(list));
 }
 
 export function materialsCharge(list: JobMaterial[]) {
   return list.filter((m) => m.chargeable).reduce((sum, m) => sum + m.qty * m.price, 0);
 }
 
+/** Where the labour figure comes from. */
+export type LabourSource = "time" | "services";
+
 export interface JobCosts {
   quoteValue: number;
+  /** Products supplied, at your cost. */
+  products: number;
+  /** Services picked from the catalogue, at your cost. */
+  services: number;
+  /** Everything added on site, products + services. */
   materials: number;
   labourHours: number;
+  /** Hours logged, priced at your labour rate. */
+  loggedLabour: number;
+  /** The labour figure actually counted in the total. */
   labour: number;
+  labourSource: LabourSource;
   totalCost: number;
   profit: number;
   margin: number;
@@ -129,12 +157,68 @@ export function jobCosts(opts: {
   materials: JobMaterial[];
   labourMinutes: number;
   labourRate: number;
+  labourSource?: LabourSource;
 }): JobCosts {
-  const materials = materialsCost(opts.materials);
+  const labourSource = opts.labourSource ?? "time";
+  const products = productsCost(opts.materials);
+  const services = servicesCost(opts.materials);
+  const materials = products + services;
   const labourHours = Math.round((opts.labourMinutes / 60) * 10) / 10;
-  const labour = labourHours * opts.labourRate;
-  const totalCost = materials + labour;
+  const loggedLabour = labourHours * opts.labourRate;
+  const labour = labourSource === "services" ? services : loggedLabour;
+  const totalCost = products + labour;
   const profit = opts.quoteValue - totalCost;
   const margin = opts.quoteValue > 0 ? (profit / opts.quoteValue) * 100 : 0;
-  return { quoteValue: opts.quoteValue, materials, labourHours, labour, totalCost, profit, margin };
+  return {
+    quoteValue: opts.quoteValue,
+    products,
+    services,
+    materials,
+    labourHours,
+    loggedLabour,
+    labour,
+    labourSource,
+    totalCost,
+    profit,
+    margin,
+  };
+}
+
+/** Which labour figure a job uses — remembered per job. */
+const SRC_KEY = "job-labour-source-v1";
+
+let sources: Record<string, LabourSource> = {};
+if (typeof window !== "undefined") {
+  try {
+    sources = JSON.parse(localStorage.getItem(SRC_KEY) || "{}");
+  } catch {
+    sources = {};
+  }
+}
+
+export function getLabourSource(jobId: string): LabourSource {
+  return sources[jobId] ?? "time";
+}
+
+export function setLabourSource(jobId: string, src: LabourSource) {
+  sources = { ...sources, [jobId]: src };
+  try {
+    localStorage.setItem(SRC_KEY, JSON.stringify(sources));
+  } catch {
+    /* ignore */
+  }
+  listeners.forEach((l) => l());
+}
+
+export function useLabourSource(jobId: string): [LabourSource, (s: LabourSource) => void] {
+  const [snap, setSnap] = useState(() => getLabourSource(jobId));
+  useEffect(() => {
+    const l = () => setSnap(getLabourSource(jobId));
+    l();
+    listeners.add(l);
+    return () => {
+      listeners.delete(l);
+    };
+  }, [jobId]);
+  return [snap, (s) => setLabourSource(jobId, s)];
 }
