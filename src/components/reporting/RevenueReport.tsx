@@ -9,6 +9,8 @@ import {
   Calendar,
   Repeat,
   MapPin,
+  Package,
+  PiggyBank,
 } from "lucide-react";
 import { Pill } from "@/components/layout/PageShell";
 
@@ -216,7 +218,7 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
 
 
       {/* Headline KPIs */}
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <Kpi
           icon={<PoundSterling className="w-3.5 h-3.5" />}
           label="Won revenue"
@@ -247,6 +249,34 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
           trend={+4.2}
           sub={`${billedJobs.length} billed jobs`}
         />
+        <Kpi
+          icon={<Package className="w-3.5 h-3.5" />}
+          label="Costs so far"
+          value={fmtGbp(costs.totalCost)}
+          sub={`${fmtGbp(costs.materials)} materials · ${fmtGbp(costs.labour)} work`}
+        />
+        <Kpi
+          icon={<PiggyBank className="w-3.5 h-3.5" />}
+          label="Profit"
+          value={fmtGbp(costs.profit)}
+          sub={`${costs.margin.toFixed(0)}% margin on costed jobs`}
+        />
+      </div>
+
+      {/* How much of the picture is real */}
+      <div className="border-hairline rounded-lg bg-card px-4 py-3 flex flex-wrap items-center gap-x-6 gap-y-2 text-xs">
+        <span className="font-medium">Costs recorded on {costs.costedCount} of {costRows.length} won jobs</span>
+        <div className="flex-1 min-w-[120px] h-1.5 bg-surface rounded-full overflow-hidden">
+          <div className="h-full rounded-full bg-primary" style={{ width: `${costs.coverage}%` }} />
+        </div>
+        {costs.uncostedCount > 0 ? (
+          <span className="text-muted-foreground">
+            {costs.uncostedCount} job{costs.uncostedCount === 1 ? "" : "s"} worth {fmtGbp(costs.uncostedValue)} still to be
+            costed — left out of the profit figures
+          </span>
+        ) : (
+          <span className="text-muted-foreground">Every won job has materials or time recorded.</span>
+        )}
       </div>
 
       {/* Trend + forecast */}
@@ -300,12 +330,43 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
             <span className="text-xs font-medium text-primary">May*</span>
           </div>
         </div>
-        <div className="mt-4 pt-3 border-t-hairline grid grid-cols-4 gap-4 text-xs">
+        <div className="mt-4 pt-3 border-t-hairline grid grid-cols-5 gap-4 text-xs">
           <Stat label="MoM growth" value={`${momGrowth >= 0 ? "+" : ""}${momGrowth.toFixed(1)}%`} positive={momGrowth >= 0} />
           <Stat label="Last 6 months" value={fmtGbp(months.reduce((a, m) => a + m.v, 0))} />
           <Stat label="Expected in May" value={fmtGbp(forecastNext)} />
+          <Stat label="Profit expected in May" value={fmtGbp(expectedProfit)} />
           <Stat label="Work in the pipeline" value={fmtGbp(pipelineRevenue + wipRevenue)} muted />
         </div>
+      </div>
+
+      {/* Where the money goes */}
+      <div className="border-hairline rounded-lg bg-card p-5">
+        <div className="text-sm font-medium mb-1">Where the money goes</div>
+        <div className="text-xs text-muted-foreground mb-4">
+          Based on the {costs.costedCount} won job{costs.costedCount === 1 ? "" : "s"} with real figures recorded
+        </div>
+        {costs.revenue > 0 ? (
+          <>
+            <div className="flex h-3 rounded-full overflow-hidden bg-surface">
+              <div className="bg-primary/40" style={{ width: `${(costs.materials / costs.revenue) * 100}%` }} />
+              <div className="bg-primary/70" style={{ width: `${(costs.labour / costs.revenue) * 100}%` }} />
+              <div
+                className="bg-success"
+                style={{ width: `${Math.max(0, (costs.profit / costs.revenue) * 100)}%` }}
+              />
+            </div>
+            <div className="grid grid-cols-4 gap-4 mt-4 text-xs">
+              <Stat label="Materials" value={fmtGbp(costs.materials)} />
+              <Stat label="Work done" value={fmtGbp(costs.labour)} />
+              <Stat label="Profit kept" value={fmtGbp(costs.profit)} positive={costs.profit >= 0} />
+              <Stat label="Margin" value={`${costs.margin.toFixed(0)}%`} muted />
+            </div>
+          </>
+        ) : (
+          <div className="text-xs text-muted-foreground">
+            No materials or time recorded yet — add them on a job to see the split.
+          </div>
+        )}
       </div>
 
       {/* Service mix + Segment + Source */}
