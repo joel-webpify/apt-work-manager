@@ -1856,7 +1856,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function MilestonesSection({
+/** The job plan: every step, its date and who's doing it. First unticked = next step. */
+function JobPlanSection({
   job,
   onUpdate,
   colorFor,
@@ -1866,31 +1867,23 @@ function MilestonesSection({
   colorFor: (n: string) => string;
 }) {
   const [draft, setDraft] = useState("");
-  const milestones = job.milestones ?? [];
-  const done = milestones.filter((m) => m.done).length;
-  const total = milestones.length;
-  const pct = total ? (done / total) * 100 : 0;
+  const [dragId, setDragId] = useState<string | null>(null);
+  const { steps, done, total, pct } = planProgress(job);
+  const next = steps.find((s) => !s.done);
   const stageColor = colorToCss(colorFor(job.stage));
 
-  const update = (next: NonNullable<Job["milestones"]>) => onUpdate({ milestones: next });
   const add = () => {
-    const label = draft.trim();
-    if (!label) return;
-    update([...milestones, { id: `ms-${Date.now()}`, label, done: false }]);
+    if (!draft.trim()) return;
+    onUpdate(addStep(job, draft));
     setDraft("");
-  };
-  const toggle = (id: string) => update(milestones.map((m) => (m.id === id ? { ...m, done: !m.done } : m)));
-  const remove = (id: string) => update(milestones.filter((m) => m.id !== id));
-  const applyPreset = (labels: string[]) => {
-    update(labels.map((l, i) => ({ id: `ms-${Date.now()}-${i}`, label: l, done: false })));
   };
 
   return (
-    <Section title="Milestones">
+    <Section title="Job plan">
       {total > 0 && (
         <div className="mb-3">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-            <span>{done} of {total} complete</span>
+            <span>{done} of {total} done</span>
             <span className="tabular-nums">{Math.round(pct)}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-surface-hover overflow-hidden">
@@ -1898,44 +1891,44 @@ function MilestonesSection({
           </div>
         </div>
       )}
-      {milestones.length === 0 ? (
+
+      {total === 0 ? (
         <div className="text-xs text-muted-foreground mb-3">
-          No milestones yet. Add steps to track progress, or pick a preset:
+          No steps yet. Add what needs doing, or start from a list:
           <div className="flex flex-wrap gap-1.5 mt-2">
-            <button onClick={() => applyPreset(["Site visit", "Quote sent", "Materials ordered", "Work scheduled", "Job complete"])} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Standard job</button>
-            <button onClick={() => applyPreset(["Survey", "Design approved", "Install day 1", "Install day 2", "Snagging"])} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Install</button>
-            <button onClick={() => applyPreset(["Arrived on site", "Work in progress", "Cleared up", "Customer sign-off"])} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Quick visit</button>
+            <button onClick={() => onUpdate(applyPlanPreset(["Site visit", "Quote sent", "Materials ordered", "Work scheduled", "Job complete"]))} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Standard job</button>
+            <button onClick={() => onUpdate(applyPlanPreset(["Survey", "Design approved", "Install day 1", "Install day 2", "Snagging"]))} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Install</button>
+            <button onClick={() => onUpdate(applyPlanPreset(["Arrived on site", "Work in progress", "Cleared up", "Customer sign-off"]))} className="text-[11px] px-2 py-1 rounded border-hairline hover:bg-surface-hover">Quick visit</button>
           </div>
         </div>
       ) : (
-        <ul className="space-y-1 mb-3">
-          {milestones.map((m) => (
-            <li key={m.id} className="group flex items-center gap-2 text-sm">
-              <button
-                onClick={() => toggle(m.id)}
-                className={`w-4 h-4 rounded border-hairline flex items-center justify-center shrink-0 ${m.done ? "bg-foreground text-background" : "bg-background"}`}
-                aria-label={m.done ? "Mark incomplete" : "Mark complete"}
-              >
-                {m.done && <Check className="w-3 h-3" strokeWidth={3} />}
-              </button>
-              <span className={`flex-1 ${m.done ? "line-through text-muted-foreground" : ""}`}>{m.label}</span>
-              <button
-                onClick={() => remove(m.id)}
-                className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded flex items-center justify-center hover:bg-surface-hover"
-                aria-label="Remove milestone"
-              >
-                <X className="w-3 h-3 text-muted-foreground" />
-              </button>
-            </li>
+        <ul className="space-y-1.5 mb-3">
+          {steps.map((s) => (
+            <PlanRow
+              key={s.id}
+              step={s}
+              isNext={next?.id === s.id}
+              dragging={dragId === s.id}
+              onDragStart={() => setDragId(s.id)}
+              onDragEnd={() => setDragId(null)}
+              onDropOn={() => {
+                if (dragId && dragId !== s.id) onUpdate(reorderSteps(job, dragId, s.id));
+                setDragId(null);
+              }}
+              onToggle={() => onUpdate(toggleStep(job, s.id))}
+              onChange={(change) => onUpdate(updateStep(job, s.id, change))}
+              onRemove={() => onUpdate(removeStep(job, s.id))}
+            />
           ))}
         </ul>
       )}
+
       <div className="flex gap-2">
         <Input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
-          placeholder="Add a milestone…"
+          placeholder="Add a step…"
           className="h-8"
         />
         <Button size="sm" variant="outline" className="h-8" onClick={add}>Add</Button>
@@ -1943,6 +1936,107 @@ function MilestonesSection({
     </Section>
   );
 }
+
+function PlanRow({
+  step,
+  isNext,
+  dragging,
+  onDragStart,
+  onDragEnd,
+  onDropOn,
+  onToggle,
+  onChange,
+  onRemove,
+}: {
+  step: PlanStep;
+  isNext: boolean;
+  dragging: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onDropOn: () => void;
+  onToggle: () => void;
+  onChange: (change: Partial<PlanStep>) => void;
+  onRemove: () => void;
+}) {
+  const overdue = !step.done && step.due && step.due < todayISO();
+  return (
+    <li
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={onDropOn}
+      className={`group rounded-lg border-hairline px-2.5 py-2 ${isNext ? "bg-background" : "bg-surface"} ${dragging ? "opacity-40" : ""}`}
+    >
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onToggle}
+          className={`w-4 h-4 rounded border-hairline flex items-center justify-center shrink-0 ${step.done ? "bg-foreground text-background" : "bg-background"}`}
+          aria-label={step.done ? "Mark not done" : "Mark done"}
+        >
+          {step.done && <Check className="w-3 h-3" strokeWidth={3} />}
+        </button>
+        <input
+          value={step.label}
+          onChange={(e) => onChange({ label: e.target.value })}
+          className={`flex-1 min-w-0 bg-transparent text-sm outline-none ${step.done ? "line-through text-muted-foreground" : ""}`}
+        />
+        {isNext && <Pill tone="info">Next</Pill>}
+        <button
+          onClick={onRemove}
+          className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 rounded flex items-center justify-center hover:bg-surface-hover shrink-0"
+          aria-label="Remove step"
+        >
+          <X className="w-3 h-3 text-muted-foreground" />
+        </button>
+      </div>
+      <div className="flex items-center gap-2 mt-1.5 pl-6">
+        <Input
+          type="date"
+          value={step.due ?? ""}
+          onChange={(e) => onChange({ due: e.target.value || undefined })}
+          className={`h-7 w-[140px] text-xs ${overdue ? "text-[hsl(var(--destructive))]" : ""}`}
+        />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              className="h-7 px-2 rounded-lg border-hairline bg-background inline-flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+              title="Who is doing this?"
+            >
+              {step.owner ? <OwnerAvatar id={step.owner} size={16} /> : <UserPlus className="w-3.5 h-3.5" />}
+              <span className="truncate max-w-[90px]">
+                {employees.find((e) => e.id === step.owner)?.name ?? "Assign"}
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-52">
+            {employees.map((e) => (
+              <DropdownMenuItem key={e.id} onClick={() => onChange({ owner: e.id })} className="gap-2 text-xs cursor-pointer">
+                <OwnerAvatar id={e.id} />
+                <span className="flex-1 truncate">{e.name}</span>
+                {step.owner === e.id && <Check className="w-3 h-3 text-muted-foreground" />}
+              </DropdownMenuItem>
+            ))}
+            {step.owner && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => onChange({ owner: undefined })} className="text-xs cursor-pointer text-muted-foreground">
+                  Unassign
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {step.due && !step.done && (
+          <span className={`text-[11px] ${overdue ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
+            {stepDueLabel(step.due)}
+          </span>
+        )}
+      </div>
+    </li>
+  );
+}
+
 
 
 
