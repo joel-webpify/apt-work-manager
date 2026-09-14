@@ -1519,7 +1519,7 @@ function JobDrawer({
               job={job}
               open={nextStepOpen}
               onOpenChange={setNextStepOpen}
-              onSave={(text, dueDate) => onUpdate({ nextAction: text, nextActionDue: dueDate })}
+              onSave={(text, dueDate, owner) => onUpdate({ nextAction: text, nextActionDue: dueDate, nextActionOwner: owner })}
               trigger={
                 <Button className="h-8 px-3 gap-1.5 text-xs shrink-0">
                   <Flag className="w-3.5 h-3.5" />
