@@ -664,7 +664,10 @@ function AllJobsView({
                     <td className="px-3 py-3 max-w-[200px]">
                       {job.nextAction ? (
                         <div className="min-w-0">
-                          <div className="text-xs truncate">{job.nextAction}</div>
+                          <div className="text-xs truncate flex items-center gap-1.5">
+                            <OwnerAvatar id={job.nextActionOwner} size={16} />
+                            <span className="truncate">{job.nextAction}</span>
+                          </div>
                           <div className={`text-[11px] mt-0.5 ${dueState(job) === "overdue" ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
                             {dueLabel(job)}
                           </div>
