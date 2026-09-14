@@ -322,9 +322,10 @@ export default function Pipeline() {
           </ToastAction>
         ),
       });
-    } else {
+    } else if (!nextStep(job)) {
       setNextStepFor(job.id);
     }
+
   };
 
   const moveToPipeline = (job: Job, target: "sales" | "install") =>
