@@ -826,7 +826,7 @@ function NextStepEditor({
               size="sm"
               variant="ghost"
               className="h-7 text-muted-foreground"
-              onClick={() => { onSave("", undefined); onOpenChange(false); }}
+              onClick={() => { onSave("", undefined, undefined); onOpenChange(false); }}
             >
               Clear
             </Button>
