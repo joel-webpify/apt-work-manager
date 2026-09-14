@@ -1,4 +1,4 @@
-import { jobCosts, useLabourSource, useMaterials, type LabourSource } from "@/lib/materialsStore";
+import { jobCosts, useLabourSource, useMaterials } from "@/lib/materialsStore";
 import { useLabourRate } from "@/lib/surveysStore";
 import { timeOnSiteMinutes, useJobRecords } from "@/lib/fieldStore";
 import { fmt, quoteTotal } from "@/lib/quoteUtils";
