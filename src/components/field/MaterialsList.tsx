@@ -44,7 +44,11 @@ export default function MaterialsList({
   return (
     <div className="space-y-3">
       {list.length === 0 && (
-        <p className="text-xs text-muted-foreground">Nothing added yet. Add what you used so the job costs are right.</p>
+        <p className="text-xs text-muted-foreground">
+          {kind === "service"
+            ? "No work added yet. Add the labour or visits done so the job costs are right."
+            : "Nothing added yet. Add what you used so the job costs are right."}
+        </p>
       )}
 
       {list.map((m) => (
