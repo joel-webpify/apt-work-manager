@@ -850,7 +850,7 @@ function NextStepEditor({
         </div>
         <div className="flex gap-1.5 pt-0.5">
           <Button size="sm" className="h-7 flex-1" onClick={save}>Save</Button>
-          {job.nextAction && (
+          {current && (
             <Button
               size="sm"
               variant="ghost"
@@ -891,7 +891,9 @@ function AssignMenu({
   onAssign: (employeeId?: string) => void;
   align?: "start" | "end";
 }) {
-  const current = employees.find((e) => e.id === job.nextActionOwner);
+  const ownerId = nextStep(job)?.owner;
+  const current = employees.find((e) => e.id === ownerId);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
