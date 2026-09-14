@@ -16,7 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { products as seedProducts, type Product } from "@/data/mockData";
+import {
+  products as seedProducts,
+  type Product,
+  type ProductKind,
+} from "@/data/mockData";
 import { fmt } from "@/lib/quoteUtils";
 
 interface Props {
