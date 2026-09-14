@@ -837,6 +837,65 @@ function NextStepEditor({
   );
 }
 
+/** Small round avatar for whoever owns the next step. */
+function OwnerAvatar({ id, size = 18 }: { id?: string; size?: number }) {
+  const emp = employees.find((e) => e.id === id);
+  if (!emp) return null;
+  return (
+    <span
+      title={emp.name}
+      className="rounded-full inline-flex items-center justify-center text-[9px] font-medium text-white shrink-0"
+      style={{ width: size, height: size, backgroundColor: `hsl(${emp.color})` }}
+    >
+      {emp.initials}
+    </span>
+  );
+}
+
+/** One-tap assignment of the next step to a team member. */
+function AssignMenu({
+  job,
+  onAssign,
+  align = "end",
+}: {
+  job: Job;
+  onAssign: (employeeId?: string) => void;
+  align?: "start" | "end";
+}) {
+  const current = employees.find((e) => e.id === job.nextActionOwner);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <button
+          draggable={false}
+          title={current ? `Assigned to ${current.name}` : "Assign to someone"}
+          className="h-6 shrink-0 rounded px-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+        >
+          {current ? <OwnerAvatar id={current.id} /> : <UserPlus className="w-3.5 h-3.5" />}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-52" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground">Who is doing this?</DropdownMenuLabel>
+        {employees.map((e) => (
+          <DropdownMenuItem key={e.id} draggable={false} onClick={() => onAssign(e.id)} className="gap-2 text-xs cursor-pointer">
+            <OwnerAvatar id={e.id} />
+            <span className="flex-1 truncate">{e.name}</span>
+            {job.nextActionOwner === e.id && <Check className="w-3 h-3 text-muted-foreground" />}
+          </DropdownMenuItem>
+        ))}
+        {job.nextActionOwner && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem draggable={false} onClick={() => onAssign(undefined)} className="text-xs cursor-pointer text-muted-foreground">
+              Unassign
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function BoardCard({
   job,
   stageColor,
