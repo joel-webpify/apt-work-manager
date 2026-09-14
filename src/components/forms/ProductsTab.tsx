@@ -123,12 +123,14 @@ export function ProductsTab() {
       </div>
 
       <div className="border-hairline rounded-lg bg-card overflow-hidden">
-        <div className="grid grid-cols-[2.4fr_1.2fr_0.8fr_1fr_0.8fr_0.6fr_auto] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
+        <div className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.6fr_auto] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/50">
           <div>Name</div>
           <div>Trade</div>
           <div>Unit</div>
+          <div className="text-right">Cost</div>
           <div className="text-right">Price</div>
           <div className="text-right">Tax</div>
+          <div className="text-right">Qty</div>
           <div>Status</div>
           <div></div>
         </div>
