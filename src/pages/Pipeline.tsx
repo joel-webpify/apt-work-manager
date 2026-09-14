@@ -213,13 +213,14 @@ export default function Pipeline() {
   /** Card whose "next step" editor should pop open (after a move). */
   const [nextStepFor, setNextStepFor] = useState<string | null>(null);
 
-  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "timeline">;
+  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "nextActionOwner" | "timeline">;
   const snapshotOf = (job: Job): Snapshot => ({
     pipelineId: job.pipelineId,
     stage: job.stage,
     daysInStage: job.daysInStage,
     nextAction: job.nextAction,
     nextActionDue: job.nextActionDue,
+    nextActionOwner: job.nextActionOwner,
     timeline: job.timeline,
   });
 
