@@ -33,6 +33,10 @@ export default function MaterialsList({
   const list = kind ? all.filter((m) => materialKind(m) === kind) : all;
   const [picking, setPicking] = useState(false);
   const [pickKind, setPickKind] = useState<ProductKind | "all">(kind ?? "all");
+  const [open, setOpen] = useState<string[]>([]);
+  const isOpen = (id: string) => open.includes(id);
+  const toggleOpen = (id: string) =>
+    setOpen((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   const cost = materialsCost(list);
   const charge = materialsCharge(list);
 
@@ -50,6 +54,37 @@ export default function MaterialsList({
             : "Nothing added yet. Add what you used so the job costs are right."}
         </p>
       )}
+
+      {list.filter((m) => !isOpen(m.id)).map((m) => (
+        <div key={m.id} className="rounded-lg border-hairline bg-surface px-3 py-2 flex items-center gap-2">
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-medium truncate">{m.name || "Untitled"}</p>
+            <p className="text-[11px] text-muted-foreground">
+              {m.qty} {m.unit} · cost {fmt(m.qty * m.cost)} · {m.chargeable ? `charged ${fmt(m.qty * m.price)}` : "not charged"}
+            </p>
+          </div>
+          {!readOnly && (
+            <>
+              <button
+                type="button"
+                onClick={() => toggleOpen(m.id)}
+                className="h-8 px-2.5 rounded-lg border-hairline bg-background text-xs font-medium shrink-0"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={() => removeMaterial(jobId, m.id)}
+                aria-label="Remove"
+                className="w-8 h-8 rounded-lg border-hairline bg-background inline-flex items-center justify-center shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
+        </div>
+      ))}
+
 
       {list.map((m) => (
         <div key={m.id} className="rounded-lg border-hairline bg-surface p-3 space-y-2">
