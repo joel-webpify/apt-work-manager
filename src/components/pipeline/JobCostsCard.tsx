@@ -4,6 +4,8 @@ import { timeOnSiteMinutes, useJobRecords } from "@/lib/fieldStore";
 import { fmt, quoteTotal } from "@/lib/quoteUtils";
 import { useQuotes } from "@/lib/quotesStore";
 import MaterialsList from "@/components/field/MaterialsList";
+import { jobs as allJobs } from "@/data/mockData";
+import { useCostReporting } from "@/lib/costReporting";
 
 /** What the job cost against what it's worth. */
 export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobValue?: number }) {
@@ -19,6 +21,10 @@ export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobVa
 
   const c = jobCosts({ quoteValue, materials, labourMinutes, labourRate: rate, labourSource });
   const usingTime = labourSource === "time";
+
+  // How this job compares with the margin you usually achieve.
+  const { totals: usual } = useCostReporting(allJobs);
+  const gap = c.margin - usual.margin;
 
   return (
     <div className="space-y-4">

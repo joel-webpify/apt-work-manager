@@ -199,6 +199,7 @@ function Tile({
   label,
   value,
   delta,
+  sub,
   accent,
   invert,
 }: {
