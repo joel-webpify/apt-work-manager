@@ -937,6 +937,8 @@ function BoardCard({
   onNextStepOpenChange,
   onSaveNextStep,
   onAssignNextStep,
+  onToggleNextStep,
+
   handover,
   onHandover,
   onStartEdit,
@@ -960,6 +962,8 @@ function BoardCard({
   onNextStepOpenChange: (o: boolean) => void;
   onSaveNextStep: (text: string, due?: string, owner?: string) => void;
   onAssignNextStep: (employeeId?: string) => void;
+  onToggleNextStep: () => void;
+
   handover?: "install" | "sales" | null;
   onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
