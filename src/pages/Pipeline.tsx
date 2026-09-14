@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
 import { PageHeader, Btn, StatusDot, Pill } from "@/components/layout/PageShell";
-import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock, MoreHorizontal, BriefcaseBusiness, Receipt, Activity } from "lucide-react";
+import { Plus, X, Phone, Mail, MapPin, LayoutGrid, List, Search, ArrowUpDown, AlertCircle, BarChart3, StickyNote, CalendarDays, Clock, Users, Settings2, Columns3, Pencil, Check, Handshake, Wrench, ArrowRight, Undo2, ChevronLeft, ChevronRight, MoveRight, Flag, CalendarClock, MoreHorizontal, BriefcaseBusiness, Receipt, Activity, UserPlus } from "lucide-react";
 import { ToastAction } from "@/components/ui/toast";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
@@ -213,13 +213,14 @@ export default function Pipeline() {
   /** Card whose "next step" editor should pop open (after a move). */
   const [nextStepFor, setNextStepFor] = useState<string | null>(null);
 
-  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "timeline">;
+  type Snapshot = Pick<Job, "pipelineId" | "stage" | "daysInStage" | "nextAction" | "nextActionDue" | "nextActionOwner" | "timeline">;
   const snapshotOf = (job: Job): Snapshot => ({
     pipelineId: job.pipelineId,
     stage: job.stage,
     daysInStage: job.daysInStage,
     nextAction: job.nextAction,
     nextActionDue: job.nextActionDue,
+    nextActionOwner: job.nextActionOwner,
     timeline: job.timeline,
   });
 
@@ -231,6 +232,7 @@ export default function Pipeline() {
       daysInStage: 0,
       nextAction: undefined,
       nextActionDue: undefined,
+      nextActionOwner: undefined,
       timeline: [...(j.timeline ?? []), { type: "note" as const, text: note, date: niceDate() }],
     });
     setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
@@ -478,7 +480,8 @@ export default function Pipeline() {
                         onStep={(dir) => stepJob(job, dir)}
                         nextStepOpen={nextStepFor === job.id}
                         onNextStepOpenChange={(o) => setNextStepFor(o ? job.id : null)}
-                        onSaveNextStep={(text, due) => updateJob(job.id, { nextAction: text, nextActionDue: due })}
+                        onSaveNextStep={(text, due, owner) => updateJob(job.id, { nextAction: text, nextActionDue: due, nextActionOwner: owner })}
+                        onAssignNextStep={(employeeId) => updateJob(job.id, { nextActionOwner: employeeId })}
                         handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
                         onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
@@ -661,7 +664,10 @@ function AllJobsView({
                     <td className="px-3 py-3 max-w-[200px]">
                       {job.nextAction ? (
                         <div className="min-w-0">
-                          <div className="text-xs truncate">{job.nextAction}</div>
+                          <div className="text-xs truncate flex items-center gap-1.5">
+                            <OwnerAvatar id={job.nextActionOwner} size={16} />
+                            <span className="truncate">{job.nextAction}</span>
+                          </div>
                           <div className={`text-[11px] mt-0.5 ${dueState(job) === "overdue" ? "text-[hsl(var(--destructive))]" : "text-muted-foreground"}`}>
                             {dueLabel(job)}
                           </div>
@@ -750,21 +756,23 @@ function NextStepEditor({
   job: Job;
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  onSave: (text: string, due?: string) => void;
+  onSave: (text: string, due?: string, owner?: string) => void;
   trigger: React.ReactNode;
 }) {
   const [text, setText] = useState(job.nextAction ?? "");
   const [due, setDue] = useState(job.nextActionDue ?? "");
+  const [owner, setOwner] = useState(job.nextActionOwner ?? "");
 
   useEffect(() => {
     if (open) {
       setText(job.nextAction ?? "");
       setDue(job.nextActionDue ?? "");
+      setOwner(job.nextActionOwner ?? "");
     }
-  }, [open, job.nextAction, job.nextActionDue]);
+  }, [open, job.nextAction, job.nextActionDue, job.nextActionOwner]);
 
   const save = () => {
-    onSave(text.trim(), due || undefined);
+    onSave(text.trim(), due || undefined, owner || undefined);
     onOpenChange(false);
   };
   const quick = (days: number) =>
@@ -788,6 +796,19 @@ function NextStepEditor({
         <div className="flex items-center gap-1.5">
           <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-8 text-xs" />
         </div>
+        <Select value={owner || "none"} onValueChange={(v) => setOwner(v === "none" ? "" : v)}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Not assigned" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none" className="text-xs">Not assigned</SelectItem>
+            {employees.map((e) => (
+              <SelectItem key={e.id} value={e.id} className="text-xs">
+                {e.name} — {e.role}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex gap-1">
           {[
             { label: "Today", d: 0 },
@@ -811,7 +832,7 @@ function NextStepEditor({
               size="sm"
               variant="ghost"
               className="h-7 text-muted-foreground"
-              onClick={() => { onSave("", undefined); onOpenChange(false); }}
+              onClick={() => { onSave("", undefined, undefined); onOpenChange(false); }}
             >
               Clear
             </Button>
@@ -819,6 +840,65 @@ function NextStepEditor({
         </div>
       </PopoverContent>
     </Popover>
+  );
+}
+
+/** Small round avatar for whoever owns the next step. */
+function OwnerAvatar({ id, size = 18 }: { id?: string; size?: number }) {
+  const emp = employees.find((e) => e.id === id);
+  if (!emp) return null;
+  return (
+    <span
+      title={emp.name}
+      className="rounded-full inline-flex items-center justify-center text-[9px] font-medium text-white shrink-0"
+      style={{ width: size, height: size, backgroundColor: `hsl(${emp.color})` }}
+    >
+      {emp.initials}
+    </span>
+  );
+}
+
+/** One-tap assignment of the next step to a team member. */
+function AssignMenu({
+  job,
+  onAssign,
+  align = "end",
+}: {
+  job: Job;
+  onAssign: (employeeId?: string) => void;
+  align?: "start" | "end";
+}) {
+  const current = employees.find((e) => e.id === job.nextActionOwner);
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+        <button
+          draggable={false}
+          title={current ? `Assigned to ${current.name}` : "Assign to someone"}
+          className="h-6 shrink-0 rounded px-1 inline-flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground hover:bg-background transition-colors"
+        >
+          {current ? <OwnerAvatar id={current.id} /> : <UserPlus className="w-3.5 h-3.5" />}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align={align} className="w-52" onClick={(e) => e.stopPropagation()}>
+        <DropdownMenuLabel className="text-[11px] text-muted-foreground">Who is doing this?</DropdownMenuLabel>
+        {employees.map((e) => (
+          <DropdownMenuItem key={e.id} draggable={false} onClick={() => onAssign(e.id)} className="gap-2 text-xs cursor-pointer">
+            <OwnerAvatar id={e.id} />
+            <span className="flex-1 truncate">{e.name}</span>
+            {job.nextActionOwner === e.id && <Check className="w-3 h-3 text-muted-foreground" />}
+          </DropdownMenuItem>
+        ))}
+        {job.nextActionOwner && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem draggable={false} onClick={() => onAssign(undefined)} className="text-xs cursor-pointer text-muted-foreground">
+              Unassign
+            </DropdownMenuItem>
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -836,6 +916,7 @@ function BoardCard({
   nextStepOpen,
   onNextStepOpenChange,
   onSaveNextStep,
+  onAssignNextStep,
   handover,
   onHandover,
   onStartEdit,
@@ -857,7 +938,8 @@ function BoardCard({
   onStep: (dir: -1 | 1) => void;
   nextStepOpen: boolean;
   onNextStepOpenChange: (o: boolean) => void;
-  onSaveNextStep: (text: string, due?: string) => void;
+  onSaveNextStep: (text: string, due?: string, owner?: string) => void;
+  onAssignNextStep: (employeeId?: string) => void;
   handover?: "install" | "sales" | null;
   onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
@@ -989,7 +1071,7 @@ function BoardCard({
       </div>
       <div className="text-sm font-medium truncate pr-20">{job.customer}</div>
       <div className="text-xs text-muted-foreground mt-0.5 truncate">{job.service}</div>
-      <div className="mt-2">
+      <div className="mt-2 flex items-center gap-1">
         <NextStepEditor
           job={job}
           open={nextStepOpen}
@@ -997,7 +1079,7 @@ function BoardCard({
           onSave={onSaveNextStep}
           trigger={
             <button
-              className={`w-full text-left text-xs inline-flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-background transition-colors ${
+              className={`flex-1 min-w-0 text-left text-xs inline-flex items-center gap-1.5 rounded px-1 -mx-1 py-0.5 hover:bg-background transition-colors ${
                 due === "overdue"
                   ? "text-[hsl(var(--destructive))] font-medium"
                   : due === "none"
@@ -1017,6 +1099,7 @@ function BoardCard({
             </button>
           }
         />
+        <AssignMenu job={job} onAssign={onAssignNextStep} />
       </div>
       <div className="flex items-center justify-between mt-2.5">
         <span className="text-sm font-medium tabular-nums">£{job.value}</span>
@@ -1441,7 +1524,7 @@ function JobDrawer({
               job={job}
               open={nextStepOpen}
               onOpenChange={setNextStepOpen}
-              onSave={(text, dueDate) => onUpdate({ nextAction: text, nextActionDue: dueDate })}
+              onSave={(text, dueDate, owner) => onUpdate({ nextAction: text, nextActionDue: dueDate, nextActionOwner: owner })}
               trigger={
                 <Button className="h-8 px-3 gap-1.5 text-xs shrink-0">
                   <Flag className="w-3.5 h-3.5" />
@@ -1458,6 +1541,7 @@ function JobDrawer({
             {job.nextAction || "No next step set"}
           </span>
           {job.nextAction && <span className="text-xs text-muted-foreground shrink-0">{dueLabel(job)}</span>}
+          <AssignMenu job={job} onAssign={(employeeId) => onUpdate({ nextActionOwner: employeeId })} />
         </div>
 
         {handover && onHandover && (
