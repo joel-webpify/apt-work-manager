@@ -1536,6 +1536,7 @@ function JobDrawer({
             {job.nextAction || "No next step set"}
           </span>
           {job.nextAction && <span className="text-xs text-muted-foreground shrink-0">{dueLabel(job)}</span>}
+          <AssignMenu job={job} onAssign={(employeeId) => onUpdate({ nextActionOwner: employeeId })} />
         </div>
 
         {handover && onHandover && (
