@@ -1063,7 +1063,7 @@ function BoardCard({
       </div>
       <div className="text-sm font-medium truncate pr-20">{job.customer}</div>
       <div className="text-xs text-muted-foreground mt-0.5 truncate">{job.service}</div>
-      <div className="mt-2">
+      <div className="mt-2 flex items-center gap-1">
         <NextStepEditor
           job={job}
           open={nextStepOpen}
