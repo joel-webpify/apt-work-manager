@@ -183,13 +183,25 @@ export default function MaterialsList({
             >
               {m.chargeable ? "Charged to customer" : "Not charged"}
             </button>
-            <span className="text-[11px] text-muted-foreground">
-              Cost {fmt(m.qty * m.cost)} · Charge {m.chargeable ? fmt(m.qty * m.price) : "—"}
-              {m.billedOn ? ` · on ${m.billedOn}` : ""}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">
+                Cost {fmt(m.qty * m.cost)} · Charge {m.chargeable ? fmt(m.qty * m.price) : "—"}
+                {m.billedOn ? ` · on ${m.billedOn}` : ""}
+              </span>
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => toggleOpen(m.id)}
+                  className="h-8 px-2.5 rounded-lg border-hairline bg-background text-[11px] font-medium"
+                >
+                  Done
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      ))}
+      )))}
+
 
       {!readOnly && (
         <div className="flex flex-wrap gap-2">
