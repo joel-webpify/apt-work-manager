@@ -34,6 +34,14 @@ export default function JobCostsCard({ jobId, jobValue }: { jobId: string; jobVa
         <Tile label="Margin" value={`${c.margin.toFixed(0)}%`} tone={c.margin >= 20 ? "good" : "bad"} />
       </div>
 
+      {usual.costedCount > 1 && c.quoteValue > 0 ? (
+        <p className="text-[11px] text-muted-foreground">
+          {Math.abs(gap) < 1
+            ? `In line with your usual ${usual.margin.toFixed(0)}% margin.`
+            : `${Math.abs(gap).toFixed(0)} points ${gap > 0 ? "above" : "below"} your usual ${usual.margin.toFixed(0)}% margin.`}
+        </p>
+      ) : null}
+
       <div className="rounded-lg border-hairline bg-surface px-3 py-2.5">
         <p className="text-xs font-semibold mb-1.5">How is the work priced?</p>
         <div className="flex flex-wrap gap-1.5">
