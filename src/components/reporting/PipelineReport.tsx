@@ -14,6 +14,7 @@ import {
 import { Pill, StatusDot } from "@/components/layout/PageShell";
 import { LeadVelocityCard } from "@/components/reporting/LeadVelocityCard";
 import { rangeLabels, type DateRange } from "@/lib/reportingData";
+import { useCostReporting } from "@/lib/costReporting";
 
 import {
   jobs as allJobs,
@@ -62,6 +63,9 @@ export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
   // For now mock data is a single snapshot, so range is a presentation control
   // — wiring the toggle so the UX is real even if values don't change.
   const jobs = allJobs;
+
+  // Margin actually achieved on jobs with real figures — used to value open work.
+  const { totals: costs } = useCostReporting(allJobs);
 
   const m = useMemo(() => {
     const total = jobs.length;
@@ -131,7 +135,11 @@ export function PipelineReport({ range = "30d" }: { range?: DateRange }) {
           icon={<Layers className="w-3.5 h-3.5" />}
           label="Pipeline value"
           value={fmt(m.pipelineValue)}
-          sub={`${m.byStage.filter((s) => !["Paid"].includes(s.stage)).reduce((a, s) => a + s.count, 0)} open jobs`}
+          sub={
+            costs.costedCount
+              ? `${fmt(Math.round(m.pipelineValue * (costs.margin / 100)))} profit expected at your ${costs.margin.toFixed(0)}% margin`
+              : `${m.byStage.filter((s) => !["Paid"].includes(s.stage)).reduce((a, s) => a + s.count, 0)} open jobs`
+          }
           trend={{ dir: "up", text: "+12.4% vs prev" }}
         />
         <Kpi
