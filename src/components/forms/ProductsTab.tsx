@@ -169,11 +169,17 @@ export function ProductsTab() {
             </div>
             <div className="text-muted-foreground">{p.trade}</div>
             <div className="text-muted-foreground">/ {p.unit}</div>
+            <div className="text-right tabular-nums text-muted-foreground">
+              {p.cost != null && p.cost > 0 ? `£${p.cost.toFixed(2)}` : "—"}
+            </div>
             <div className="text-right tabular-nums font-medium">
               £{p.price.toFixed(2)}
             </div>
             <div className="text-right text-muted-foreground tabular-nums">
               {p.taxRate}%
+            </div>
+            <div className="text-right tabular-nums text-muted-foreground">
+              {p.quantity != null ? p.quantity : "—"}
             </div>
             <div>
               {p.active ? (
