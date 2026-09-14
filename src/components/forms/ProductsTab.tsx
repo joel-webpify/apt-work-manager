@@ -143,7 +143,7 @@ export function ProductsTab() {
         {filtered.map((p) => (
           <div
             key={p.id}
-            className="grid grid-cols-[2.4fr_1.2fr_0.8fr_1fr_0.8fr_0.6fr_auto] px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+            className="grid grid-cols-[2.2fr_1fr_0.7fr_0.9fr_0.9fr_0.7fr_0.7fr_0.6fr_auto] px-4 h-12 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
           >
             <div className="min-w-0 flex items-center gap-2.5">
               {p.imageUrl ? (
