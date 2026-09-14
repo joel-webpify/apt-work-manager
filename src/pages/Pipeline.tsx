@@ -1091,6 +1091,7 @@ function BoardCard({
             </button>
           }
         />
+        <AssignMenu job={job} onAssign={onAssignNextStep} />
       </div>
       <div className="flex items-center justify-between mt-2.5">
         <span className="text-sm font-medium tabular-nums">£{job.value}</span>
