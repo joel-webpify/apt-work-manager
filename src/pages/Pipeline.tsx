@@ -790,6 +790,19 @@ function NextStepEditor({
         <div className="flex items-center gap-1.5">
           <Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="h-8 text-xs" />
         </div>
+        <Select value={owner || "none"} onValueChange={(v) => setOwner(v === "none" ? "" : v)}>
+          <SelectTrigger className="h-8 text-xs">
+            <SelectValue placeholder="Not assigned" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none" className="text-xs">Not assigned</SelectItem>
+            {employees.map((e) => (
+              <SelectItem key={e.id} value={e.id} className="text-xs">
+                {e.name} — {e.role}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex gap-1">
           {[
             { label: "Today", d: 0 },
