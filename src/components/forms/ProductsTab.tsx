@@ -445,38 +445,97 @@ export function ProductsTab() {
                   }
                 />
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-sku">SKU</Label>
-                <Input
-                  id="p-sku"
-                  value={draft.sku ?? ""}
-                  onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
-                />
-              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 items-end">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-qty">Quantity in stock (optional)</Label>
-                <Input
-                  id="p-qty"
-                  type="number"
-                  value={draft.quantity ?? ""}
-                  placeholder="Leave blank if you don't track this"
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      quantity:
-                        e.target.value === "" ? undefined : Number(e.target.value),
-                    })
-                  }
-                />
+
+            <p className="text-xs text-muted-foreground">
+              {draft.price > 0 && (draft.cost ?? 0) > 0
+                ? `You keep £${(draft.price - (draft.cost ?? 0)).toFixed(2)} (${Math.round(((draft.price - (draft.cost ?? 0)) / draft.price) * 100)}%) on each one.`
+                : "Add a cost to see what you keep on each one."}
+            </p>
+
+            {draftKind === "product" ? (
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-qty">In stock (optional)</Label>
+                  <Input
+                    id="p-qty"
+                    type="number"
+                    value={draft.quantity ?? ""}
+                    placeholder="Leave blank"
+                    onChange={(e) =>
+                      setDraft({
+                        ...draft,
+                        quantity:
+                          e.target.value === "" ? undefined : Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-sku">Product code</Label>
+                  <Input
+                    id="p-sku"
+                    value={draft.sku ?? ""}
+                    onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="p-sup">Supplier</Label>
+                  <Input
+                    id="p-sup"
+                    value={draft.supplier ?? ""}
+                    placeholder="Optional"
+                    onChange={(e) =>
+                      setDraft({ ...draft, supplier: e.target.value })
+                    }
+                  />
+                </div>
               </div>
-              <p className="text-xs text-muted-foreground pb-2">
-                {draft.price > 0 && (draft.cost ?? 0) > 0
-                  ? `You keep £${(draft.price - (draft.cost ?? 0)).toFixed(2)} (${Math.round(((draft.price - (draft.cost ?? 0)) / draft.price) * 100)}%) on each one.`
-                  : "Add a cost to see what you keep on each one."}
-              </p>
-            </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="p-hours">Typical time on site (hours)</Label>
+                    <Input
+                      id="p-hours"
+                      type="number"
+                      step="0.5"
+                      value={draft.typicalHours ?? ""}
+                      placeholder="Leave blank"
+                      onChange={(e) =>
+                        setDraft({
+                          ...draft,
+                          typicalHours:
+                            e.target.value === ""
+                              ? undefined
+                              : Number(e.target.value),
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="p-sku">Service code</Label>
+                    <Input
+                      id="p-sku"
+                      value={draft.sku ?? ""}
+                      onChange={(e) => setDraft({ ...draft, sku: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="p-matx" className="text-sm">
+                    Materials charged on top
+                  </Label>
+                  <Switch
+                    id="p-matx"
+                    checked={Boolean(draft.materialsExtra)}
+                    onCheckedChange={(v) =>
+                      setDraft({ ...draft, materialsExtra: v })
+                    }
+                  />
+                </div>
+              </div>
+            )}
             <div className="flex items-center justify-between pt-1">
               <Label htmlFor="p-active" className="text-sm">
                 Active — available for quotes
