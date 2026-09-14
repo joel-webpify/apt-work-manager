@@ -911,10 +911,11 @@ function AssignMenu({
           <DropdownMenuItem key={e.id} draggable={false} onClick={() => onAssign(e.id)} className="gap-2 text-xs cursor-pointer">
             <OwnerAvatar id={e.id} />
             <span className="flex-1 truncate">{e.name}</span>
-            {job.nextActionOwner === e.id && <Check className="w-3 h-3 text-muted-foreground" />}
+            {ownerId === e.id && <Check className="w-3 h-3 text-muted-foreground" />}
           </DropdownMenuItem>
         ))}
-        {job.nextActionOwner && (
+        {ownerId && (
+
           <>
             <DropdownMenuSeparator />
             <DropdownMenuItem draggable={false} onClick={() => onAssign(undefined)} className="text-xs cursor-pointer text-muted-foreground">
