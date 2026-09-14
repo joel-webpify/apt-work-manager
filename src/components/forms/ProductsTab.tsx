@@ -317,6 +317,18 @@ export function ProductsTab() {
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="space-y-1.5">
+                <Label htmlFor="p-cost">Cost to you (£)</Label>
+                <Input
+                  id="p-cost"
+                  type="number"
+                  step="0.01"
+                  value={draft.cost ?? 0}
+                  onChange={(e) =>
+                    setDraft({ ...draft, cost: Number(e.target.value) || 0 })
+                  }
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="p-price">Price (£)</Label>
                 <Input
                   id="p-price"
