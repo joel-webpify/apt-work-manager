@@ -72,11 +72,12 @@ export function ProductsTab() {
       (p.sku ?? "").toLowerCase().includes(q) ||
       (p.description ?? "").toLowerCase().includes(q);
     const matchT = tradeFilter === "all" || p.trade === tradeFilter;
-    return matchQ && matchT;
+    const matchK = kindFilter === "all" || kindOf(p) === kindFilter;
+    return matchQ && matchT && matchK;
   });
 
   const startNew = () => {
-    setDraft(blank());
+    setDraft(blank(kindFilter === "service" ? "service" : "product"));
     setEditingId(null);
     setOpen(true);
   };
