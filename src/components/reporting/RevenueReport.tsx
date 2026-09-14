@@ -136,6 +136,14 @@ const topPostcodes = postcodeRevenue.slice(0, 6);
 const postcodeTotal = postcodeRevenue.reduce((a, x) => a + x.revenue, 0);
 const postcodeMax = Math.max(...postcodeRevenue.map((x) => x.revenue), 1);
 
+// Won jobs, and the area each one belongs to — shared with the cost reporting
+const wonJobsList = jobs.filter((j) => wonStages.includes(j.stage));
+const contactPostcodes = new Map(contacts.map((c) => [c.id, c.postcode]));
+function postcodeKey(j: Job) {
+  const raw = j.postcode || contactPostcodes.get(j.contactId) || "";
+  return raw.split(" ")[0].toUpperCase() || "Unknown";
+}
+
 // Repeat vs one-off customer revenue (from won jobs)
 const repeatMix = (() => {
   const map = new Map<string, { revenue: number; jobs: number }>();
