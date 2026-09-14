@@ -552,17 +552,18 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
           <span className="text-sm font-medium">Customers who spend the most</span>
           <span className="text-xs text-muted-foreground">Period to date</span>
         </div>
-        <div className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/40">
+        <div className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr_1fr] px-4 h-9 items-center text-xs text-muted-foreground font-medium border-b-hairline bg-surface/40">
           <div>Customer</div>
           <div>Type</div>
           <div className="text-right">Jobs</div>
           <div className="text-right">Avg job</div>
           <div className="text-right">Revenue</div>
+          <div className="text-right">Margin</div>
         </div>
         {topCustomers.map((c, i) => (
           <div
             key={c.name}
-            className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
+            className="grid grid-cols-[2fr_1fr_0.8fr_1fr_1.2fr_1fr] px-4 h-11 items-center text-sm border-b-hairline last:border-b-0 hover:bg-surface-hover transition-colors"
           >
             <div className="flex items-center gap-2 min-w-0">
               <span className="text-xs text-muted-foreground tabular-nums w-4">{i + 1}</span>
@@ -574,6 +575,9 @@ export function RevenueReport({ range = "90d" }: { range?: DateRange }) {
             <div className="text-right tabular-nums">{c.jobs}</div>
             <div className="text-right tabular-nums text-muted-foreground">{fmtGbp(c.revenue / c.jobs)}</div>
             <div className="text-right tabular-nums font-medium">{fmtGbp(c.revenue)}</div>
+            <div className="text-right tabular-nums text-muted-foreground">
+              {byCustomer.get(c.name)?.costedCount ? `${byCustomer.get(c.name)!.margin.toFixed(0)}%` : "—"}
+            </div>
           </div>
         ))}
       </div>
