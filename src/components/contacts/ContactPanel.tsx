@@ -4,7 +4,7 @@ import {
   X, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle,
   Briefcase, Megaphone, ArrowUpRight, Package, ChevronDown, ChevronRight,
-  Phone, Copy, Check, CalendarDays, UserRound, Info, Workflow,
+  Phone, Copy, Check, CalendarDays, Info, Workflow,
 } from "lucide-react";
 import type { Contact, Job } from "@/data/mockData";
 import { employees } from "@/data/mockData";
@@ -339,7 +339,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
         </div>
       </aside>
 
-      <EditContactDialog contact={contact} open={editOpen} onOpenChange={setEditOpen} />
+      <EditContactDialog contact={currentContact} open={editOpen} onOpenChange={setEditOpen} />
       {drawerRef && <RefDrawer refItem={drawerRef} onClose={() => setDrawerRef(null)} />}
     </>
   );
@@ -407,6 +407,75 @@ function NextActionEditor({ note, date, onSave }: { note: string; date: string; 
 
 function Attribution({ source, mode }: { source: string; mode: "manual" | "automatic" }) {
   return <section className="rounded-md border-hairline bg-surface/50 p-3"><div className="mb-2 flex items-center justify-between"><SectionLabel>Traffic attribution</SectionLabel><Tooltip><TooltipTrigger asChild><span className="inline-flex cursor-help items-center gap-1 rounded border-hairline bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">TAGGED <Info className="h-2.5 w-2.5" /></span></TooltipTrigger><TooltipContent>{mode === "manual" ? "Manually assigned by a team member" : "Automatically captured from the visitor’s journey"}</TooltipContent></Tooltip></div><Row label="Source" value={safeAttribution(source)} /></section>;
+}
+
+function safeAttribution(source: string): string {
+  const value = source.trim();
+  if (!value) return "Direct / unknown";
+  const unsafe = /(^|\b)(localhost|127\.0\.0\.1|0\.0\.0\.0|::1)(\b|$)|-preview--|\.lovable\.app/i;
+  return unsafe.test(value) ? "Direct / unknown" : value;
+}
+
+function smsHref(phone: string): string | undefined {
+  const compact = phone.replace(/[\s()-]/g, "");
+  if (!/^(?:\+44|0044|07)\d{9}$/.test(compact)) return undefined;
+  return `sms:${compact}`;
+}
+
+function parseRecordedDate(value?: string): number | null {
+  if (!value || value === "—") return null;
+  const direct = Date.parse(value);
+  if (!Number.isNaN(direct)) return direct;
+  const withYear = Date.parse(`${value} ${new Date().getFullYear()}`);
+  return Number.isNaN(withYear) ? null : withYear;
+}
+
+function latestActivity(contact: Contact, history: Job[], contactQuotes: { issueDate: string; selection?: { acceptedAt?: string } }[]): number | null {
+  const candidates: number[] = [];
+  const lastJob = parseRecordedDate(contact.lastJob);
+  if (lastJob) candidates.push(lastJob);
+  history.forEach((job) => job.timeline.forEach((entry) => {
+    const at = parseRecordedDate(entry.date);
+    if (at) candidates.push(at);
+  }));
+  contactQuotes.forEach((quote) => {
+    const issued = parseRecordedDate(quote.issueDate);
+    const accepted = parseRecordedDate(quote.selection?.acceptedAt);
+    if (issued) candidates.push(issued);
+    if (accepted) candidates.push(accepted);
+  });
+  return candidates.length ? Math.max(...candidates) : null;
+}
+
+function formatDateTime(at: number): string {
+  return new Date(at).toLocaleString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function latestJobLabel(history: Job[]): string {
+  if (!history.length) return "No jobs yet";
+  const dated = history
+    .map((job) => ({ job, at: Math.max(0, ...job.timeline.map((entry) => parseRecordedDate(entry.date) ?? 0)) }))
+    .sort((a, b) => b.at - a.at);
+  const latest = dated[0]?.job;
+  return latest ? `${latest.service} · ${latest.stage}` : "No jobs yet";
+}
+
+function leadScoreFactors(contact: Contact, history: Job[], contactQuotes: { status: string }[]) {
+  const factors: { label: string; points: number }[] = [];
+  if (contactQuotes.length) factors.push({ label: "Submitted a quote", points: 15 });
+  if (history.some((job) => ["Completed", "Invoiced", "Paid"].includes(job.stage))) factors.push({ label: "Previous completed job", points: 20 });
+  if (contact.email) factors.push({ label: "Email address on file", points: 10 });
+  if (contact.phone) factors.push({ label: "Phone number on file", points: 10 });
+  if (contact.lifecycle === "Customer") factors.push({ label: "Existing customer", points: 15 });
+  if (history.length > 1) factors.push({ label: "Repeat work", points: 15 });
+  if (contact.totalSpend > 0) factors.push({ label: "Recorded customer spend", points: 15 });
+  return factors;
 }
 
 type TimelineRef = {
