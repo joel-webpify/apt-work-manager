@@ -14,6 +14,9 @@ export function TagEditor({ contactId, tags }: { contactId: string; tags: string
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
+      {tags.length === 0 && !adding && (
+        <span className="text-xs text-muted-foreground">No tags yet.</span>
+      )}
       {tags.map((t) => (
         <span
           key={t}

@@ -1,14 +1,22 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   X, Mail, MessageSquare, Plus, CheckCircle2, FileText, StickyNote, Pencil,
   Send, MailOpen, MousePointerClick, AlertTriangle,
   Briefcase, Megaphone, ArrowUpRight, Package, ChevronDown, ChevronRight,
+  Phone, Copy, Check, CalendarDays, UserRound, Info, Workflow,
 } from "lucide-react";
 import type { Contact, Job } from "@/data/mockData";
-import { jobs } from "@/data/mockData";
+import { employees } from "@/data/mockData";
 import { Pill } from "@/components/layout/PageShell";
 import { initials, avatarColor } from "@/lib/avatar";
-import { useContactExtras, updateContact } from "@/lib/contactsStore";
+import { updateContact, updateContactExtra, useContactExtras, type MarketingConsent } from "@/lib/contactsStore";
+import { useJobs } from "@/lib/jobsStore";
+import { useQuotes } from "@/lib/quotesStore";
+import { useWorkflows } from "@/lib/workflowsStore";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { toast } from "@/hooks/use-toast";
 import { EditContactDialog } from "./EditContactDialog";
 import { TagEditor } from "./TagEditor";
 import { RefDrawer, type DrawerRef } from "./RefDrawer";
@@ -17,18 +25,35 @@ type Tab = "Overview" | "Jobs" | "Activity" | "Notes";
 type ActivityFilter = "All" | "Email" | "Jobs" | "Notes";
 
 export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: () => void }) {
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("Overview");
   const [activityFilter, setActivityFilter] = useState<ActivityFilter>("All");
   const [editOpen, setEditOpen] = useState(false);
   const [drawerRef, setDrawerRef] = useState<DrawerRef | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
+  const [nextActionOpen, setNextActionOpen] = useState(false);
+  const [enrollOpen, setEnrollOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const extras = useContactExtras();
-  const tags = extras[contact.id]?.tags ?? [];
-  const history = jobs.filter((j) => j.contactId === contact.id);
-  const av = avatarColor(contact.email || contact.name);
-  const jobsMeta = useMemo(() => buildJobsMeta(contact, history), [contact, history]);
-  const leadSinceAt = useMemo(() => computeLeadSince(contact, jobsMeta), [contact, jobsMeta]);
+  const [allJobs] = useJobs();
+  const [quotes] = useQuotes();
+  const workflows = useWorkflows();
+  const extra = extras[contact.id] ?? {};
+  const currentContact = { ...contact, ...(extra.overrides ?? {}) };
+  const tags = extra.tags ?? [];
+  const history = allJobs.filter((j) => j.contactId === contact.id);
+  const av = avatarColor(currentContact.email || currentContact.name);
+  const jobsMeta = useMemo(() => buildJobsMeta(currentContact, history), [currentContact, history]);
+  const leadSinceAt = useMemo(() => computeLeadSince(currentContact, jobsMeta), [currentContact, jobsMeta]);
   const productSummary = useMemo(() => summarizeProducts(jobsMeta), [jobsMeta]);
-  const timeline = useMemo(() => buildTimeline(contact, jobsMeta), [contact, jobsMeta]);
+  const timeline = useMemo(() => buildTimeline(currentContact, jobsMeta), [currentContact, jobsMeta]);
+  const contactQuotes = quotes.filter((q) => q.contactId === contact.id);
+  const scoreFactors = leadScoreFactors(currentContact, history, contactQuotes);
+  const leadScore = scoreFactors.reduce((sum, factor) => sum + factor.points, 0);
+  const owner = employees.find((employee) => employee.id === extra.assignedRepId);
+  const enrolled = workflows.filter((workflow) => extra.automationIds?.includes(workflow.id));
+  const availableAutomations = workflows.filter((workflow) => workflow.active && !extra.automationIds?.includes(workflow.id));
+  const lastActivity = latestActivity(currentContact, history, contactQuotes);
   const visibleTimeline = useMemo(
     () => (activityFilter === "All" ? timeline : timeline.filter((e) => e.category === activityFilter)),
     [timeline, activityFilter],
@@ -56,24 +81,81 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
         <div className="px-5 pt-5 pb-4 border-b-hairline">
           <div className="flex items-center gap-3 mb-4">
             <div className={`w-12 h-12 rounded-xl flex items-center justify-center font-semibold text-sm ${av.bg} ${av.fg}`}>
-              {initials(contact.name)}
+               {initials(currentContact.name)}
             </div>
             <div className="min-w-0">
-              <h2 className="text-lg font-semibold truncate">{contact.name}</h2>
+               <h2 className="text-lg font-semibold truncate">{currentContact.name}</h2>
               <div className="flex items-center gap-2 mt-0.5">
-                <Pill tone={contact.lifecycle === "Customer" ? "success" : contact.lifecycle === "Lead" ? "info" : "neutral"}>
-                  {contact.lifecycle}
+                 <Pill tone={currentContact.lifecycle === "Customer" ? "success" : currentContact.lifecycle === "Lead" ? "info" : "neutral"}>
+                   {currentContact.lifecycle}
                 </Pill>
-                <span className="text-xs text-muted-foreground">{contact.type}</span>
+                 <label className="relative inline-flex items-center">
+                   <select
+                     aria-label="Contact type"
+                     value={currentContact.type}
+                     onChange={(event) => updateContact(contact.id, { type: event.target.value as Contact["type"] })}
+                     className="h-6 appearance-none rounded-md border-hairline bg-background pl-2 pr-6 text-xs font-medium focus:outline-none focus:border-primary/50"
+                   >
+                     <option>Residential</option>
+                     <option>Commercial</option>
+                   </select>
+                   <ChevronDown className="pointer-events-none absolute right-1.5 h-3 w-3 text-primary" />
+                 </label>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
-            <QuickAction icon={Mail} label="Email" href={`mailto:${contact.email}`} />
-            <QuickAction icon={MessageSquare} label="Chat" />
-            <QuickAction icon={Plus} label="New job" primary />
+           <div className="grid grid-cols-4 gap-2">
+             <QuickAction icon={Mail} label="Email" href={currentContact.email ? `mailto:${currentContact.email}` : undefined} disabled={!currentContact.email} disabledReason="Requires an email address on file" />
+             <QuickAction icon={Phone} label="Call" href={currentContact.phone ? `tel:${currentContact.phone}` : undefined} disabled={!currentContact.phone} disabledReason="Requires a phone number on file" />
+             <QuickAction icon={MessageSquare} label="Chat" href={smsHref(currentContact.phone)} disabled={!smsHref(currentContact.phone)} disabledReason="Requires an SMS number on file" />
+             <QuickAction icon={Plus} label="New project" primary onClick={() => { onClose(); navigate("/pipeline"); }} />
           </div>
+
+           <div className="mt-4 grid grid-cols-3 divide-x divide-border rounded-md border-hairline bg-surface/50">
+             <Popover>
+               <PopoverTrigger asChild>
+                 <button className="min-w-0 px-3 py-2 text-left hover:bg-surface-hover">
+                   <span className="block text-[10px] text-muted-foreground">Score</span>
+                   <span className="text-xs font-semibold text-primary">{leadScore}/100</span>
+                 </button>
+               </PopoverTrigger>
+               <PopoverContent align="start" className="w-64 p-3">
+                 <div className="mb-2 text-xs font-semibold">Score factors</div>
+                 <div className="space-y-2">
+                   {scoreFactors.map((factor) => (
+                     <div key={factor.label} className="flex items-center justify-between gap-3 text-xs">
+                       <span className="text-muted-foreground">{factor.label}</span>
+                       <span className="font-semibold text-primary">+{factor.points}</span>
+                     </div>
+                   ))}
+                 </div>
+               </PopoverContent>
+             </Popover>
+             <Popover>
+               <PopoverTrigger asChild>
+                 <button className="min-w-0 px-3 py-2 text-left hover:bg-surface-hover">
+                   <span className="block text-[10px] text-muted-foreground">Owner</span>
+                   <span className="block truncate text-xs font-medium">{owner?.name ?? "Unassigned"}</span>
+                 </button>
+               </PopoverTrigger>
+               <PopoverContent align="center" className="w-56 p-1">
+                 <PickerButton label="Unassigned" onClick={() => updateContactExtra(contact.id, { assignedRepId: undefined })} />
+                 {employees.map((employee) => <PickerButton key={employee.id} label={employee.name} onClick={() => updateContactExtra(contact.id, { assignedRepId: employee.id })} />)}
+               </PopoverContent>
+             </Popover>
+             <Popover open={nextActionOpen} onOpenChange={setNextActionOpen}>
+               <PopoverTrigger asChild>
+                 <button className="min-w-0 px-3 py-2 text-left hover:bg-surface-hover">
+                   <span className="block text-[10px] text-muted-foreground">Next action</span>
+                   <span className="block truncate text-xs font-medium">{extra.nextActionNote || "None set"}</span>
+                 </button>
+               </PopoverTrigger>
+               <PopoverContent align="end" className="w-72 p-3">
+                 <NextActionEditor note={extra.nextActionNote ?? ""} date={extra.nextActionDate ?? ""} onSave={(note, date) => { updateContactExtra(contact.id, { nextActionNote: note || undefined, nextActionDate: date || undefined }); setNextActionOpen(false); }} />
+               </PopoverContent>
+             </Popover>
+           </div>
 
           <div className="mt-4">
             <div className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-2">
@@ -102,15 +184,52 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
         <div className="flex-1 overflow-y-auto p-5">
           {tab === "Overview" && (
             <div className="space-y-5">
-              <div className="space-y-1.5 text-sm">
-                <Row label="Phone" value={contact.phone} />
-                <Row label="Email" value={contact.email} />
-                <Row label="Postcode" value={contact.postcode} />
-                <Row label="Lead source" value={contact.source} />
-                <Row label="Lead since" value={formatDate(leadSinceAt)} />
-                <Row label="Last job" value={contact.lastJob || "—"} />
-                <Row label="Total spend" value={`£${contact.totalSpend.toLocaleString()}`} />
-              </div>
+               <section>
+                 <SectionLabel>Overview</SectionLabel>
+                 <div className="space-y-2 text-sm">
+                   <Row label="Phone" value={currentContact.phone || "Not set"} />
+                   <div className="flex items-center justify-between gap-3">
+                     <span className="shrink-0 text-muted-foreground">Email</span>
+                     <div className="flex min-w-0 items-center gap-1.5">
+                       <span className="truncate font-medium">{currentContact.email || "Not set"}</span>
+                       {currentContact.email && <button aria-label="Copy email" className="shrink-0 rounded p-1 text-muted-foreground hover:bg-surface-hover hover:text-foreground" onClick={async () => { await navigator.clipboard.writeText(currentContact.email); setCopied(true); toast({ title: "Email copied" }); window.setTimeout(() => setCopied(false), 1500); }}>{copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}</button>}
+                     </div>
+                   </div>
+                   <Row label="Last activity" value={lastActivity ? `${relTime(lastActivity)} · ${formatDateTime(lastActivity)}` : "No activity yet"} />
+                   <Row label="Total spend" value={`£${currentContact.totalSpend.toLocaleString()}`} />
+                 </div>
+                 <button onClick={() => setMoreOpen((value) => !value)} className="mt-3 flex w-full items-center justify-between border-t-hairline pt-3 text-xs font-medium text-muted-foreground hover:text-foreground">
+                   More details {moreOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+                 </button>
+                 {moreOpen && <div className="mt-3 space-y-2 text-sm">
+                   <Row label="Location" value={currentContact.postcode || "Not set"} />
+                   <Row label="Record source" value={safeAttribution(currentContact.source)} />
+                   <Row label="Lead since" value={formatDate(leadSinceAt)} />
+                   <Row label="Last job in pipeline" value={latestJobLabel(history)} />
+                 </div>}
+               </section>
+
+               <Attribution source={currentContact.source} mode={extra.attributionMode ?? "manual"} />
+
+               <section>
+                 <SectionLabel>Marketing consent</SectionLabel>
+                 <select aria-label="Marketing consent" value={extra.marketingConsent ?? "not_set"} onChange={(event) => updateContactExtra(contact.id, { marketingConsent: event.target.value as MarketingConsent })} className="h-9 w-full rounded-md border-hairline bg-background px-2.5 text-sm focus:outline-none focus:border-primary/40">
+                   <option value="not_set">Not set</option>
+                   <option value="opted_in">Opted in</option>
+                   <option value="opted_out">Opted out</option>
+                 </select>
+               </section>
+
+               <section>
+                 <div className="mb-2 flex items-center justify-between">
+                   <SectionLabel>Email automations</SectionLabel>
+                   <button onClick={() => setEnrollOpen((value) => !value)} className="text-xs font-medium text-primary hover:underline">{enrolled.length ? "Add another" : "Browse automations →"}</button>
+                 </div>
+                 {enrolled.length === 0 ? <p className="text-sm text-muted-foreground">This contact has not been enrolled in any automations yet.</p> : <div className="space-y-1.5">{enrolled.map((workflow) => <div key={workflow.id} className="flex items-center gap-2 rounded-md border-hairline px-2.5 py-2 text-sm"><Workflow className="h-3.5 w-3.5 text-primary" /><span className="min-w-0 flex-1 truncate">{workflow.name}</span><button className="text-xs text-muted-foreground hover:text-foreground" onClick={() => updateContactExtra(contact.id, { automationIds: extra.automationIds?.filter((id) => id !== workflow.id) })}>Remove</button></div>)}</div>}
+                 {enrollOpen && <div className="mt-3 rounded-md border-hairline bg-surface/50 p-2.5">
+                   {extra.marketingConsent !== "opted_in" ? <div className="flex gap-2 text-xs text-[hsl(var(--destructive))]"><AlertTriangle className="h-3.5 w-3.5 shrink-0" /><span>Set marketing consent to Opted in before enrolling this contact.</span></div> : availableAutomations.length === 0 ? <p className="text-xs text-muted-foreground">No other active automations are available.</p> : <div className="space-y-1">{availableAutomations.map((workflow) => <PickerButton key={workflow.id} label={workflow.name} onClick={() => updateContactExtra(contact.id, { automationIds: [...(extra.automationIds ?? []), workflow.id] })} />)}</div>}
+                 </div>}
+               </section>
 
               {productSummary.length > 0 && (
                 <div>
@@ -209,8 +328,8 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
 
           {tab === "Notes" && (
             <textarea
-              key={contact.id}
-              defaultValue={contact.notes}
+               key={currentContact.id}
+               defaultValue={currentContact.notes}
               placeholder="Add a note…"
               maxLength={2000}
               onBlur={(e) => updateContact(contact.id, { notes: e.target.value })}
@@ -231,11 +350,17 @@ function QuickAction({
   label,
   href,
   primary,
+  disabled,
+  disabledReason,
+  onClick,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   href?: string;
   primary?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
+  onClick?: () => void;
 }) {
   const cls = `flex flex-col items-center gap-1.5 py-2.5 rounded-lg border-hairline transition-colors ${
     primary
@@ -248,11 +373,13 @@ function QuickAction({
       <span className="text-[10px] uppercase tracking-wide font-medium">{label}</span>
     </>
   );
-  return href ? (
+   const control = href && !disabled ? (
     <a href={href} className={cls}>{inner}</a>
   ) : (
-    <button className={cls}>{inner}</button>
+     <button onClick={onClick} disabled={disabled} className={`${cls} disabled:cursor-not-allowed disabled:opacity-45`}>{inner}</button>
   );
+   if (!disabled || !disabledReason) return control;
+   return <Tooltip><TooltipTrigger asChild><span className="block">{control}</span></TooltipTrigger><TooltipContent>{disabledReason}</TooltipContent></Tooltip>;
 }
 
 function Row({ label, value }: { label: string; value: string }) {
@@ -262,6 +389,24 @@ function Row({ label, value }: { label: string; value: string }) {
       <span className="font-medium text-right truncate">{value}</span>
     </div>
   );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{children}</div>;
+}
+
+function PickerButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return <button onClick={onClick} className="block w-full rounded px-2.5 py-2 text-left text-sm hover:bg-surface-hover">{label}</button>;
+}
+
+function NextActionEditor({ note, date, onSave }: { note: string; date: string; onSave: (note: string, date: string) => void }) {
+  const [draftNote, setDraftNote] = useState(note);
+  const [draftDate, setDraftDate] = useState(date);
+  return <div className="space-y-3"><div className="text-xs font-semibold">Next action</div><input autoFocus value={draftNote} onChange={(event) => setDraftNote(event.target.value)} placeholder="e.g. Call about quote" className="h-9 w-full rounded-md border-hairline bg-background px-2.5 text-sm focus:outline-none focus:border-primary/40" /><label className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /><input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} className="h-8 flex-1 rounded-md border-hairline bg-background px-2 text-sm text-foreground" /></label><button onClick={() => onSave(draftNote.trim(), draftDate)} className="h-8 w-full rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground">Save next action</button></div>;
+}
+
+function Attribution({ source, mode }: { source: string; mode: "manual" | "automatic" }) {
+  return <section className="rounded-md border-hairline bg-surface/50 p-3"><div className="mb-2 flex items-center justify-between"><SectionLabel>Traffic attribution</SectionLabel><Tooltip><TooltipTrigger asChild><span className="inline-flex cursor-help items-center gap-1 rounded border-hairline bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">TAGGED <Info className="h-2.5 w-2.5" /></span></TooltipTrigger><TooltipContent>{mode === "manual" ? "Manually assigned by a team member" : "Automatically captured from the visitor’s journey"}</TooltipContent></Tooltip></div><Row label="Source" value={safeAttribution(source)} /></section>;
 }
 
 type TimelineRef = {
