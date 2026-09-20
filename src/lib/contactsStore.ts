@@ -20,7 +20,18 @@ function write(list: Contact[]) {
   listeners.forEach((l) => l());
 }
 
-export type ContactExtra = { overrides?: Partial<Contact>; tags?: string[] };
+export type MarketingConsent = "opted_in" | "opted_out" | "not_set";
+
+export type ContactExtra = {
+  overrides?: Partial<Contact>;
+  tags?: string[];
+  assignedRepId?: string;
+  nextActionNote?: string;
+  nextActionDate?: string;
+  marketingConsent?: MarketingConsent;
+  automationIds?: string[];
+  attributionMode?: "manual" | "automatic";
+};
 type ExtrasMap = Record<string, ContactExtra>;
 
 function readExtras(): ExtrasMap {
@@ -33,6 +44,12 @@ function readExtras(): ExtrasMap {
 function writeExtras(map: ExtrasMap) {
   localStorage.setItem(EXTRAS_KEY, JSON.stringify(map));
   listeners.forEach((l) => l());
+}
+
+export function updateContactExtra(id: string, patch: Partial<ContactExtra>) {
+  const extras = readExtras();
+  extras[id] = { ...extras[id], ...patch };
+  writeExtras(extras);
 }
 
 export function useImportedContacts() {
