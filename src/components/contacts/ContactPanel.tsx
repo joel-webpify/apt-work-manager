@@ -44,7 +44,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
   const history = allJobs.filter((j) => j.contactId === contact.id);
   const av = avatarColor(currentContact.email || currentContact.name);
   const jobsMeta = useMemo(() => buildJobsMeta(currentContact, history), [currentContact, history]);
-  const leadSinceAt = useMemo(() => computeLeadSince(currentContact, jobsMeta), [currentContact, jobsMeta]);
+  const leadSinceAt = useMemo(() => computeLeadSince(currentContact, history), [currentContact, history]);
   const productSummary = useMemo(() => summarizeProducts(jobsMeta), [jobsMeta]);
   const timeline = useMemo(() => buildTimeline(currentContact, jobsMeta), [currentContact, jobsMeta]);
   const contactQuotes = quotes.filter((q) => q.contactId === contact.id);
@@ -62,7 +62,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
   return (
     <>
       <div className="fixed inset-0 bg-black/25 z-40 animate-fade-in" onClick={onClose} />
-      <aside className="fixed top-0 right-0 h-screen w-[460px] bg-background border-l-hairline z-50 flex flex-col animate-slide-in-right">
+       <aside className="fixed top-0 right-0 h-screen w-full sm:w-[460px] bg-background border-l-hairline z-50 flex flex-col animate-slide-in-right">
         <header className="h-14 px-5 flex items-center justify-between border-b-hairline">
           <span className="text-sm font-medium text-muted-foreground">Contact</span>
           <div className="flex items-center gap-1">
@@ -204,7 +204,7 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
                  {moreOpen && <div className="mt-3 space-y-2 text-sm">
                    <Row label="Location" value={currentContact.postcode || "Not set"} />
                    <Row label="Record source" value={safeAttribution(currentContact.source)} />
-                   <Row label="Lead since" value={formatDate(leadSinceAt)} />
+                   <Row label="Lead since" value={leadSinceAt ? formatDate(leadSinceAt) : "Not recorded"} />
                    <Row label="Last job in pipeline" value={latestJobLabel(history)} />
                  </div>}
                </section>
@@ -567,14 +567,11 @@ function buildJobsMeta(contact: Contact, history: Job[]): JobMeta[] {
   });
 }
 
-function computeLeadSince(contact: Contact, jobsMeta: JobMeta[]): number {
-  const day = 86400000;
-  const rnd = seeded(contact.id + ":lead");
-  if (jobsMeta.length === 0) {
-    return Date.now() - (5 + Math.floor(rnd() * 60)) * day;
-  }
-  const earliest = Math.min(...jobsMeta.map((j) => j.at));
-  return earliest - (3 + Math.floor(rnd() * 21)) * day;
+function computeLeadSince(contact: Contact, history: Job[]): number | null {
+  const dates = history.flatMap((job) => job.timeline.map((entry) => parseRecordedDate(entry.date)).filter((at): at is number => at !== null));
+  const lastJob = parseRecordedDate(contact.lastJob);
+  if (lastJob) dates.push(lastJob);
+  return dates.length ? Math.min(...dates) : null;
 }
 
 function summarizeProducts(jobsMeta: JobMeta[]) {
