@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
-import { useStages, resolveStageName, colorToCss, firstStageOf, lastStageOf } from "@/lib/stagesStore";
+import { useStages, resolveStageName, colorToCss, getPipelines } from "@/lib/stagesStore";
+import PipelineIcon from "@/components/pipeline/PipelineIcon";
 import {
 
   planSteps,
@@ -138,14 +139,18 @@ function needsAttention(job: Job): boolean {
 }
 
 
-type PipelineTab = "sales" | "install" | "all";
+/** A board id, or "all" for the combined list. */
+type PipelineTab = string;
 
 export default function Pipeline() {
   const [jobListRaw, setJobListInternal] = useJobs();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = (searchParams.get("pipeline") ?? "sales").toLowerCase();
-  const tab: PipelineTab = tabParam === "install" || tabParam === "all" ? (tabParam as PipelineTab) : "sales";
-  const activePipelineId = tab === "all" ? "sales" : tab;
+  const allPipelines = getPipelines();
+  const firstPipelineId = allPipelines[0]?.id ?? "sales";
+  const tabParam = (searchParams.get("pipeline") ?? firstPipelineId).toLowerCase();
+  const tab: PipelineTab =
+    tabParam === "all" || allPipelines.some((p) => p.id === tabParam) ? tabParam : firstPipelineId;
+  const activePipelineId = tab === "all" ? firstPipelineId : tab;
   const { pipelines, pipeline, stages: stageDefs, stageNames, colorFor, pipelineIdForStage: pipeFor } =
     useStages(activePipelineId);
 
