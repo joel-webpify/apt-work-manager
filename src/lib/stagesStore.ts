@@ -256,6 +256,41 @@ export function lastStageOf(pipelineId: PipelineId): string {
   return p?.stages[p.stages.length - 1]?.name ?? "";
 }
 
+export function getPipeline(pipelineId: PipelineId): Pipeline | undefined {
+  return state.pipelines.find((p) => p.id === pipelineId);
+}
+
+/** Add a board from a template. Returns the new board so callers can jump to it. */
+export function addPipeline(templateKey: string): Pipeline {
+  const tpl = PIPELINE_TEMPLATES.find((t) => t.key === templateKey) ?? PIPELINE_TEMPLATES[PIPELINE_TEMPLATES.length - 1];
+  const created = pipelineFromTemplate(tpl, state.pipelines);
+  state.pipelines = [...state.pipelines, created];
+  persist();
+  return created;
+}
+
+/** Remove a board. The last remaining board can't be removed. */
+export function removePipeline(pipelineId: PipelineId) {
+  if (state.pipelines.length <= 1) return;
+  state.pipelines = state.pipelines.filter((p) => p.id !== pipelineId);
+  persist();
+}
+
+export function movePipeline(pipelineId: PipelineId, dir: -1 | 1) {
+  const list = [...state.pipelines];
+  const i = list.findIndex((p) => p.id === pipelineId);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  state.pipelines = list;
+  persist();
+}
+
+export function updatePipeline(pipelineId: PipelineId, patch: Partial<Pick<Pipeline, "name" | "icon" | "color">>) {
+  state.pipelines = state.pipelines.map((p) => (p.id === pipelineId ? { ...p, ...patch } : p));
+  persist();
+}
+
 export const STAGE_COLOR_PRESETS: { label: string; value: string }[] = [
   { label: "Blue", value: "199 89% 48%" },
   { label: "Indigo", value: "239 84% 67%" },
