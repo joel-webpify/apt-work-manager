@@ -170,7 +170,7 @@ export default function PipelinesTab() {
               </Button>
             </div>
           </div>
-          <StageEditor pipelineId={p.id} />
+          <StageEditor pipelineId={p.id} showPipelineName={false} />
         </section>
       ))}
 
