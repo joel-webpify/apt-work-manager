@@ -68,14 +68,123 @@ function mkStage(name: string, prefix: string): Stage {
 }
 
 
+const SERVICE_STAGE_NAMES = ["Reported", "Booked in", "On site", "Fixed"];
+
+/** Icons a board can use. Stored by key; the UI maps these to lucide components. */
+export const PIPELINE_ICONS = [
+  "handshake",
+  "wrench",
+  "truck",
+  "calendar",
+  "clipboard",
+  "hammer",
+  "phone",
+  "star",
+] as const;
+export type PipelineIcon = (typeof PIPELINE_ICONS)[number];
+
+export interface PipelineTemplate {
+  key: string;
+  label: string;
+  description: string;
+  name: string;
+  icon: PipelineIcon;
+  color: string;
+  stageNames: string[];
+}
+
+export const PIPELINE_TEMPLATES: PipelineTemplate[] = [
+  {
+    key: "sales",
+    label: "Sales",
+    description: "Enquiry through to won",
+    name: "Sales",
+    icon: "handshake",
+    color: "199 89% 48%",
+    stageNames: SALES_STAGE_NAMES,
+  },
+  {
+    key: "install",
+    label: "Installation",
+    description: "Booking the work in and getting it done",
+    name: "Installation",
+    icon: "wrench",
+    color: "239 84% 67%",
+    stageNames: INSTALL_STAGE_NAMES,
+  },
+  {
+    key: "service",
+    label: "Service & repairs",
+    description: "Call-outs and fixes",
+    name: "Service & repairs",
+    icon: "hammer",
+    color: "25 95% 53%",
+    stageNames: SERVICE_STAGE_NAMES,
+  },
+  {
+    key: "blank",
+    label: "Blank board",
+    description: "Start with one stage and build it up",
+    name: "New board",
+    icon: "clipboard",
+    color: "215 16% 47%",
+    stageNames: ["First stage"],
+  },
+];
+
+function slug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "board";
+}
+
+function pipelineFromTemplate(tpl: PipelineTemplate, existing: Pipeline[]): Pipeline {
+  let id = slug(tpl.name);
+  if (existing.some((p) => p.id === id)) id = `${id}-${Math.random().toString(36).slice(2, 6)}`;
+  return {
+    id,
+    name: existing.some((p) => p.name === tpl.name) ? `${tpl.name} (copy)` : tpl.name,
+    icon: tpl.icon,
+    color: tpl.color,
+    stages: tpl.stageNames.map((n) => mkStage(n, id)),
+  };
+}
+
 function defaultState(): State {
   return {
     pipelines: [
-      { id: "sales", name: "Sales", stages: SALES_STAGE_NAMES.map((n) => mkStage(n, "sales")) },
-      { id: "install", name: "Installation", stages: INSTALL_STAGE_NAMES.map((n) => mkStage(n, "install")) },
+      {
+        id: "sales",
+        name: "Sales",
+        icon: "handshake",
+        color: "199 89% 48%",
+        stages: SALES_STAGE_NAMES.map((n) => mkStage(n, "sales")),
+      },
+      {
+        id: "install",
+        name: "Installation",
+        icon: "wrench",
+        color: "239 84% 67%",
+        stages: INSTALL_STAGE_NAMES.map((n) => mkStage(n, "install")),
+      },
     ],
     renames: {},
   };
+}
+
+const DEFAULT_LOOK: Record<string, { icon: PipelineIcon; color: string }> = {
+  sales: { icon: "handshake", color: "199 89% 48%" },
+  install: { icon: "wrench", color: "239 84% 67%" },
+};
+
+/** Older saved boards have no icon/colour — fill sensible ones in. */
+function withLook(pipelines: Pipeline[]): Pipeline[] {
+  return pipelines.map((p, i) => ({
+    ...p,
+    icon: p.icon ?? DEFAULT_LOOK[p.id]?.icon ?? PIPELINE_ICONS[i % PIPELINE_ICONS.length],
+    color:
+      p.color ??
+      DEFAULT_LOOK[p.id]?.color ??
+      STAGE_COLOR_PRESETS[i % STAGE_COLOR_PRESETS.length].value,
+  }));
 }
 
 function load(): State {
@@ -86,14 +195,16 @@ function load(): State {
   } catch {
     /* ignore */
   }
-  try {
-    const raw = localStorage.getItem(PIPELINES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Pipeline[];
-      if (Array.isArray(parsed) && parsed.length) return { pipelines: parsed, renames };
+  for (const key of [PIPELINES_KEY, LEGACY_PIPELINES_KEY]) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Pipeline[];
+        if (Array.isArray(parsed) && parsed.length) return { pipelines: withLook(parsed), renames };
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
   }
   return { ...defaultState(), renames };
 }
