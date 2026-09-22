@@ -175,15 +175,14 @@ const DEFAULT_LOOK: Record<string, { icon: PipelineIcon; color: string }> = {
   install: { icon: "wrench", color: "239 84% 67%" },
 };
 
+const BOARD_COLOR_CYCLE = ["199 89% 48%", "239 84% 67%", "25 95% 53%", "142 71% 45%", "271 91% 65%", "173 80% 40%"];
+
 /** Older saved boards have no icon/colour — fill sensible ones in. */
 function withLook(pipelines: Pipeline[]): Pipeline[] {
   return pipelines.map((p, i) => ({
     ...p,
     icon: p.icon ?? DEFAULT_LOOK[p.id]?.icon ?? PIPELINE_ICONS[i % PIPELINE_ICONS.length],
-    color:
-      p.color ??
-      DEFAULT_LOOK[p.id]?.color ??
-      STAGE_COLOR_PRESETS[i % STAGE_COLOR_PRESETS.length].value,
+    color: p.color ?? DEFAULT_LOOK[p.id]?.color ?? BOARD_COLOR_CYCLE[i % BOARD_COLOR_CYCLE.length],
   }));
 }
 
