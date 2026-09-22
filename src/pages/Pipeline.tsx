@@ -556,7 +556,7 @@ function AllJobsView({
   onOpenPipeline,
 }: {
   jobs: Job[];
-  pipelines: { id: string; name: string; stages: { name: string }[] }[];
+  pipelines: PipelineLite[];
   colorFor: (n: string) => string;
   onSelect: (j: Job) => void;
   onOpenPipeline: (id: string) => void;
