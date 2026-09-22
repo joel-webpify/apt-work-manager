@@ -226,9 +226,8 @@ export default function Pipeline() {
   };
 
   // ---- Moving jobs ----------------------------------------------------------
-  const salesLastStage = lastStageOf("sales");
-  const installFirstStage = firstStageOf("install");
-  const salesFirstStage = firstStageOf("sales");
+  const nameOfPipeline = (id?: string) => pipelines.find((p) => p.id === (id ?? firstPipelineId))?.name ?? "";
+
 
   /** Jobs that just arrived somewhere new, so you can spot them on the board. */
   const [recentlyMoved, setRecentlyMoved] = useState<string[]>([]);
