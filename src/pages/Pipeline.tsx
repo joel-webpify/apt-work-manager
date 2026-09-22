@@ -324,12 +324,8 @@ export default function Pipeline() {
     if (job) moveJob(job, stage, activePipelineId);
   };
 
-  const canHandOver = (job: Job) => job.pipelineId === "sales" && job.stage === salesLastStage;
-  const canReturn = (job: Job) => job.pipelineId === "install" && job.stage === installFirstStage;
-
-  const counts = {
-    sales: jobList.filter((j) => j.pipelineId === "sales").length,
-    install: jobList.filter((j) => j.pipelineId === "install").length,
+  const counts: Record<string, number> = {
+    ...Object.fromEntries(pipelines.map((p) => [p.id, jobList.filter((j) => j.pipelineId === p.id).length])),
     all: jobList.length,
   };
   const attentionCount = boardJobs.filter(needsAttention).length;
