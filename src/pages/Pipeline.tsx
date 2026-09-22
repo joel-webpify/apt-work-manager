@@ -376,19 +376,22 @@ export default function Pipeline() {
         }
       />
 
-      {/* Pipeline switcher */}
-      <div className="px-8 border-b-hairline flex items-center gap-1">
+      {/* Board switcher */}
+      <div className="px-8 border-b-hairline flex items-center gap-1 overflow-x-auto">
         {pipelines.map((p) => (
           <button
             key={p.id}
-            onClick={() => setTab(p.id as PipelineTab)}
-            className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 ${
-              tab === p.id ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+            onClick={() => setTab(p.id)}
+            style={tab === p.id ? { borderColor: colorToCss(p.color ?? "199 89% 48%") } : undefined}
+            className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 shrink-0 ${
+              tab === p.id ? "text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {p.id === "sales" ? <Handshake className="w-3.5 h-3.5" /> : <Wrench className="w-3.5 h-3.5" />}
+            <span style={{ color: colorToCss(p.color ?? "199 89% 48%") }}>
+              <PipelineIcon icon={p.icon} className="w-3.5 h-3.5" />
+            </span>
             {p.name}
-            <span className="text-xs text-muted-foreground">{counts[p.id as "sales" | "install"] ?? 0}</span>
+            <span className="text-xs text-muted-foreground">{counts[p.id] ?? 0}</span>
           </button>
         ))}
         <button
@@ -423,7 +426,7 @@ export default function Pipeline() {
           pipelines={pipelines}
           colorFor={colorFor}
           onSelect={setSelected}
-          onOpenPipeline={(id) => setTab(id as PipelineTab)}
+          onOpenPipeline={(id) => setTab(id)}
         />
       )}
 
@@ -468,9 +471,6 @@ export default function Pipeline() {
                         onSaveNextStep={(text, due, owner) => updateJob(job.id, setNextStep(job, text, due, owner))}
                         onAssignNextStep={(employeeId) => updateJob(job.id, assignNextStep(job, employeeId))}
                         onToggleNextStep={() => { const s = nextStep(job); if (s) updateJob(job.id, toggleStep(job, s.id)); }}
-
-                        handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
-                        onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
                         onCancelEdit={() => setEditingCardId(null)}
                         onSaveEdit={(patch) => { updateJob(job.id, patch); setEditingCardId(null); }}
@@ -509,14 +509,15 @@ export default function Pipeline() {
         <JobDrawer
           job={selected}
           stageNames={
-            (pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.stages ?? stageDefs).map((s) => s.name)
+            (pipelines.find((p) => p.id === (selected.pipelineId ?? firstPipelineId))?.stages ?? stageDefs).map(
+              (s) => s.name,
+            )
           }
           colorFor={colorFor}
           pipelines={pipelines}
           onMove={(stage, pipelineId) => moveJob(selected, stage, pipelineId)}
-          pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.name}
-          handover={canHandOver(selected) ? "install" : canReturn(selected) ? "sales" : null}
-          onHandover={(target) => moveToPipeline(selected, target)}
+          pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? firstPipelineId))?.name}
+          pipelineIcon={pipelines.find((p) => p.id === (selected.pipelineId ?? firstPipelineId))?.icon}
           onClose={() => setSelected(null)}
           onUpdate={(patch) => {
             updateJob(selected.id, patch);
