@@ -238,7 +238,6 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
                     <div className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground">
                       Products purchased
                     </div>
-                    <span className="text-[10px] text-muted-foreground">For retargeting</span>
                   </div>
                   <div className="space-y-1">
                     {productSummary.map((p) => (
