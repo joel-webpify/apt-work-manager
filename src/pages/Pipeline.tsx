@@ -266,7 +266,7 @@ export default function Pipeline() {
       ...snap,
       timeline: [
         ...(snap.timeline ?? []),
-        { type: "note" as const, text: "Handover undone", date: niceDate() },
+        { type: "note" as const, text: "Move undone", date: niceDate() },
       ],
     });
     setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
@@ -275,51 +275,25 @@ export default function Pipeline() {
   };
 
   /**
-   * The one way a job changes stage or side. Handles the timeline note, the
-   * automatic handover when a sale is won, and keeps the open panel in sync.
+   * The one way a job changes stage or board. Writes the timeline note, offers
+   * an undo when it crosses to another board, and keeps the open panel in sync.
    */
   const moveJob = (job: Job, stage: string, pipelineId?: string, note?: string) => {
     const target = pipelineId ?? job.pipelineId ?? pipeFor(stage);
-    const from = job.pipelineId ?? "sales";
+    const from = job.pipelineId ?? firstPipelineId;
     if (job.stage === stage && from === target) return;
     const snap = snapshotOf(job);
     const crossed = target !== from;
-    const label =
-      note ??
-      (crossed
-        ? target === "install"
-          ? "Handed over to installation"
-          : "Sent back to sales"
-        : `Moved to ${stage}`);
+    const label = note ?? (crossed ? `Moved to ${nameOfPipeline(target)} — ${stage}` : `Moved to ${stage}`);
 
     applyMove(job.id, target, stage, label);
     runLifecycle(job.id, stage);
 
-    // Winning a sale hands the job to installation by itself — undoable.
-    if (!crossed && target === "sales" && stage === salesLastStage && installFirstStage) {
-      applyMove(job.id, "install", installFirstStage, "Won — handed over to installation");
-      runLifecycle(job.id, installFirstStage);
-      flash(job.id);
-      topToast({
-        title: "Handed over to installation",
-        description: `${job.customer} is won and now sitting in “${installFirstStage}”.`,
-        action: (
-          <ToastAction altText="Undo the handover" onClick={() => restore(job.id, snap)}>
-            Undo
-          </ToastAction>
-        ),
-      });
-      return;
-    }
-
     if (crossed) {
       flash(job.id);
       topToast({
-        title: label,
-        description:
-          target === "install"
-            ? `${job.customer} is now in the installation pipeline at “${stage}”.`
-            : `${job.customer} is back with sales at “${stage}”.`,
+        title: `Moved to ${nameOfPipeline(target)}`,
+        description: `${job.customer} is now at “${stage}”.`,
         action: (
           <ToastAction altText="Undo the move" onClick={() => restore(job.id, snap)}>
             Undo
@@ -332,15 +306,8 @@ export default function Pipeline() {
 
   };
 
-  const moveToPipeline = (job: Job, target: "sales" | "install") =>
-    moveJob(
-      job,
-      (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as string,
-      target,
-    );
-
   const stepJob = (job: Job, dir: -1 | 1) => {
-    const list = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"))?.stages ?? [];
+    const list = pipelines.find((p) => p.id === (job.pipelineId ?? firstPipelineId))?.stages ?? [];
     const i = list.findIndex((s) => s.name === job.stage);
     const next = list[i + dir];
     if (i < 0 || !next) return;
