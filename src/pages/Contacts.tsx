@@ -131,6 +131,27 @@ export default function Contacts() {
       <PageBody>
         <ContactKpis contacts={contacts} />
 
+        {lsaLeads.length > 0 && !lsaDismissed && (
+          <div className="mb-4 border-hairline rounded-lg bg-card px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">{lsaLeads.length} LSA leads ready to sort</div>
+              <p className="text-xs text-muted-foreground">
+                Each Google Local Services lead can become a contact, a contact with a job, or be deleted.
+              </p>
+            </div>
+            <Btn variant="primary" onClick={() => setLsaOpen(true)}>Review leads</Btn>
+            <button
+              onClick={() => { dismissLsaBanner(); setLsaDismissed(true); }}
+              className="h-8 px-2 text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" /> Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mb-4">
           <div className="flex-1 relative max-w-md">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
