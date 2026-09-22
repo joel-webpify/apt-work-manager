@@ -14,6 +14,7 @@ import { updateContact, updateContactExtra, useContactExtras, type MarketingCons
 import { useJobs } from "@/lib/jobsStore";
 import { useQuotes } from "@/lib/quotesStore";
 import { useWorkflows } from "@/lib/workflowsStore";
+import { useChannelGroups, groupForSource } from "@/lib/channelGroups";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/hooks/use-toast";
@@ -405,8 +406,68 @@ function NextActionEditor({ note, date, onSave }: { note: string; date: string; 
   return <div className="space-y-3"><div className="text-xs font-semibold">Next action</div><input autoFocus value={draftNote} onChange={(event) => setDraftNote(event.target.value)} placeholder="e.g. Call about quote" className="h-9 w-full rounded-md border-hairline bg-background px-2.5 text-sm focus:outline-none focus:border-primary/40" /><label className="flex items-center gap-2 text-xs text-muted-foreground"><CalendarDays className="h-3.5 w-3.5" /><input type="date" value={draftDate} onChange={(event) => setDraftDate(event.target.value)} className="h-8 flex-1 rounded-md border-hairline bg-background px-2 text-sm text-foreground" /></label><button onClick={() => onSave(draftNote.trim(), draftDate)} className="h-8 w-full rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground">Save next action</button></div>;
 }
 
+const KNOWN_ATTRIBUTION: Record<string, { source: string; medium: string; campaign?: string }> = {
+  "google ads": { source: "google", medium: "cpc", campaign: "brand-uk" },
+  "local service ads": { source: "google", medium: "lsa", campaign: "local-services" },
+  "lsa": { source: "google", medium: "lsa", campaign: "local-services" },
+  "facebook": { source: "facebook", medium: "social", campaign: "spring-offer" },
+  "facebook ads": { source: "facebook", medium: "social", campaign: "spring-offer" },
+  "instagram": { source: "instagram", medium: "social", campaign: "spring-offer" },
+  "website form": { source: "direct", medium: "none" },
+  "direct": { source: "direct", medium: "none" },
+  "referral": { source: "referral", medium: "word-of-mouth" },
+  "word of mouth": { source: "referral", medium: "word-of-mouth" },
+  "google business": { source: "gbp", medium: "referral" },
+  "newsletter": { source: "newsletter", medium: "email", campaign: "may-digest" },
+  "email": { source: "newsletter", medium: "email" },
+  "seo": { source: "google", medium: "organic" },
+  "google organic": { source: "google", medium: "organic" },
+};
+
+/** Split "source / medium / campaign" style values, then fall back to the known-source map. */
+function attributionDetails(raw: string): { source: string; medium: string; campaign?: string } {
+  const clean = safeAttribution(raw);
+  if (clean === "Direct / unknown") return { source: "direct", medium: "none" };
+  const parts = clean.split("/").map((part) => part.trim()).filter(Boolean);
+  if (parts.length >= 2) return { source: parts[0], medium: parts[1], campaign: parts[2] };
+  const known = KNOWN_ATTRIBUTION[clean.toLowerCase()];
+  if (known) return known;
+  return { source: clean, medium: "—" };
+}
+
 function Attribution({ source, mode }: { source: string; mode: "manual" | "automatic" }) {
-  return <section className="rounded-md border-hairline bg-surface/50 p-3"><div className="mb-2 flex items-center justify-between"><SectionLabel>Traffic attribution</SectionLabel><Tooltip><TooltipTrigger asChild><span className="inline-flex cursor-help items-center gap-1 rounded border-hairline bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">TAGGED <Info className="h-2.5 w-2.5" /></span></TooltipTrigger><TooltipContent>{mode === "manual" ? "Manually assigned by a team member" : "Automatically captured from the visitor’s journey"}</TooltipContent></Tooltip></div><Row label="Source" value={safeAttribution(source)} /></section>;
+  const [groups] = useChannelGroups();
+  const details = attributionDetails(source);
+  const group = groupForSource(source, groups) ?? groupForSource(details.source, groups);
+  return (
+    <section className="rounded-md border-hairline bg-surface/50 p-3">
+      <div className="mb-2 flex items-center justify-between">
+        <SectionLabel>Traffic attribution</SectionLabel>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-help items-center gap-1 rounded border-hairline bg-background px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">TAGGED <Info className="h-2.5 w-2.5" /></span>
+          </TooltipTrigger>
+          <TooltipContent>{mode === "manual" ? "Manually assigned by a team member" : "Automatically captured from the visitor’s journey"}</TooltipContent>
+        </Tooltip>
+      </div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <span className="text-[10px] uppercase tracking-wide font-medium text-muted-foreground">Channel group</span>
+          {group ? (
+            <span className="inline-flex items-center gap-1.5 font-medium">
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: `hsl(${group.color})` }} />
+              {group.name}
+            </span>
+          ) : (
+            <span className="font-medium text-muted-foreground">Ungrouped</span>
+          )}
+        </div>
+        <Row label="Source" value={details.source} />
+        <Row label="Medium" value={details.medium} />
+        <Row label="Campaign" value={details.campaign ?? "—"} />
+      </div>
+    </section>
+  );
 }
 
 function safeAttribution(source: string): string {
