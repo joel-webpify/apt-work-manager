@@ -354,12 +354,17 @@ export function useStages(pipelineId?: PipelineId) {
       state.renames = { ...state.renames, [oldName]: trimmed };
       persist();
     },
-    renamePipeline: (name: string) => {
+    renamePipeline: (name: string, id?: PipelineId) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      state.pipelines = state.pipelines.map((p) => (p.id === targetId ? { ...p, name: trimmed } : p));
+      const which = id ?? targetId;
+      state.pipelines = state.pipelines.map((p) => (p.id === which ? { ...p, name: trimmed } : p));
       persist();
     },
+    addPipeline,
+    removePipeline,
+    movePipeline,
+    updatePipeline,
     setStageColor: (id: string, color: string) => {
       state.pipelines = state.pipelines.map((p) => ({
         ...p,
