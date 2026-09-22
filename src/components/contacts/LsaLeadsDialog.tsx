@@ -42,7 +42,7 @@ export function LsaLeadsDialog({
       customer: lead.name,
       service: lead.service,
       value: 0,
-      stage: firstStageOf("sales"),
+      stage: firstStageOf("sales") as Job["stage"],
       pipelineId: "sales",
       daysInStage: 0,
       address: lead.postcode,
