@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, Plus, Upload, Mail, ArrowUpDown, Users } from "lucide-react";
+import { Search, Plus, Upload, Mail, ArrowUpDown, Users, Briefcase, X } from "lucide-react";
+import { LsaLeadsDialog } from "@/components/contacts/LsaLeadsDialog";
+import { useLsaLeads, dismissLsaBanner, isLsaBannerDismissed } from "@/lib/lsaLeadsStore";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
 import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
@@ -31,6 +33,10 @@ export default function Contacts() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const [advFilters, setAdvFilters] = useState<ContactFilterState>(emptyFilters);
+
+  const lsaLeads = useLsaLeads();
+  const [lsaOpen, setLsaOpen] = useState(false);
+  const [lsaDismissed, setLsaDismissed] = useState(isLsaBannerDismissed);
 
   const imported = useImportedContacts();
   const extras = useContactExtras();
@@ -272,6 +278,7 @@ export default function Contacts() {
       {selected && <ContactPanel contact={selected} onClose={() => setSelected(null)} />}
       <EditContactDialog contact={null} open={createOpen} onOpenChange={setCreateOpen} mode="create" />
       <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
+      <LsaLeadsDialog open={lsaOpen} onOpenChange={setLsaOpen} />
     </>
   );
 }
