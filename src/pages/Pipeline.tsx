@@ -571,7 +571,7 @@ function AllJobsView({
     <div className="flex-1 overflow-auto px-8 py-6">
       <div className="grid gap-3 sm:grid-cols-3 mb-5">
         {pipelines.map((p) => {
-          const list = jobs.filter((j) => (j.pipelineId ?? "sales") === p.id);
+          const list = jobs.filter((j) => (j.pipelineId ?? pipelines[0]?.id) === p.id);
           return (
             <button
               key={p.id}
@@ -628,7 +628,7 @@ function AllJobsView({
               </tr>
             ) : (
               filtered.map((job) => {
-                const pipe = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"));
+                const pipe = pipelines.find((p) => p.id === (job.pipelineId ?? pipelines[0]?.id));
                 return (
                   <tr
                     key={job.id}
@@ -638,9 +638,11 @@ function AllJobsView({
                     <td className="px-3 py-3 font-medium">{job.customer}</td>
                     <td className="px-3 py-3 text-muted-foreground">{job.service}</td>
                     <td className="px-3 py-3">
-                      <Pill tone={pipe?.id === "install" ? "info" : "neutral"}>
-                        {pipe?.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
-                        {pipe?.name ?? "Sales"}
+                      <Pill tone="neutral">
+                        <span style={{ color: colorToCss(pipe?.color ?? "215 16% 47%") }}>
+                          <PipelineIcon icon={pipe?.icon} className="w-3 h-3" />
+                        </span>
+                        {pipe?.name ?? "Board"}
                       </Pill>
                     </td>
                     <td className="px-3 py-3">
@@ -683,7 +685,7 @@ function AllJobsView({
 }
 
 
-type PipelineLite = { id: string; name: string; stages: { name: string }[] };
+type PipelineLite = { id: string; name: string; icon?: string; color?: string; stages: { name: string }[] };
 
 /** Pick any stage — on this board or the other one — in a single tap. */
 function MoveJobMenu({
@@ -701,7 +703,7 @@ function MoveJobMenu({
   trigger: React.ReactNode;
   align?: "start" | "end";
 }) {
-  const currentPipe = job.pipelineId ?? "sales";
+  const currentPipe = job.pipelineId ?? pipelines[0]?.id;
   const ordered = [...pipelines].sort((a, b) => (a.id === currentPipe ? -1 : b.id === currentPipe ? 1 : 0));
   return (
     <DropdownMenu>
@@ -713,7 +715,9 @@ function MoveJobMenu({
           <div key={p.id}>
             {idx > 0 && <DropdownMenuSeparator />}
             <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
-              {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+              <span style={{ color: colorToCss(p.color ?? "215 16% 47%") }}>
+                <PipelineIcon icon={p.icon} className="w-3 h-3" />
+              </span>
               {p.name}
             </DropdownMenuLabel>
             {p.stages.map((s) => {
@@ -918,8 +922,6 @@ function BoardCard({
   onAssignNextStep,
   onToggleNextStep,
 
-  handover,
-  onHandover,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
@@ -943,8 +945,6 @@ function BoardCard({
   onAssignNextStep: (employeeId?: string) => void;
   onToggleNextStep: () => void;
 
-  handover?: "install" | "sales" | null;
-  onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSaveEdit: (patch: Partial<Job>) => void;
@@ -1002,7 +1002,7 @@ function BoardCard({
   const step = nextStep(job);
   const plan = planProgress(job);
 
-  const currentPipe = job.pipelineId ?? "sales";
+  const currentPipe = job.pipelineId ?? pipelines[0]?.id;
 
 
   return (
@@ -1045,7 +1045,9 @@ function BoardCard({
                     <div key={p.id}>
                       {idx > 0 && <DropdownMenuSeparator />}
                       <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
-                        {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+                        <span style={{ color: colorToCss(p.color ?? "215 16% 47%") }}>
+                          <PipelineIcon icon={p.icon} className="w-3 h-3" />
+                        </span>
                         {p.name}
                       </DropdownMenuLabel>
                       {p.stages.map((s) => {
@@ -1186,22 +1188,6 @@ function BoardCard({
             {job.assignments[0].date.slice(5)}
           </span>
         </div>
-      )}
-      {handover && onHandover && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onHandover(handover); }}
-          className={`mt-2.5 w-full h-7 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors ${
-            handover === "install"
-              ? "bg-primary text-primary-foreground hover:opacity-90"
-              : "border-hairline text-muted-foreground hover:text-foreground hover:bg-background"
-          }`}
-        >
-          {handover === "install" ? (
-            <><ArrowRight className="w-3 h-3" /> Send to installation</>
-          ) : (
-            <><Undo2 className="w-3 h-3" /> Return to sales</>
-          )}
-        </button>
       )}
     </div>
 
@@ -1470,8 +1456,7 @@ function JobDrawer({
   pipelines,
   onMove,
   pipelineName,
-  handover,
-  onHandover,
+  pipelineIcon,
   onClose,
   onUpdate,
 }: {
@@ -1481,8 +1466,7 @@ function JobDrawer({
   pipelines: PipelineLite[];
   onMove: (stage: string, pipelineId: string) => void;
   pipelineName?: string;
-  handover?: "install" | "sales" | null;
-  onHandover?: (target: "install" | "sales") => void;
+  pipelineIcon?: string;
   onClose: () => void;
   onUpdate: (patch: Partial<Job>) => void;
 }) {
@@ -1527,8 +1511,8 @@ function JobDrawer({
           <div className="mt-4 flex items-center gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
             {pipelineName && (
-              <Pill tone={job.pipelineId === "install" ? "info" : "neutral"}>
-                {job.pipelineId === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+              <Pill tone="neutral">
+                <PipelineIcon icon={pipelineIcon} className="w-3 h-3" />
                 {pipelineName}
               </Pill>
             )}
@@ -1581,22 +1565,6 @@ function JobDrawer({
 
         </div>
 
-        {handover && onHandover && (
-          <div className="px-5 py-2.5 border-b-hairline bg-surface/40 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground flex-1">
-              {handover === "install"
-                ? "Sale won — hand this job over when you're ready to deliver it."
-                : "Not ready to install yet? Put it back with the sales team."}
-            </span>
-            <Button size="sm" className="h-7" variant={handover === "install" ? "default" : "outline"} onClick={() => onHandover(handover)}>
-              {handover === "install" ? (
-                <><ArrowRight className="w-3 h-3" /> Send to installation</>
-              ) : (
-                <><Undo2 className="w-3 h-3" /> Return to sales</>
-              )}
-            </Button>
-          </div>
-        )}
 
 
         <nav className="grid grid-cols-4 border-b-hairline px-5 shrink-0" aria-label="Job sections">
