@@ -8,7 +8,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { stages as seedStages, stageColors as seedStageColors, employees, type Job, type PipelineStage, type Trade } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { onJobStageChange } from "@/lib/lifecycle";
-import { useStages, resolveStageName, colorToCss, firstStageOf, lastStageOf } from "@/lib/stagesStore";
+import { useStages, resolveStageName, colorToCss, getPipelines } from "@/lib/stagesStore";
+import PipelineIcon from "@/components/pipeline/PipelineIcon";
 import {
 
   planSteps,
@@ -138,14 +139,18 @@ function needsAttention(job: Job): boolean {
 }
 
 
-type PipelineTab = "sales" | "install" | "all";
+/** A board id, or "all" for the combined list. */
+type PipelineTab = string;
 
 export default function Pipeline() {
   const [jobListRaw, setJobListInternal] = useJobs();
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = (searchParams.get("pipeline") ?? "sales").toLowerCase();
-  const tab: PipelineTab = tabParam === "install" || tabParam === "all" ? (tabParam as PipelineTab) : "sales";
-  const activePipelineId = tab === "all" ? "sales" : tab;
+  const allPipelines = getPipelines();
+  const firstPipelineId = allPipelines[0]?.id ?? "sales";
+  const tabParam = (searchParams.get("pipeline") ?? firstPipelineId).toLowerCase();
+  const tab: PipelineTab =
+    tabParam === "all" || allPipelines.some((p) => p.id === tabParam) ? tabParam : firstPipelineId;
+  const activePipelineId = tab === "all" ? firstPipelineId : tab;
   const { pipelines, pipeline, stages: stageDefs, stageNames, colorFor, pipelineIdForStage: pipeFor } =
     useStages(activePipelineId);
 
@@ -221,9 +226,8 @@ export default function Pipeline() {
   };
 
   // ---- Moving jobs ----------------------------------------------------------
-  const salesLastStage = lastStageOf("sales");
-  const installFirstStage = firstStageOf("install");
-  const salesFirstStage = firstStageOf("sales");
+  const nameOfPipeline = (id?: string) => pipelines.find((p) => p.id === (id ?? firstPipelineId))?.name ?? "";
+
 
   /** Jobs that just arrived somewhere new, so you can spot them on the board. */
   const [recentlyMoved, setRecentlyMoved] = useState<string[]>([]);
@@ -262,7 +266,7 @@ export default function Pipeline() {
       ...snap,
       timeline: [
         ...(snap.timeline ?? []),
-        { type: "note" as const, text: "Handover undone", date: niceDate() },
+        { type: "note" as const, text: "Move undone", date: niceDate() },
       ],
     });
     setJobList((prev) => prev.map((j) => (j.id === jobId ? patch(j) : j)));
@@ -271,51 +275,25 @@ export default function Pipeline() {
   };
 
   /**
-   * The one way a job changes stage or side. Handles the timeline note, the
-   * automatic handover when a sale is won, and keeps the open panel in sync.
+   * The one way a job changes stage or board. Writes the timeline note, offers
+   * an undo when it crosses to another board, and keeps the open panel in sync.
    */
   const moveJob = (job: Job, stage: string, pipelineId?: string, note?: string) => {
     const target = pipelineId ?? job.pipelineId ?? pipeFor(stage);
-    const from = job.pipelineId ?? "sales";
+    const from = job.pipelineId ?? firstPipelineId;
     if (job.stage === stage && from === target) return;
     const snap = snapshotOf(job);
     const crossed = target !== from;
-    const label =
-      note ??
-      (crossed
-        ? target === "install"
-          ? "Handed over to installation"
-          : "Sent back to sales"
-        : `Moved to ${stage}`);
+    const label = note ?? (crossed ? `Moved to ${nameOfPipeline(target)} — ${stage}` : `Moved to ${stage}`);
 
     applyMove(job.id, target, stage, label);
     runLifecycle(job.id, stage);
 
-    // Winning a sale hands the job to installation by itself — undoable.
-    if (!crossed && target === "sales" && stage === salesLastStage && installFirstStage) {
-      applyMove(job.id, "install", installFirstStage, "Won — handed over to installation");
-      runLifecycle(job.id, installFirstStage);
-      flash(job.id);
-      topToast({
-        title: "Handed over to installation",
-        description: `${job.customer} is won and now sitting in “${installFirstStage}”.`,
-        action: (
-          <ToastAction altText="Undo the handover" onClick={() => restore(job.id, snap)}>
-            Undo
-          </ToastAction>
-        ),
-      });
-      return;
-    }
-
     if (crossed) {
       flash(job.id);
       topToast({
-        title: label,
-        description:
-          target === "install"
-            ? `${job.customer} is now in the installation pipeline at “${stage}”.`
-            : `${job.customer} is back with sales at “${stage}”.`,
+        title: `Moved to ${nameOfPipeline(target)}`,
+        description: `${job.customer} is now at “${stage}”.`,
         action: (
           <ToastAction altText="Undo the move" onClick={() => restore(job.id, snap)}>
             Undo
@@ -328,15 +306,8 @@ export default function Pipeline() {
 
   };
 
-  const moveToPipeline = (job: Job, target: "sales" | "install") =>
-    moveJob(
-      job,
-      (target === "install" ? installFirstStage : salesLastStage || salesFirstStage) as string,
-      target,
-    );
-
   const stepJob = (job: Job, dir: -1 | 1) => {
-    const list = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"))?.stages ?? [];
+    const list = pipelines.find((p) => p.id === (job.pipelineId ?? firstPipelineId))?.stages ?? [];
     const i = list.findIndex((s) => s.name === job.stage);
     const next = list[i + dir];
     if (i < 0 || !next) return;
@@ -353,12 +324,8 @@ export default function Pipeline() {
     if (job) moveJob(job, stage, activePipelineId);
   };
 
-  const canHandOver = (job: Job) => job.pipelineId === "sales" && job.stage === salesLastStage;
-  const canReturn = (job: Job) => job.pipelineId === "install" && job.stage === installFirstStage;
-
-  const counts = {
-    sales: jobList.filter((j) => j.pipelineId === "sales").length,
-    install: jobList.filter((j) => j.pipelineId === "install").length,
+  const counts: Record<string, number> = {
+    ...Object.fromEntries(pipelines.map((p) => [p.id, jobList.filter((j) => j.pipelineId === p.id).length])),
     all: jobList.length,
   };
   const attentionCount = boardJobs.filter(needsAttention).length;
@@ -409,19 +376,22 @@ export default function Pipeline() {
         }
       />
 
-      {/* Pipeline switcher */}
-      <div className="px-8 border-b-hairline flex items-center gap-1">
+      {/* Board switcher */}
+      <div className="px-8 border-b-hairline flex items-center gap-1 overflow-x-auto">
         {pipelines.map((p) => (
           <button
             key={p.id}
-            onClick={() => setTab(p.id as PipelineTab)}
-            className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 ${
-              tab === p.id ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
+            onClick={() => setTab(p.id)}
+            style={tab === p.id ? { borderColor: colorToCss(p.color ?? "199 89% 48%") } : undefined}
+            className={`h-9 px-3 text-sm border-b-2 -mb-px transition-colors inline-flex items-center gap-1.5 shrink-0 ${
+              tab === p.id ? "text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
             }`}
           >
-            {p.id === "sales" ? <Handshake className="w-3.5 h-3.5" /> : <Wrench className="w-3.5 h-3.5" />}
+            <span style={{ color: colorToCss(p.color ?? "199 89% 48%") }}>
+              <PipelineIcon icon={p.icon} className="w-3.5 h-3.5" />
+            </span>
             {p.name}
-            <span className="text-xs text-muted-foreground">{counts[p.id as "sales" | "install"] ?? 0}</span>
+            <span className="text-xs text-muted-foreground">{counts[p.id] ?? 0}</span>
           </button>
         ))}
         <button
@@ -456,7 +426,7 @@ export default function Pipeline() {
           pipelines={pipelines}
           colorFor={colorFor}
           onSelect={setSelected}
-          onOpenPipeline={(id) => setTab(id as PipelineTab)}
+          onOpenPipeline={(id) => setTab(id)}
         />
       )}
 
@@ -501,9 +471,6 @@ export default function Pipeline() {
                         onSaveNextStep={(text, due, owner) => updateJob(job.id, setNextStep(job, text, due, owner))}
                         onAssignNextStep={(employeeId) => updateJob(job.id, assignNextStep(job, employeeId))}
                         onToggleNextStep={() => { const s = nextStep(job); if (s) updateJob(job.id, toggleStep(job, s.id)); }}
-
-                        handover={canHandOver(job) ? "install" : canReturn(job) ? "sales" : null}
-                        onHandover={(target) => moveToPipeline(job, target)}
                         onStartEdit={() => setEditingCardId(job.id)}
                         onCancelEdit={() => setEditingCardId(null)}
                         onSaveEdit={(patch) => { updateJob(job.id, patch); setEditingCardId(null); }}
@@ -542,14 +509,15 @@ export default function Pipeline() {
         <JobDrawer
           job={selected}
           stageNames={
-            (pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.stages ?? stageDefs).map((s) => s.name)
+            (pipelines.find((p) => p.id === (selected.pipelineId ?? firstPipelineId))?.stages ?? stageDefs).map(
+              (s) => s.name,
+            )
           }
           colorFor={colorFor}
           pipelines={pipelines}
           onMove={(stage, pipelineId) => moveJob(selected, stage, pipelineId)}
-          pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? "sales"))?.name}
-          handover={canHandOver(selected) ? "install" : canReturn(selected) ? "sales" : null}
-          onHandover={(target) => moveToPipeline(selected, target)}
+          pipelineName={pipelines.find((p) => p.id === (selected.pipelineId ?? firstPipelineId))?.name}
+          pipelineIcon={pipelines.find((p) => p.id === (selected.pipelineId ?? firstPipelineId))?.icon}
           onClose={() => setSelected(null)}
           onUpdate={(patch) => {
             updateJob(selected.id, patch);
@@ -588,7 +556,7 @@ function AllJobsView({
   onOpenPipeline,
 }: {
   jobs: Job[];
-  pipelines: { id: string; name: string; stages: { name: string }[] }[];
+  pipelines: PipelineLite[];
   colorFor: (n: string) => string;
   onSelect: (j: Job) => void;
   onOpenPipeline: (id: string) => void;
@@ -603,7 +571,7 @@ function AllJobsView({
     <div className="flex-1 overflow-auto px-8 py-6">
       <div className="grid gap-3 sm:grid-cols-3 mb-5">
         {pipelines.map((p) => {
-          const list = jobs.filter((j) => (j.pipelineId ?? "sales") === p.id);
+          const list = jobs.filter((j) => (j.pipelineId ?? pipelines[0]?.id) === p.id);
           return (
             <button
               key={p.id}
@@ -660,7 +628,7 @@ function AllJobsView({
               </tr>
             ) : (
               filtered.map((job) => {
-                const pipe = pipelines.find((p) => p.id === (job.pipelineId ?? "sales"));
+                const pipe = pipelines.find((p) => p.id === (job.pipelineId ?? pipelines[0]?.id));
                 return (
                   <tr
                     key={job.id}
@@ -670,9 +638,11 @@ function AllJobsView({
                     <td className="px-3 py-3 font-medium">{job.customer}</td>
                     <td className="px-3 py-3 text-muted-foreground">{job.service}</td>
                     <td className="px-3 py-3">
-                      <Pill tone={pipe?.id === "install" ? "info" : "neutral"}>
-                        {pipe?.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
-                        {pipe?.name ?? "Sales"}
+                      <Pill tone="neutral">
+                        <span style={{ color: colorToCss(pipe?.color ?? "215 16% 47%") }}>
+                          <PipelineIcon icon={pipe?.icon} className="w-3 h-3" />
+                        </span>
+                        {pipe?.name ?? "Board"}
                       </Pill>
                     </td>
                     <td className="px-3 py-3">
@@ -715,7 +685,7 @@ function AllJobsView({
 }
 
 
-type PipelineLite = { id: string; name: string; stages: { name: string }[] };
+type PipelineLite = { id: string; name: string; icon?: string; color?: string; stages: { name: string }[] };
 
 /** Pick any stage — on this board or the other one — in a single tap. */
 function MoveJobMenu({
@@ -733,7 +703,7 @@ function MoveJobMenu({
   trigger: React.ReactNode;
   align?: "start" | "end";
 }) {
-  const currentPipe = job.pipelineId ?? "sales";
+  const currentPipe = job.pipelineId ?? pipelines[0]?.id;
   const ordered = [...pipelines].sort((a, b) => (a.id === currentPipe ? -1 : b.id === currentPipe ? 1 : 0));
   return (
     <DropdownMenu>
@@ -745,7 +715,9 @@ function MoveJobMenu({
           <div key={p.id}>
             {idx > 0 && <DropdownMenuSeparator />}
             <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
-              {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+              <span style={{ color: colorToCss(p.color ?? "215 16% 47%") }}>
+                <PipelineIcon icon={p.icon} className="w-3 h-3" />
+              </span>
               {p.name}
             </DropdownMenuLabel>
             {p.stages.map((s) => {
@@ -950,8 +922,6 @@ function BoardCard({
   onAssignNextStep,
   onToggleNextStep,
 
-  handover,
-  onHandover,
   onStartEdit,
   onCancelEdit,
   onSaveEdit,
@@ -975,8 +945,6 @@ function BoardCard({
   onAssignNextStep: (employeeId?: string) => void;
   onToggleNextStep: () => void;
 
-  handover?: "install" | "sales" | null;
-  onHandover?: (target: "install" | "sales") => void;
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onSaveEdit: (patch: Partial<Job>) => void;
@@ -1034,7 +1002,7 @@ function BoardCard({
   const step = nextStep(job);
   const plan = planProgress(job);
 
-  const currentPipe = job.pipelineId ?? "sales";
+  const currentPipe = job.pipelineId ?? pipelines[0]?.id;
 
 
   return (
@@ -1077,7 +1045,9 @@ function BoardCard({
                     <div key={p.id}>
                       {idx > 0 && <DropdownMenuSeparator />}
                       <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium inline-flex items-center gap-1.5">
-                        {p.id === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+                        <span style={{ color: colorToCss(p.color ?? "215 16% 47%") }}>
+                          <PipelineIcon icon={p.icon} className="w-3 h-3" />
+                        </span>
                         {p.name}
                       </DropdownMenuLabel>
                       {p.stages.map((s) => {
@@ -1218,22 +1188,6 @@ function BoardCard({
             {job.assignments[0].date.slice(5)}
           </span>
         </div>
-      )}
-      {handover && onHandover && (
-        <button
-          onClick={(e) => { e.stopPropagation(); onHandover(handover); }}
-          className={`mt-2.5 w-full h-7 rounded-md text-xs font-medium inline-flex items-center justify-center gap-1.5 transition-colors ${
-            handover === "install"
-              ? "bg-primary text-primary-foreground hover:opacity-90"
-              : "border-hairline text-muted-foreground hover:text-foreground hover:bg-background"
-          }`}
-        >
-          {handover === "install" ? (
-            <><ArrowRight className="w-3 h-3" /> Send to installation</>
-          ) : (
-            <><Undo2 className="w-3 h-3" /> Return to sales</>
-          )}
-        </button>
       )}
     </div>
 
@@ -1502,8 +1456,7 @@ function JobDrawer({
   pipelines,
   onMove,
   pipelineName,
-  handover,
-  onHandover,
+  pipelineIcon,
   onClose,
   onUpdate,
 }: {
@@ -1513,8 +1466,7 @@ function JobDrawer({
   pipelines: PipelineLite[];
   onMove: (stage: string, pipelineId: string) => void;
   pipelineName?: string;
-  handover?: "install" | "sales" | null;
-  onHandover?: (target: "install" | "sales") => void;
+  pipelineIcon?: string;
   onClose: () => void;
   onUpdate: (patch: Partial<Job>) => void;
 }) {
@@ -1559,8 +1511,8 @@ function JobDrawer({
           <div className="mt-4 flex items-center gap-2">
             <div className="flex items-center gap-2 min-w-0 flex-1">
             {pipelineName && (
-              <Pill tone={job.pipelineId === "install" ? "info" : "neutral"}>
-                {job.pipelineId === "install" ? <Wrench className="w-3 h-3" /> : <Handshake className="w-3 h-3" />}
+              <Pill tone="neutral">
+                <PipelineIcon icon={pipelineIcon} className="w-3 h-3" />
                 {pipelineName}
               </Pill>
             )}
@@ -1613,22 +1565,6 @@ function JobDrawer({
 
         </div>
 
-        {handover && onHandover && (
-          <div className="px-5 py-2.5 border-b-hairline bg-surface/40 flex items-center gap-2">
-            <span className="text-xs text-muted-foreground flex-1">
-              {handover === "install"
-                ? "Sale won — hand this job over when you're ready to deliver it."
-                : "Not ready to install yet? Put it back with the sales team."}
-            </span>
-            <Button size="sm" className="h-7" variant={handover === "install" ? "default" : "outline"} onClick={() => onHandover(handover)}>
-              {handover === "install" ? (
-                <><ArrowRight className="w-3 h-3" /> Send to installation</>
-              ) : (
-                <><Undo2 className="w-3 h-3" /> Return to sales</>
-              )}
-            </Button>
-          </div>
-        )}
 
 
         <nav className="grid grid-cols-4 border-b-hairline px-5 shrink-0" aria-label="Job sections">

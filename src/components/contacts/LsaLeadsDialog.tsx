@@ -4,7 +4,7 @@ import { Briefcase, UserPlus, Trash2, Phone, Mail, MapPin, Inbox } from "lucide-
 import { useLsaLeads, removeLsaLead, type LsaLead } from "@/lib/lsaLeadsStore";
 import { createContact } from "@/lib/contactsStore";
 import { addJob } from "@/lib/jobsStore";
-import { firstStageOf } from "@/lib/stagesStore";
+import { firstStageOf, getPipelines } from "@/lib/stagesStore";
 import { toast } from "@/hooks/use-toast";
 import type { Job } from "@/data/mockData";
 
@@ -36,14 +36,15 @@ export function LsaLeadsDialog({
   function createContactAndJob(lead: LsaLead) {
     setBusy(lead.id);
     const contactId = makeContact(lead);
+    const board = getPipelines()[0];
     const job: Job = {
       id: `j-lsa-${lead.id}-${Date.now()}`,
       contactId,
       customer: lead.name,
       service: lead.service,
       value: 0,
-      stage: firstStageOf("sales") as Job["stage"],
-      pipelineId: "sales",
+      stage: firstStageOf(board?.id ?? "sales") as Job["stage"],
+      pipelineId: board?.id ?? "sales",
       daysInStage: 0,
       address: lead.postcode,
       postcode: lead.postcode,
@@ -55,7 +56,7 @@ export function LsaLeadsDialog({
     addJob(job);
     removeLsaLead(lead.id);
     setBusy(null);
-    toast({ title: "Contact and job created", description: `${lead.name} is now in your sales pipeline.` });
+    toast({ title: "Contact and job created", description: `${lead.name} is now on your ${board?.name ?? "first"} board.` });
   }
 
   function createContactOnly(lead: LsaLead) {

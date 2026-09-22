@@ -11,11 +11,16 @@ export interface Pipeline {
   id: string;
   name: string;
   stages: Stage[];
+  /** Key from PIPELINE_ICONS — stored as a string so boards stay serialisable. */
+  icon?: string;
+  /** Board colour, same format as a stage colour. */
+  color?: string;
 }
 
 export type PipelineId = "sales" | "install" | string;
 
-const PIPELINES_KEY = "pipelines-v3";
+const PIPELINES_KEY = "pipelines-v4";
+const LEGACY_PIPELINES_KEY = "pipelines-v3";
 const RENAMES_KEY = "pipeline-stage-renames-v1";
 
 interface State {
@@ -63,14 +68,122 @@ function mkStage(name: string, prefix: string): Stage {
 }
 
 
+const SERVICE_STAGE_NAMES = ["Reported", "Booked in", "On site", "Fixed"];
+
+/** Icons a board can use. Stored by key; the UI maps these to lucide components. */
+export const PIPELINE_ICONS = [
+  "handshake",
+  "wrench",
+  "truck",
+  "calendar",
+  "clipboard",
+  "hammer",
+  "phone",
+  "star",
+] as const;
+export type PipelineIcon = (typeof PIPELINE_ICONS)[number];
+
+export interface PipelineTemplate {
+  key: string;
+  label: string;
+  description: string;
+  name: string;
+  icon: PipelineIcon;
+  color: string;
+  stageNames: string[];
+}
+
+export const PIPELINE_TEMPLATES: PipelineTemplate[] = [
+  {
+    key: "sales",
+    label: "Sales",
+    description: "Enquiry through to won",
+    name: "Sales",
+    icon: "handshake",
+    color: "199 89% 48%",
+    stageNames: SALES_STAGE_NAMES,
+  },
+  {
+    key: "install",
+    label: "Installation",
+    description: "Booking the work in and getting it done",
+    name: "Installation",
+    icon: "wrench",
+    color: "239 84% 67%",
+    stageNames: INSTALL_STAGE_NAMES,
+  },
+  {
+    key: "service",
+    label: "Service & repairs",
+    description: "Call-outs and fixes",
+    name: "Service & repairs",
+    icon: "hammer",
+    color: "25 95% 53%",
+    stageNames: SERVICE_STAGE_NAMES,
+  },
+  {
+    key: "blank",
+    label: "Blank board",
+    description: "Start with one stage and build it up",
+    name: "New board",
+    icon: "clipboard",
+    color: "215 16% 47%",
+    stageNames: ["First stage"],
+  },
+];
+
+function slug(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "board";
+}
+
+function pipelineFromTemplate(tpl: PipelineTemplate, existing: Pipeline[]): Pipeline {
+  let id = slug(tpl.name);
+  if (existing.some((p) => p.id === id)) id = `${id}-${Math.random().toString(36).slice(2, 6)}`;
+  return {
+    id,
+    name: existing.some((p) => p.name === tpl.name) ? `${tpl.name} (copy)` : tpl.name,
+    icon: tpl.icon,
+    color: tpl.color,
+    stages: tpl.stageNames.map((n) => mkStage(n, id)),
+  };
+}
+
 function defaultState(): State {
   return {
     pipelines: [
-      { id: "sales", name: "Sales", stages: SALES_STAGE_NAMES.map((n) => mkStage(n, "sales")) },
-      { id: "install", name: "Installation", stages: INSTALL_STAGE_NAMES.map((n) => mkStage(n, "install")) },
+      {
+        id: "sales",
+        name: "Sales",
+        icon: "handshake",
+        color: "199 89% 48%",
+        stages: SALES_STAGE_NAMES.map((n) => mkStage(n, "sales")),
+      },
+      {
+        id: "install",
+        name: "Installation",
+        icon: "wrench",
+        color: "239 84% 67%",
+        stages: INSTALL_STAGE_NAMES.map((n) => mkStage(n, "install")),
+      },
     ],
     renames: {},
   };
+}
+
+const DEFAULT_LOOK: Record<string, { icon: PipelineIcon; color: string }> = {
+  sales: { icon: "handshake", color: "199 89% 48%" },
+  install: { icon: "wrench", color: "239 84% 67%" },
+};
+
+const BOARD_COLOR_CYCLE = ["199 89% 48%", "239 84% 67%", "25 95% 53%", "142 71% 45%", "271 91% 65%", "173 80% 40%"];
+
+/** Older saved boards have no icon/colour — fill sensible ones in. */
+function withLook(pipelines: Pipeline[]): Pipeline[] {
+  return pipelines.map((p, i) => ({
+    ...p,
+    icon: p.icon ?? DEFAULT_LOOK[p.id]?.icon ?? PIPELINE_ICONS[i % PIPELINE_ICONS.length],
+    color: p.color ?? DEFAULT_LOOK[p.id]?.color ?? BOARD_COLOR_CYCLE[i % BOARD_COLOR_CYCLE.length],
+  }));
 }
 
 function load(): State {
@@ -81,14 +194,16 @@ function load(): State {
   } catch {
     /* ignore */
   }
-  try {
-    const raw = localStorage.getItem(PIPELINES_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as Pipeline[];
-      if (Array.isArray(parsed) && parsed.length) return { pipelines: parsed, renames };
+  for (const key of [PIPELINES_KEY, LEGACY_PIPELINES_KEY]) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw) as Pipeline[];
+        if (Array.isArray(parsed) && parsed.length) return { pipelines: withLook(parsed), renames };
+      }
+    } catch {
+      /* ignore */
     }
-  } catch {
-    /* ignore */
   }
   return { ...defaultState(), renames };
 }
@@ -139,6 +254,41 @@ export function firstStageOf(pipelineId: PipelineId): string {
 export function lastStageOf(pipelineId: PipelineId): string {
   const p = state.pipelines.find((x) => x.id === pipelineId);
   return p?.stages[p.stages.length - 1]?.name ?? "";
+}
+
+export function getPipeline(pipelineId: PipelineId): Pipeline | undefined {
+  return state.pipelines.find((p) => p.id === pipelineId);
+}
+
+/** Add a board from a template. Returns the new board so callers can jump to it. */
+export function addPipeline(templateKey: string): Pipeline {
+  const tpl = PIPELINE_TEMPLATES.find((t) => t.key === templateKey) ?? PIPELINE_TEMPLATES[PIPELINE_TEMPLATES.length - 1];
+  const created = pipelineFromTemplate(tpl, state.pipelines);
+  state.pipelines = [...state.pipelines, created];
+  persist();
+  return created;
+}
+
+/** Remove a board. The last remaining board can't be removed. */
+export function removePipeline(pipelineId: PipelineId) {
+  if (state.pipelines.length <= 1) return;
+  state.pipelines = state.pipelines.filter((p) => p.id !== pipelineId);
+  persist();
+}
+
+export function movePipeline(pipelineId: PipelineId, dir: -1 | 1) {
+  const list = [...state.pipelines];
+  const i = list.findIndex((p) => p.id === pipelineId);
+  const j = i + dir;
+  if (i < 0 || j < 0 || j >= list.length) return;
+  [list[i], list[j]] = [list[j], list[i]];
+  state.pipelines = list;
+  persist();
+}
+
+export function updatePipeline(pipelineId: PipelineId, patch: Partial<Pick<Pipeline, "name" | "icon" | "color">>) {
+  state.pipelines = state.pipelines.map((p) => (p.id === pipelineId ? { ...p, ...patch } : p));
+  persist();
 }
 
 export const STAGE_COLOR_PRESETS: { label: string; value: string }[] = [
@@ -204,12 +354,17 @@ export function useStages(pipelineId?: PipelineId) {
       state.renames = { ...state.renames, [oldName]: trimmed };
       persist();
     },
-    renamePipeline: (name: string) => {
+    renamePipeline: (name: string, id?: PipelineId) => {
       const trimmed = name.trim();
       if (!trimmed) return;
-      state.pipelines = state.pipelines.map((p) => (p.id === targetId ? { ...p, name: trimmed } : p));
+      const which = id ?? targetId;
+      state.pipelines = state.pipelines.map((p) => (p.id === which ? { ...p, name: trimmed } : p));
       persist();
     },
+    addPipeline,
+    removePipeline,
+    movePipeline,
+    updatePipeline,
     setStageColor: (id: string, color: string) => {
       state.pipelines = state.pipelines.map((p) => ({
         ...p,
