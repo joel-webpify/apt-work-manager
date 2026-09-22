@@ -11,11 +11,16 @@ export interface Pipeline {
   id: string;
   name: string;
   stages: Stage[];
+  /** Key from PIPELINE_ICONS — stored as a string so boards stay serialisable. */
+  icon?: string;
+  /** Board colour, same format as a stage colour. */
+  color?: string;
 }
 
 export type PipelineId = "sales" | "install" | string;
 
-const PIPELINES_KEY = "pipelines-v3";
+const PIPELINES_KEY = "pipelines-v4";
+const LEGACY_PIPELINES_KEY = "pipelines-v3";
 const RENAMES_KEY = "pipeline-stage-renames-v1";
 
 interface State {
