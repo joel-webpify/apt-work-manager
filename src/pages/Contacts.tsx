@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
-import { Search, Plus, Upload, Mail, ArrowUpDown, Users } from "lucide-react";
+import { Search, Plus, Upload, Mail, ArrowUpDown, Users, Briefcase, X } from "lucide-react";
+import { LsaLeadsDialog } from "@/components/contacts/LsaLeadsDialog";
+import { useLsaLeads, dismissLsaBanner, isLsaBannerDismissed } from "@/lib/lsaLeadsStore";
 import { contacts as mockContacts, type Contact } from "@/data/mockData";
 import { ImportContactsDialog } from "@/components/contacts/ImportContactsDialog";
 import { useImportedContacts, mergeWithMock, useContactExtras, applyExtrasTo } from "@/lib/contactsStore";
@@ -31,6 +33,10 @@ export default function Contacts() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const [advFilters, setAdvFilters] = useState<ContactFilterState>(emptyFilters);
+
+  const lsaLeads = useLsaLeads();
+  const [lsaOpen, setLsaOpen] = useState(false);
+  const [lsaDismissed, setLsaDismissed] = useState(isLsaBannerDismissed);
 
   const imported = useImportedContacts();
   const extras = useContactExtras();
@@ -130,6 +136,27 @@ export default function Contacts() {
       />
       <PageBody>
         <ContactKpis contacts={contacts} />
+
+        {lsaLeads.length > 0 && !lsaDismissed && (
+          <div className="mb-4 border-hairline rounded-lg bg-card px-4 py-3 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">{lsaLeads.length} LSA leads ready to sort</div>
+              <p className="text-xs text-muted-foreground">
+                Each Google Local Services lead can become a contact, a contact with a job, or be deleted.
+              </p>
+            </div>
+            <Btn variant="primary" onClick={() => setLsaOpen(true)}>Review leads</Btn>
+            <button
+              onClick={() => { dismissLsaBanner(); setLsaDismissed(true); }}
+              className="h-8 px-2 text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
+            >
+              <X className="w-3.5 h-3.5" /> Dismiss
+            </button>
+          </div>
+        )}
 
         <div className="flex items-center gap-2 mb-4">
           <div className="flex-1 relative max-w-md">
@@ -251,6 +278,7 @@ export default function Contacts() {
       {selected && <ContactPanel contact={selected} onClose={() => setSelected(null)} />}
       <EditContactDialog contact={null} open={createOpen} onOpenChange={setCreateOpen} mode="create" />
       <ImportContactsDialog open={importOpen} onOpenChange={setImportOpen} />
+      <LsaLeadsDialog open={lsaOpen} onOpenChange={setLsaOpen} />
     </>
   );
 }
