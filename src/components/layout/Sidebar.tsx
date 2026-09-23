@@ -107,17 +107,17 @@ export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
     item.end ? location.pathname === item.to : location.pathname.startsWith(item.to);
 
   return (
-    <aside className="w-[240px] shrink-0 bg-surface border-r-hairline flex flex-col h-screen sticky top-0">
-      <div className="px-4 h-14 flex items-center border-b-hairline">
+    <aside className="w-14 md:w-[240px] shrink-0 bg-surface border-r-hairline flex flex-col h-screen sticky top-0">
+      <div className="px-2 md:px-4 h-14 flex items-center justify-center md:justify-start border-b-hairline">
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-md bg-primary flex items-center justify-center">
             <span className="text-primary-foreground text-xs font-medium">S</span>
           </div>
-          <span className="text-base font-medium tracking-tight">ServiceCRM</span>
+          <span className="hidden text-base font-medium tracking-tight md:inline">ServiceCRM</span>
         </div>
       </div>
 
-      <nav className="flex-1 px-2 py-3 overflow-y-auto">
+      <nav className="flex-1 px-1.5 md:px-2 py-3 overflow-y-auto">
         {groups.map((group) => {
           const isCollapsed = !!collapsed[group.id];
           const hasActive = group.items.some(isActive);
@@ -126,7 +126,7 @@ export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
               {group.label && (
                 <button
                   onClick={() => toggle(group.id)}
-                  className="w-full flex items-center justify-between px-2.5 h-6 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors"
+                  className="hidden w-full items-center justify-between px-2.5 h-6 text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors md:flex"
                 >
                   <span>{group.label}</span>
                   <ChevronDown
@@ -148,14 +148,14 @@ export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
                         to={item.to}
                         end={item.end}
                         className={cn(
-                          "flex items-center gap-2.5 px-2.5 h-8 rounded-md text-sm transition-colors",
+                          "flex items-center justify-center md:justify-start gap-2.5 px-2.5 h-8 rounded-md text-sm transition-colors",
                           active
                             ? "bg-surface-hover text-foreground font-medium"
                             : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
                         )}
                       >
                         <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
-                        <span className="truncate">{item.label}</span>
+                        <span className="hidden truncate md:inline">{item.label}</span>
                       </NavLink>
                     );
                   })}
@@ -166,14 +166,14 @@ export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
         })}
       </nav>
 
-      <div className="p-2 border-t-hairline">
+      <div className="p-1.5 md:p-2 border-t-hairline">
         <button
           onClick={onAskAI}
-          className="w-full flex items-center gap-2.5 px-2.5 h-9 rounded-md bg-background border-hairline text-sm font-medium hover:bg-surface-hover transition-colors"
+          className="w-full flex items-center justify-center md:justify-start gap-2.5 px-2.5 h-9 rounded-md bg-background border-hairline text-sm font-medium hover:bg-surface-hover transition-colors"
         >
           <Sparkles className="w-4 h-4 text-primary" strokeWidth={1.75} />
-          <span>Ask AI</span>
-          <kbd className="ml-auto text-xs text-muted-foreground font-mono">⌘K</kbd>
+          <span className="hidden md:inline">Ask AI</span>
+          <kbd className="ml-auto hidden text-xs text-muted-foreground font-mono md:inline">⌘K</kbd>
         </button>
       </div>
     </aside>
