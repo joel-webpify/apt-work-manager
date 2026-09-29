@@ -168,7 +168,13 @@ export default function Dashboard() {
     },
     { label: "Follow-up", value: String(notContacted.length), tone: followTone, href: "/contacts?filter=not-contacted", sub: `Avg first response: ${avgResponseH.toFixed(1)}h` },
     { label: "Quotes", value: `${money.format(openValue)} · ${openQuotes.length} open`, tone: quoteTone, href: "/reporting?tab=pipeline", sub: winText },
-    { label: "Cash", value: money.format(paidThisMonth), tone: cashTone, href: "/reporting?tab=revenue", sub: overdueInvoices.length ? `${money.format(overdueValue)} overdue` : "Nothing overdue" },
+    {
+      label: "Lead to quote",
+      value: rate === null ? "—" : `${rate}%`,
+      tone: rate === null ? ("grey" as Tone) : ("green" as Tone),
+      href: "/reporting?tab=marketing",
+      sub: rate === null ? "Not enough data yet" : `${quotedLeads.length} of ${recentLeads.length} leads · last 30 days`,
+    },
     gbpConnected
       ? { label: "Reputation", value: `${rating.toFixed(1)}★ · ${reviews.length}`, tone: repTone, href: "/marketing/gbp", sub: `${newThisMonth} new this month · ${unreplied.length} unreplied` }
       : { label: "Reputation", value: "Connect Google Business", tone: "grey" as Tone, href: "/marketing/gbp", sub: "See your rating here" },
