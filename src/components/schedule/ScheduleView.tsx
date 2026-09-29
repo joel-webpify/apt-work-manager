@@ -340,7 +340,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
         {/* Schedule */}
         <div className="min-w-0 overflow-x-auto pb-2">
           {mode === "week" ? (
-            <div className="border-hairline rounded-lg overflow-hidden bg-card min-w-[720px]">
+            <div className="border-hairline rounded-lg overflow-hidden bg-card min-w-[640px]">
               {/* Day header */}
               <div
                 className="grid border-b-hairline bg-surface/40"
