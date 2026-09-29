@@ -1,35 +1,33 @@
-# Dashboard: replace Needs attention with a sales funnel card
+# Dashboard: swap the Cash card for a lead-to-quote rate
 
 ## Goal
-Replace the "Needs attention" card on the dashboard with a statistics card showing this month's sales funnel, while keeping the rest of the at-a-glance dashboard as it is.
+Remove the Cash card from the top health strip and replace it with a card showing how many new leads turn into quotes sent.
 
 ## What will change
 
-### Replace the Needs attention card with "This month" funnel
-The left card in the main row becomes a sales funnel showing how work moved through the business this month:
+### New "Lead to quote" card
+The fifth card in the health strip becomes:
 
-- **New leads** — enquiries received this month
-- **Quotes sent** — with a % of leads step (how many became quotes)
-- **Jobs won** — quotes accepted this month, with a % win step
-- **Paid** — money collected this month (GBP)
-
-Visual: four steps with descending bars (a clean funnel look, not alert-style), each step showing its figure, its label, and the conversion percentage from the previous step. Steps link to the relevant view (leads → reporting marketing, quotes → quotes, won → reporting pipeline, paid → reporting revenue). Quiet "not enough data yet" text for steps with no activity this month — no alarm styling, and no fabricated trends.
-
-- The header keeps a short plain-English subtitle (e.g. "How enquiries became money this month").
-- The Mine/Everyone switch is dropped — the funnel is business-wide.
-- A small "Full reports" link opens `/reporting`.
+- **Main figure:** the percentage of new leads that have had a quote sent — e.g. "25%".
+- **Secondary line:** "3 of 12 leads · last 30 days", so the percentage is never on its own.
+- Leads counted = received in the last 30 days, spam excluded.
+- A lead counts as quoted when a quote exists for the same customer with an issue date after the lead arrived.
+- Quiet "Not enough data yet" when fewer than 5 leads fall in the window — no alarm styling, no fabricated trends.
+- Clicks through to Reporting → Marketing (same destination as the Leads card), where lead sources and conversions live.
 
 ### Everything else stays
-- The five status cards, This week schedule card, Latest reviews, active jobs line and team row are untouched.
-- Same palette, typography, tokens and navigation.
+- The other four cards (Leads, Follow-up, Quotes, Reputation) are untouched.
+- The overdue-invoice figure is not lost — it already appears in the "Needs attention" list ("Overdue invoices").
+- Same palette, typography and layout. Needs attention, This week and Latest reviews unchanged.
 
 ## Technical details
 - Edit `src/pages/Dashboard.tsx` only.
-- Data already available: `leads` (receivedAt, ownerId), `useQuotes()` (issueDate, status, docTotals), `useInvoices()` (issueDate, paidDate, invoiceTotals). No new data source.
-- This month = current calendar month, matching the existing Cash card logic.
+- Data already loaded: `leads` (receivedAt, status) and `useQuotes()` (issueDate, customer, status). No new data source.
+- The lead-to-quote match is by customer name against the demo data — fine for the prototype, but a real build should link leads to contacts/jobs so the match is exact (worth adding to the developer brief).
 - Semantic design tokens only; no colour or typography changes.
 
 ## Verification
+- Card figures match the sample data (count a few leads by hand).
+- "Not enough data yet" state shows when the window is thin.
 - Desktop, the current preview size, and phone width: no overflow, no page errors.
-- Funnel figures match the mock data (e.g. paid amount matches the Cash card this month).
-- All four steps navigate to the right views.
+- The card opens Reporting → Marketing.
