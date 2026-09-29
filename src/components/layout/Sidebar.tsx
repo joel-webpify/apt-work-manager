@@ -3,6 +3,7 @@ import { NavLink, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
   KanbanSquare,
+  CalendarDays,
   Users,
   FileText,
   Receipt,
@@ -38,6 +39,7 @@ const groups: Group[] = [
     items: [
       { to: "/contacts", label: "Contacts & leads", icon: Users },
       { to: "/pipeline", label: "Jobs & pipeline", icon: KanbanSquare },
+      { to: "/schedule", label: "Schedule", icon: CalendarDays },
       { to: "/quotes", label: "Quotes & invoices", icon: Receipt },
       { to: "/forms", label: "Forms", icon: FileText },
     ],
