@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Check, Mail, Plus, UserPlus } from "lucide-react";
+import { ArrowRight, Check, Mail, Plus, Star, UserPlus } from "lucide-react";
 import { PageBody, Btn } from "@/components/layout/PageShell";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
 import { EditContactDialog } from "@/components/contacts/EditContactDialog";
@@ -284,6 +284,48 @@ export default function Dashboard() {
               )}
             </section>
           </div>
+
+          {/* Latest reviews */}
+          <section className="rounded-lg border-hairline bg-card p-5">
+            <div className="flex items-center justify-between border-b-hairline pb-4">
+              <div>
+                <h2 className="text-base font-semibold">Latest reviews</h2>
+                {gbpConnected && reviews.length > 0 && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {rating.toFixed(1)} average · {reviews.length} reviews · {unreplied.length} unreplied
+                  </p>
+                )}
+              </div>
+              <button className="flex items-center gap-1 text-xs font-medium text-primary" onClick={() => navigate("/marketing/gbp")}>
+                {gbpConnected ? "All reviews" : "Connect"} <ArrowRight className="h-3 w-3" />
+              </button>
+            </div>
+            {!gbpConnected ? (
+              <button className="py-4 text-sm text-muted-foreground" onClick={() => navigate("/marketing/gbp")}>
+                Connect Google Business to see your reviews here · <span className="text-primary">Connect</span>
+              </button>
+            ) : (
+              <div className="grid gap-x-8 sm:grid-cols-2">
+                {[...reviews].sort((a, b) => a.daysAgo - b.daysAgo).slice(0, 4).map((r) => (
+                  <button key={r.id} onClick={() => navigate("/marketing/gbp")} className="group flex flex-col gap-1 border-b-hairline py-3 text-left last:border-b-0 sm:nth-[3]:border-b-0">
+                    <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={i} className={`h-3 w-3 ${i < r.rating ? "fill-[hsl(var(--warning))] text-[hsl(var(--warning))]" : "text-muted-foreground/30"}`} />
+                        ))}
+                      </span>
+                      <span className="text-sm font-medium">{r.author}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {r.daysAgo === 0 ? "Today" : r.daysAgo === 1 ? "Yesterday" : `${r.daysAgo} days ago`}
+                      </span>
+                      {!r.reply && <span className="ml-auto text-xs font-medium text-primary">Reply</span>}
+                    </span>
+                    <span className="line-clamp-2 text-sm text-muted-foreground">{r.text}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </section>
 
           <button onClick={() => navigate("/pipeline?pipeline=all")} className="group flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
             <span className="font-medium text-foreground">{active.length} active jobs</span> · {money.format(activeValue)}
