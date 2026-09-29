@@ -162,7 +162,7 @@ export default function Dashboard() {
       label: "Leads", value: String(leadsThisWeek), tone: leadTone, href: "/reporting?tab=marketing",
       sub: enoughLeadData ? `${leadDelta >= 0 ? "+" : ""}${Math.round(leadDelta * 100)}% vs normal` : "Not enough data yet",
     },
-    { label: "Quotes", value: `${money.format(openValue)} · ${openQuotes.length} open`, tone: quoteTone, href: "/reporting?tab=pipeline", sub: winText },
+    { label: "Quotes", value: money.format(openValue), tone: quoteTone, href: "/reporting?tab=pipeline", sub: `${openQuotes.length} open · ${winText}` },
     {
       label: "Lead to quote",
       value: rate === null ? "—" : `${rate}%`,
@@ -171,7 +171,7 @@ export default function Dashboard() {
       sub: rate === null ? "Not enough data yet" : `${quotedLeads.length} of ${recentLeads.length} leads · last 30 days`,
     },
     gbpConnected
-      ? { label: "Reputation", value: `${rating.toFixed(1)}★ · ${reviews.length}`, tone: repTone, href: "/marketing/gbp", sub: `${newThisMonth} new this month · ${unreplied.length} unreplied` }
+      ? { label: "Reputation", value: `${rating.toFixed(1)}★`, tone: repTone, href: "/marketing/gbp", sub: `${reviews.length} reviews · ${unreplied.length} unreplied` }
       : { label: "Reputation", value: "Connect Google Business", tone: "grey" as Tone, href: "/marketing/gbp", sub: "See your rating here" },
   ];
 
@@ -206,7 +206,7 @@ export default function Dashboard() {
                   <Dot tone={h.tone} />
                 </span>
                 <span className="mt-3 block truncate text-2xl font-semibold tabular-nums">{h.value}</span>
-                <span className="mt-1.5 block truncate text-sm text-muted-foreground">{h.sub}</span>
+                <span className="mt-1.5 block text-sm text-muted-foreground line-clamp-2">{h.sub}</span>
               </button>
             ))}
           </section>
