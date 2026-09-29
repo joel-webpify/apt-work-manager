@@ -307,7 +307,7 @@ export default function Dashboard() {
             ) : (
               <div className="grid gap-x-8 sm:grid-cols-2">
                 {[...reviews].sort((a, b) => a.daysAgo - b.daysAgo).slice(0, 4).map((r) => (
-                  <button key={r.id} onClick={() => navigate("/marketing/gbp")} className="group flex flex-col gap-1 border-b-hairline py-3 text-left last:border-b-0 sm:nth-[3]:border-b-0">
+                  <button key={r.id} onClick={() => navigate("/marketing/gbp")} className="group flex flex-col gap-1 border-b-hairline py-3 text-left last:border-b-0">
                     <span className="flex items-center gap-2">
                       <span className="flex items-center gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
                         {Array.from({ length: 5 }, (_, i) => (
