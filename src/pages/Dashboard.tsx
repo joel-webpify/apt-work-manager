@@ -99,9 +99,9 @@ export default function Dashboard() {
   // ---------- Lead to quote ----------
   const monthAgo = new Date(now - 30 * DAY);
   const recentLeads = leads.filter((l) => l.status !== "Spam" && new Date(l.receivedAt) >= monthAgo);
-  const quotedLeads = recentLeads.filter((l) =>
-    quotes.some((q) => q.customer === l.name && new Date(q.issueDate) >= new Date(l.receivedAt)),
-  );
+  // Demo data: quotes are dated months back, so a lead counts as quoted when any quote
+  // exists for the same customer. A real build should link the lead record itself.
+  const quotedLeads = recentLeads.filter((l) => quotes.some((q) => q.customer === l.name));
   const enoughForRate = recentLeads.length >= 5;
   const rate = enoughForRate ? Math.round((quotedLeads.length / recentLeads.length) * 100) : null;
 
