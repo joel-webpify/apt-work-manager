@@ -1,41 +1,43 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  ArrowRight,
-  CalendarDays,
-  Clock3,
-  Mail,
-  Plus,
-  UserPlus,
-  UserRoundX,
-} from "lucide-react";
-import { PageBody, Btn, StatusDot } from "@/components/layout/PageShell";
+import { ArrowRight, Check, Mail, Plus, UserPlus } from "lucide-react";
+import { PageBody, Btn } from "@/components/layout/PageShell";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
-import PipelineIcon from "@/components/pipeline/PipelineIcon";
 import { EditContactDialog } from "@/components/contacts/EditContactDialog";
 import { employees, type Job } from "@/data/mockData";
 import { addJob, useJobs } from "@/lib/jobsStore";
 import { useQuotes } from "@/lib/quotesStore";
 import { useInvoices } from "@/lib/invoicesStore";
+import { useGbp } from "@/lib/gbpStore";
+import { leads } from "@/lib/leadsData";
 import { docTotals, totals as invoiceTotals } from "@/lib/quoteUtils";
 import { nextStep } from "@/lib/jobPlan";
-import { useCostReporting } from "@/lib/costReporting";
-import { colorToCss, pipelineIdForStage, resolveStageName, useStages } from "@/lib/stagesStore";
+import { resolveStageName, useStages } from "@/lib/stagesStore";
 
-const money = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP",
-  maximumFractionDigits: 0,
-});
+const money = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
+const DAY = 86_400_000;
+const iso = (d: Date) => d.toISOString().slice(0, 10);
+const daysSince = (date: string) => Math.floor((Date.now() - new Date(date).getTime()) / DAY);
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+type Tone = "green" | "amber" | "red" | "grey";
+const toneColor: Record<Tone, string> = {
+  green: "hsl(var(--success))",
+  amber: "hsl(var(--warning))",
+  red: "hsl(var(--destructive))",
+  grey: "hsl(var(--muted-foreground) / 0.5)",
+};
+const toneRank: Record<Tone, number> = { red: 0, amber: 1, green: 2, grey: 3 };
 
-function jobPipelineId(job: Job) {
-  return job.pipelineId ?? pipelineIdForStage(resolveStageName(job.stage));
-}
+// Demo: the signed-in person is the first team member, and is the owner.
+const CURRENT_USER_ID = employees[0]?.id;
+const IS_OWNER = true;
+const MULTI_USER = employees.length >= 2;
+const DONE_STAGES = ["Completed", "Invoiced", "Paid"];
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <h2 className="text-base font-semibold">{children}</h2>;
+const jobOwner = (job: Job) => job.assignments?.[0]?.employeeId;
+
+function Dot({ tone }: { tone: Tone }) {
+  return <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: toneColor[tone] }} />;
 }
 
 export default function Dashboard() {
@@ -43,82 +45,133 @@ export default function Dashboard() {
   const [jobs] = useJobs();
   const [quotes] = useQuotes();
   const [invoices] = useInvoices();
+  const gbp = useGbp();
   const { pipelines } = useStages();
-  const { totals: costTotals } = useCostReporting(jobs);
   const [newJobOpen, setNewJobOpen] = useState(false);
   const [newContactOpen, setNewContactOpen] = useState(false);
-  const [selectedPipelineId, setSelectedPipelineId] = useState(() => pipelines[0]?.id ?? "");
+  const [scope, setScope] = useState<"mine" | "everyone">(IS_OWNER ? "everyone" : "mine");
 
-  const today = todayIso();
-  const todaysWork = useMemo(
-    () =>
-      jobs
-        .flatMap((job) =>
-          (job.assignments ?? [])
-            .filter((assignment) => assignment.date === today)
-            .map((assignment) => ({ job, assignment })),
-        )
-        .sort((a, b) => a.assignment.start.localeCompare(b.assignment.start)),
-    [jobs, today],
+  const mine = scope === "mine" && MULTI_USER;
+  const today = iso(new Date());
+  const now = Date.now();
+
+  const scopedJobs = useMemo(() => (mine ? jobs.filter((j) => jobOwner(j) === CURRENT_USER_ID) : jobs), [jobs, mine]);
+  const scopedLeads = useMemo(
+    () => leads.filter((l) => l.status === "Open" && (!mine || l.ownerId === CURRENT_USER_ID)),
+    [mine],
   );
 
-  const overdue = useMemo(
-    () =>
-      jobs
-        .map((job) => ({ job, step: nextStep(job) }))
-        .filter(({ step }) => Boolean(step?.due && step.due < today)),
-    [jobs, today],
-  );
-  const unassigned = jobs.filter(
-    (job) => (job.assignments?.length ?? 0) === 0 && !["Completed", "Invoiced", "Paid"].includes(resolveStageName(job.stage)),
-  );
+  // ---------- Leads ----------
+  const inWindow = (w: number) =>
+    scopedLeads.filter((l) => {
+      const age = now - new Date(l.receivedAt).getTime();
+      return age >= w * 7 * DAY && age < (w + 1) * 7 * DAY;
+    }).length;
+  const leadsThisWeek = inWindow(0);
+  const history = [1, 2, 3, 4, 5, 6].map(inWindow);
+  const weeksWithData = history.filter((n) => n > 0).length;
+  const historyTotal = history.reduce((a, b) => a + b, 0);
+  const enoughLeadData = weeksWithData >= 4 && historyTotal >= 10;
+  const normal = historyTotal / 6;
+  const leadDelta = enoughLeadData && normal ? (leadsThisWeek - normal) / normal : 0;
+  const leadTone: Tone = !enoughLeadData ? "grey" : leadDelta <= -0.5 ? "red" : leadDelta <= -0.25 ? "amber" : "green";
 
-  const openQuotes = quotes.filter((quote) => quote.status === "Sent");
-  const quoteValue = openQuotes.reduce((sum, quote) => sum + docTotals(quote).total, 0);
-  const decidedQuotes = quotes.filter((quote) => ["Accepted", "Declined"].includes(quote.status));
-  const acceptedQuotes = decidedQuotes.filter((quote) => quote.status === "Accepted");
-  const conversion = decidedQuotes.length ? Math.round((acceptedQuotes.length / decidedQuotes.length) * 100) : 0;
+  // ---------- Follow-up ----------
+  const notContacted = scopedLeads.filter((l) => !l.firstContactAt && now - new Date(l.receivedAt).getTime() > DAY);
+  const responded = scopedLeads.filter((l) => l.firstContactAt);
+  const avgResponseH = responded.length
+    ? responded.reduce((s, l) => s + (new Date(l.firstContactAt!).getTime() - new Date(l.receivedAt).getTime()), 0) / responded.length / 3600_000
+    : 0;
+  const followTone: Tone = notContacted.length === 0 ? "green" : notContacted.length <= 2 ? "amber" : "red";
 
-  const now = new Date();
-  const monthlyRevenue = invoices
-    .filter((invoice) => {
-      const date = new Date(invoice.issueDate);
-      return invoice.status === "Paid" && date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+  // ---------- Quotes ----------
+  const openQuotes = quotes.filter((q) => q.status === "Sent");
+  const openValue = openQuotes.reduce((s, q) => s + docTotals(q).total, 0);
+  const oldestWait = Math.max(0, ...openQuotes.map((q) => daysSince(q.issueDate)));
+  const waitingQuotes = openQuotes.filter((q) => daysSince(q.issueDate) >= 7);
+  const decided = quotes.filter((q) => ["Accepted", "Declined"].includes(q.status) && daysSince(q.issueDate) <= 90);
+  const won = decided.filter((q) => q.status === "Accepted").length;
+  const winText = decided.length >= 10
+    ? `${Math.round((won / decided.length) * 100)}% win rate (90 days)`
+    : decided.length ? `${won} of ${decided.length} won (90 days)` : "No decided quotes yet";
+  const quoteTone: Tone = oldestWait >= 14 ? "red" : oldestWait >= 7 ? "amber" : "green";
+
+  // ---------- Cash ----------
+  const thisMonth = new Date();
+  const paidThisMonth = invoices
+    .filter((i) => {
+      if (i.status !== "Paid") return false;
+      const d = new Date(i.paidDate ?? i.issueDate);
+      return d.getMonth() === thisMonth.getMonth() && d.getFullYear() === thisMonth.getFullYear();
     })
-    .reduce((sum, invoice) => sum + invoiceTotals(invoice.items).total, 0);
+    .reduce((s, i) => s + invoiceTotals(i.items).total, 0);
+  const overdueInvoices = invoices.filter((i) => (i.status === "Sent" || i.status === "Overdue") && i.dueDate < today);
+  const overdueValue = overdueInvoices.reduce((s, i) => s + invoiceTotals(i.items).total, 0);
+  const worstOverdue = Math.max(0, ...overdueInvoices.map((i) => daysSince(i.dueDate)));
+  const cashTone: Tone = worstOverdue >= 14 ? "red" : overdueInvoices.length ? "amber" : "green";
 
-  const pipelineSummaries = pipelines.map((pipeline) => {
-    const boardJobs = jobs.filter((job) => jobPipelineId(job) === pipeline.id);
-    const stages = pipeline.stages.map((stage) => {
-      const stageJobs = boardJobs.filter((job) => resolveStageName(job.stage) === stage.name);
-      return {
-        ...stage,
-        count: stageJobs.length,
-        value: stageJobs.reduce((sum, job) => sum + job.value, 0),
-      };
-    });
-    return { pipeline, boardJobs, stages };
+  // ---------- Reputation ----------
+  const reviews = gbp?.reviews ?? [];
+  const gbpConnected = Boolean(gbp?.profile);
+  const rating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
+  const unreplied = reviews.filter((r) => !r.reply);
+  const newThisMonth = reviews.filter((r) => r.daysAgo <= 30).length;
+  const repTone: Tone = unreplied.some((r) => r.rating <= 3) ? "red" : unreplied.length ? "amber" : "green";
+
+  // ---------- Needs attention ----------
+  const overdueSteps = scopedJobs.filter((j) => {
+    const s = nextStep(j);
+    return Boolean(s?.due && s.due < today);
   });
+  const unassigned = jobs.filter((j) => !j.assignments?.length && !DONE_STAGES.includes(resolveStageName(j.stage)));
 
-  const recentActivity = useMemo(
-    () =>
-      jobs
-        .flatMap((job) => job.timeline.map((item) => ({ ...item, job })))
-        .slice(0, 4),
-    [jobs],
+  const attention = [
+    { count: notContacted.length, title: "New leads not contacted", desc: "Waiting more than 24 hours", tone: followTone, href: "/contacts?filter=not-contacted" },
+    { count: waitingQuotes.length, title: "Quotes waiting for a reply", desc: "Sent 7+ days ago", tone: quoteTone, href: "/quotes?status=Sent" },
+    { count: overdueInvoices.length, title: "Overdue invoices", desc: `${money.format(overdueValue)} past due`, tone: cashTone, href: "/quotes?tab=invoices" },
+    ...(MULTI_USER ? [{ count: unassigned.length, title: "Jobs without an owner", desc: "Ready to assign", tone: "amber" as Tone, href: "/pipeline?pipeline=all" }] : []),
+    { count: overdueSteps.length, title: "Next steps past due", desc: "Review job plans", tone: "amber" as Tone, href: "/pipeline?attention=1" },
+    ...(gbpConnected ? [{ count: unreplied.length, title: "Unreplied Google reviews", desc: "Replies help your ranking", tone: repTone, href: "/marketing/google-business" }] : []),
+  ]
+    .filter((r) => r.count > 0)
+    .sort((a, b) => toneRank[a.tone] - toneRank[b.tone]);
+
+  // ---------- This week ----------
+  const week = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    const date = iso(d);
+    const visits = scopedJobs
+      .flatMap((job) => (job.assignments ?? []).filter((a) => a.date === date && (!mine || a.employeeId === CURRENT_USER_ID)).map((a) => ({ job, a })))
+      .sort((x, y) => x.a.start.localeCompare(y.a.start));
+    return { date, d, visits };
+  });
+  const weekEmpty = week.every((w) => !w.visits.length);
+
+  // ---------- Team ----------
+  const outToday = employees.filter((e) => e.daysOff.includes(today) || !e.workingDays.includes(new Date().getDay()));
+  const available = week.reduce(
+    (s, w) => s + employees.filter((e) => e.workingDays.includes(w.d.getDay()) && !e.daysOff.includes(w.date)).reduce((t, e) => t + e.capacityHoursPerDay, 0),
+    0,
   );
+  const booked = jobs.flatMap((j) => j.assignments ?? []).filter((a) => week.some((w) => w.date === a.date)).reduce((s, a) => s + a.duration, 0);
+  const hasAvailability = employees.some((e) => e.capacityHoursPerDay > 0);
 
-  const firstPipelineId = pipelines[0]?.id ?? "sales";
-  const selectedPipeline = pipelines.find((pipeline) => pipeline.id === selectedPipelineId) ?? pipelines[0];
-  const selectedSummary = pipelineSummaries.find(({ pipeline }) => pipeline.id === selectedPipeline?.id);
-  const selectedValue = selectedSummary?.boardJobs.reduce((sum, job) => sum + job.value, 0) ?? 0;
-  const selectedMaxStage = Math.max(...(selectedSummary?.stages.map((stage) => stage.count) ?? [1]), 1);
+  // ---------- Pipeline line ----------
+  const active = jobs.filter((j) => !DONE_STAGES.includes(resolveStageName(j.stage)));
+  const activeValue = active.reduce((s, j) => s + j.value, 0);
 
-  const metrics = [
-    { label: "Revenue this month", value: money.format(monthlyRevenue), detail: "Paid invoices", href: "/reporting?tab=revenue" },
-    { label: "Open quote value", value: money.format(quoteValue), detail: `${openQuotes.length} sent ${openQuotes.length === 1 ? "quote" : "quotes"}`, href: "/quotes" },
-    { label: "Quote conversion", value: `${conversion}%`, detail: "Of decided quotes", href: "/reporting?tab=pipeline" },
-    { label: "Expected profit", value: money.format(costTotals.profit), detail: `${costTotals.costedCount} costed ${costTotals.costedCount === 1 ? "job" : "jobs"}`, href: "/reporting?tab=revenue" },
+  const health = [
+    {
+      label: "Leads", value: String(leadsThisWeek), tone: leadTone, href: "/reporting?tab=marketing",
+      sub: enoughLeadData ? `${leadDelta >= 0 ? "+" : ""}${Math.round(leadDelta * 100)}% vs normal` : "Not enough data yet",
+    },
+    { label: "Follow-up", value: String(notContacted.length), tone: followTone, href: "/contacts?filter=not-contacted", sub: `Avg first response: ${avgResponseH.toFixed(1)}h` },
+    { label: "Quotes", value: `${money.format(openValue)} · ${openQuotes.length} open`, tone: quoteTone, href: "/reporting?tab=pipeline", sub: winText },
+    { label: "Cash", value: money.format(paidThisMonth), tone: cashTone, href: "/reporting?tab=revenue", sub: overdueInvoices.length ? `${money.format(overdueValue)} overdue` : "Nothing overdue" },
+    gbpConnected
+      ? { label: "Reputation", value: `${rating.toFixed(1)}★ · ${reviews.length}`, tone: repTone, href: "/marketing/google-business", sub: `${newThisMonth} new this month · ${unreplied.length} unreplied` }
+      : { label: "Reputation", value: "Connect Google Business", tone: "grey" as Tone, href: "/marketing/google-business", sub: "See your rating here" },
   ];
 
   return (
@@ -127,7 +180,7 @@ export default function Dashboard() {
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-[26px] font-semibold leading-none">Dashboard</h1>
-            <p className="mt-1.5 text-sm text-muted-foreground">Your work and business at a glance</p>
+            <p className="mt-1.5 text-sm text-muted-foreground">Is the business OK, and what needs doing now</p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Btn onClick={() => setNewJobOpen(true)}><Plus className="h-3.5 w-3.5" /> New job</Btn>
@@ -138,177 +191,119 @@ export default function Dashboard() {
       </header>
 
       <PageBody>
-        <div className="mx-auto max-w-[1440px] space-y-8">
-          <section aria-label="Business pulse" className="border-y-hairline grid grid-cols-2 bg-card lg:grid-cols-4">
-            {metrics.map((metric, index) => (
+        <div className="mx-auto max-w-[1440px] space-y-5">
+          {/* Health strip */}
+          <section aria-label="Business health" className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible">
+            {health.map((h) => (
               <button
-                key={metric.label}
-                className={`group px-4 py-5 text-left transition-colors hover:bg-surface sm:px-6 ${index % 2 ? "border-l-hairline" : ""} ${index > 1 ? "border-t-hairline lg:border-t-0" : ""} ${index === 2 ? "lg:border-l-hairline" : ""}`}
-                onClick={() => navigate(metric.href)}
+                key={h.label}
+                onClick={() => navigate(h.href)}
+                className="group min-w-[200px] snap-start rounded-lg border-hairline bg-card p-4 text-left transition-colors hover:bg-surface lg:min-w-0"
               >
-                <span className="text-xs font-medium text-muted-foreground">{metric.label}</span>
-                <span className="mt-2 flex items-end justify-between gap-2">
-                  <span className="text-2xl font-semibold tabular-nums sm:text-3xl">{metric.value}</span>
-                  <ArrowRight className="mb-1 h-3.5 w-3.5 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                <span className="flex items-center justify-between">
+                  <span className="text-xs font-medium text-muted-foreground">{h.label}</span>
+                  <Dot tone={h.tone} />
                 </span>
-                <span className="mt-1 block text-xs text-muted-foreground">{metric.detail}</span>
+                <span className="mt-2 block truncate text-xl font-semibold tabular-nums">{h.value}</span>
+                <span className="mt-1 block truncate text-xs text-muted-foreground">{h.sub}</span>
               </button>
             ))}
           </section>
 
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.55fr)_minmax(300px,0.75fr)]">
-            <section className="border-hairline min-h-[330px] rounded-lg bg-card p-5 sm:p-6">
-              <div className="flex items-start justify-between gap-3 border-b-hairline pb-5">
+          {/* Main row */}
+          <div className="grid gap-5 lg:grid-cols-3">
+            <section className="rounded-lg border-hairline bg-card p-5 lg:col-span-2">
+              <div className="flex items-start justify-between gap-3 border-b-hairline pb-4">
                 <div>
-                  <SectionTitle>Today&apos;s work</SectionTitle>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}
-                  </p>
+                  <h2 className="text-base font-semibold">Needs attention</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">Things waiting on you or your team</p>
                 </div>
-                <Btn variant="ghost" className="h-8" onClick={() => navigate("/field")}>Full schedule <ArrowRight className="h-3 w-3" /></Btn>
-              </div>
-              {todaysWork.length ? (
-                <div className="divide-y divide-border">
-                  {todaysWork.slice(0, 5).map(({ job, assignment }) => {
-                    const employee = employees.find((person) => person.id === assignment.employeeId);
-                    return (
-                      <button key={`${job.id}-${assignment.employeeId}-${assignment.start}`} className="group grid w-full grid-cols-[58px_minmax(0,1fr)] items-center gap-3 py-4 text-left sm:grid-cols-[58px_minmax(0,1fr)_auto]" onClick={() => navigate(`/field/job/${job.id}`)}>
-                        <span className="text-base font-semibold tabular-nums text-primary">{assignment.start}</span>
-                        <span className="min-w-0">
-                          <span className="block truncate text-sm font-medium">{job.customer}</span>
-                          <span className="block truncate text-xs text-muted-foreground">{job.service}</span>
-                        </span>
-                        <span className="col-start-2 flex items-center gap-2 text-xs text-muted-foreground sm:col-start-auto">
-                          {employee?.name ?? "Unassigned"}<ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                        </span>
+                {MULTI_USER && (
+                  <div className="flex rounded-md border-hairline p-0.5 text-xs">
+                    {(["mine", "everyone"] as const).map((s) => (
+                      <button key={s} onClick={() => setScope(s)} className={`rounded px-2.5 py-1 font-medium capitalize transition-colors ${scope === s ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-surface"}`}>
+                        {s}
                       </button>
-                    );
-                  })}
+                    ))}
+                  </div>
+                )}
+              </div>
+              {attention.length ? (
+                <div className="divide-y divide-border">
+                  {attention.map((r) => (
+                    <button key={r.title} onClick={() => navigate(r.href)} className="group flex w-full items-center gap-4 py-3 text-left">
+                      <Dot tone={r.tone} />
+                      <span className="w-8 text-xl font-semibold tabular-nums">{r.count}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{r.title}</span>
+                        <span className="block truncate text-xs text-muted-foreground">{r.desc}</span>
+                      </span>
+                      <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    </button>
+                  ))}
                 </div>
               ) : (
-                <div className="flex min-h-56 items-center justify-center py-8 text-center">
-                  <div>
-                    <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-surface"><CalendarDays className="h-4 w-4 text-muted-foreground" /></span>
-                    <p className="mt-3 text-sm font-medium">No visits booked for today</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Your team&apos;s scheduled work will appear here.</p>
-                    <Btn variant="secondary" className="mt-4" onClick={() => navigate("/field")}>Open schedule</Btn>
+                <p className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+                  <Check className="h-4 w-4 text-[hsl(var(--success))]" /> All caught up, nothing needs your attention.
+                </p>
+              )}
+            </section>
+
+            <section className="rounded-lg border-hairline bg-card p-5">
+              <div className="flex items-center justify-between border-b-hairline pb-4">
+                <h2 className="text-base font-semibold">This week</h2>
+                <button className="flex items-center gap-1 text-xs font-medium text-primary" onClick={() => navigate("/field")}>Full schedule <ArrowRight className="h-3 w-3" /></button>
+              </div>
+              {weekEmpty ? (
+                <button className="py-4 text-sm text-muted-foreground" onClick={() => navigate("/field")}>No visits booked this week · <span className="text-primary">Open schedule</span></button>
+              ) : (
+                <div className="pt-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Today</p>
+                  {week[0].visits.length ? (
+                    <div className="mt-1 divide-y divide-border">
+                      {week[0].visits.slice(0, 4).map(({ job, a }) => (
+                        <button key={`${job.id}-${a.employeeId}-${a.start}`} onClick={() => navigate(`/field/job/${job.id}`)} className="grid w-full grid-cols-[44px_minmax(0,1fr)] gap-2 py-2 text-left">
+                          <span className="text-sm font-semibold tabular-nums text-primary">{a.start}</span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-sm font-medium">{job.customer}</span>
+                            <span className="block truncate text-xs text-muted-foreground">{employees.find((e) => e.id === a.employeeId)?.name ?? "Unassigned"}</span>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  ) : <p className="py-2 text-sm text-muted-foreground/70">Free</p>}
+                  <div className="mt-2 space-y-1.5 border-t-hairline pt-3">
+                    {week.slice(1).map((w) => (
+                      <div key={w.date} className={`flex justify-between text-sm ${w.visits.length ? "" : "text-muted-foreground/60"}`}>
+                        <span>{w.d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric" })}</span>
+                        <span className="tabular-nums">{w.visits.length ? `${w.visits.length} ${w.visits.length === 1 ? "visit" : "visits"}` : "Free"}</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
             </section>
-
-            <section className="border-hairline rounded-lg bg-card p-5 sm:p-6">
-              <div className="border-b-hairline pb-5">
-                <SectionTitle>Work to organise</SectionTitle>
-                <p className="mt-1 text-sm text-muted-foreground">Items waiting for a decision or owner</p>
-              </div>
-              <div className="divide-y divide-border">
-                <button className="group flex w-full items-center gap-4 py-5 text-left" onClick={() => navigate("/pipeline?attention=1")}>
-                  <span className="w-9 text-2xl font-semibold tabular-nums">{overdue.length}</span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Next steps past due</span><span className="block text-xs text-muted-foreground">Review job plans</span></span>
-                  <Clock3 className="h-4 w-4 text-muted-foreground" />
-                </button>
-                <button className="group flex w-full items-center gap-4 py-5 text-left" onClick={() => navigate("/pipeline?pipeline=all")}>
-                  <span className="w-9 text-2xl font-semibold tabular-nums">{unassigned.length}</span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Jobs without an owner</span><span className="block text-xs text-muted-foreground">Ready to assign</span></span>
-                  <UserRoundX className="h-4 w-4 text-muted-foreground" />
-                </button>
-                <button className="group flex w-full items-center gap-4 py-5 text-left" onClick={() => navigate("/quotes")}>
-                  <span className="w-9 text-2xl font-semibold tabular-nums">{openQuotes.length}</span>
-                  <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Quotes awaiting a decision</span><span className="block text-xs text-muted-foreground">{money.format(quoteValue)} open</span></span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                </button>
-              </div>
-            </section>
           </div>
 
-          <section>
-            <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <SectionTitle>Pipeline overview</SectionTitle>
-                <p className="mt-1 text-sm text-muted-foreground">{jobs.length} jobs across {pipelines.length} boards</p>
-              </div>
-              <Btn variant="ghost" onClick={() => navigate("/pipeline?pipeline=all")}>Open all boards <ArrowRight className="h-3 w-3" /></Btn>
-            </div>
-            <div className="mb-4 flex gap-2 overflow-x-auto pb-1">
-              {pipelines.map((pipeline) => {
-                const summary = pipelineSummaries.find((item) => item.pipeline.id === pipeline.id);
-                const active = pipeline.id === selectedPipeline?.id;
-                return (
-                  <button key={pipeline.id} className={`flex shrink-0 items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium transition-colors ${active ? "border-primary bg-primary/10 text-primary" : "border-border bg-card hover:bg-surface"}`} onClick={() => setSelectedPipelineId(pipeline.id)}>
-                    <PipelineIcon icon={pipeline.icon} className="h-3.5 w-3.5" />
-                    {pipeline.name}
-                    <span className="text-xs opacity-70">{summary?.boardJobs.length ?? 0}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <button onClick={() => navigate("/pipeline?pipeline=all")} className="group flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+            <span className="font-medium text-foreground">{active.length} active jobs</span> · {money.format(activeValue)}
+            {pipelines.length > 1 && <> · {pipelines.length} boards</>} · <span className="text-primary">Open boards</span>
+            <ArrowRight className="h-3 w-3 text-primary transition-transform group-hover:translate-x-0.5" />
+          </button>
 
-            <div className="border-hairline grid overflow-hidden rounded-lg bg-card xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
-              <div className="p-5 sm:p-6 xl:border-r-hairline">
-                {selectedPipeline && selectedSummary ? (
-                  <>
-                    <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-md bg-surface text-primary"><PipelineIcon icon={selectedPipeline.icon} className="h-4 w-4" /></span>
-                        <div><h3 className="font-semibold">{selectedPipeline.name}</h3><p className="text-xs text-muted-foreground">{selectedSummary.boardJobs.length} jobs · {money.format(selectedValue)}</p></div>
-                      </div>
-                      <Btn variant="secondary" onClick={() => navigate(`/pipeline?pipeline=${selectedPipeline.id}`)}>Open board <ArrowRight className="h-3 w-3" /></Btn>
-                    </div>
-                    <div className="space-y-4">
-                      {selectedSummary.stages.map((stage) => (
-                        <div key={stage.id} className="grid grid-cols-[minmax(100px,0.7fr)_minmax(120px,1.5fr)_auto] items-center gap-3">
-                          <span className="truncate text-sm">{stage.name}</span>
-                          <div className="h-2 overflow-hidden rounded-full bg-surface"><div className="h-full rounded-full" style={{ width: `${(stage.count / selectedMaxStage) * 100}%`, backgroundColor: colorToCss(stage.color) }} /></div>
-                          <span className="w-24 text-right text-xs tabular-nums text-muted-foreground">{stage.count} · {money.format(stage.value)}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : <p className="text-sm text-muted-foreground">No pipeline boards yet.</p>}
-              </div>
-
-              <div className="border-t-hairline p-5 sm:p-6 xl:border-t-0">
-                <h3 className="text-sm font-semibold">All boards</h3>
-                <div className="mt-3 max-h-64 divide-y divide-border overflow-y-auto">
-                  {pipelineSummaries.map(({ pipeline, boardJobs }) => {
-                    const value = boardJobs.reduce((sum, job) => sum + job.value, 0);
-                    return (
-                      <button key={pipeline.id} className="group flex w-full items-center gap-3 py-3 text-left" onClick={() => setSelectedPipelineId(pipeline.id)}>
-                        <StatusDot color={colorToCss(pipeline.color ?? "215 16% 47%")} />
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{pipeline.name}</span>
-                        <span className="text-right text-xs tabular-nums text-muted-foreground">{boardJobs.length} jobs<br />{money.format(value)}</span>
-                        <ArrowRight className="h-3 w-3 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className="border-t-hairline pt-6">
-            <div className="mb-4 flex items-center justify-between gap-3"><SectionTitle>Recent activity</SectionTitle><Btn variant="ghost" onClick={() => navigate("/pipeline?pipeline=all")}>View all <ArrowRight className="h-3 w-3" /></Btn></div>
-            <div className="divide-y divide-border">
-              {recentActivity.length ? recentActivity.map((item, index) => (
-                <button key={`${item.job.id}-${index}`} className="group grid w-full grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 py-3 text-left sm:grid-cols-[auto_minmax(0,1fr)_minmax(120px,0.35fr)_auto]" onClick={() => navigate(`/pipeline?pipeline=${jobPipelineId(item.job)}`)}>
-                  <StatusDot color={item.type === "email" ? "hsl(var(--primary))" : "hsl(var(--success))"} />
-                  <span className="truncate text-sm">{item.text}</span>
-                  <span className="hidden truncate text-xs text-muted-foreground sm:block">{item.job.customer}</span>
-                  <span className="text-xs text-muted-foreground">{item.date}</span>
-                </button>
-              )) : <p className="py-4 text-sm text-muted-foreground">No activity recorded yet.</p>}
-            </div>
-          </section>
+          {MULTI_USER && (
+            <section aria-label="Team" className="flex flex-wrap gap-x-8 gap-y-2 rounded-lg border-hairline bg-card px-5 py-3 text-sm">
+              <span><span className="text-muted-foreground">Unassigned jobs</span> <span className="ml-1 font-semibold tabular-nums">{unassigned.length}</span></span>
+              {hasAvailability && available > 0 && (
+                <span><span className="text-muted-foreground">Capacity this week</span> <span className="ml-1 font-semibold tabular-nums">{Math.round((booked / available) * 100)}%</span> <span className="text-xs text-muted-foreground">({Math.round(booked)}h / {Math.round(available)}h)</span></span>
+              )}
+              <span className="min-w-0"><span className="text-muted-foreground">Out today</span> <span className="ml-1 font-medium">{outToday.length ? outToday.map((e) => e.name.split(" ")[0]).join(", ") : "Everyone in"}</span></span>
+            </section>
+          )}
         </div>
       </PageBody>
 
-      <NewJobDialog
-        open={newJobOpen}
-        onOpenChange={setNewJobOpen}
-        defaultPipelineId={firstPipelineId}
-        onCreate={addJob}
-      />
+      <NewJobDialog open={newJobOpen} onOpenChange={setNewJobOpen} defaultPipelineId={pipelines[0]?.id ?? "sales"} onCreate={addJob} />
       <EditContactDialog contact={null} open={newContactOpen} onOpenChange={setNewContactOpen} mode="create" />
     </>
   );
