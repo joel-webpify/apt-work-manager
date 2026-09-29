@@ -1,8 +1,11 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type DragEvent } from "react";
-import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Plus, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check, ClipboardList, Wrench } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { employees, type Employee, type Job, type JobAssignment, type Trade } from "@/data/mockData";
 import { Btn, StatusDot } from "@/components/layout/PageShell";
+import { findSmartSlot } from "@/lib/travel";
+import { visitTypeFor } from "@/lib/visitTypes";
+import DayView from "@/components/schedule/DayView";
 
 // ---------- date helpers (local, no deps) ----------
 function pad(n: number) {
@@ -46,7 +49,7 @@ interface AssignmentRow {
   assignment: JobAssignment;
 }
 
-interface DragPayload {
+export interface DragPayload {
   jobId: string;
   fromEmployeeId?: string;
   fromDate?: string;
@@ -64,6 +67,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const { toast } = useToast();
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(2026, 4, 4)));
   const [tradeFilter, setTradeFilter] = useState<Trade | "All">("All");
+  const [mode, setMode] = useState<"week" | "day">("week");
   const [drag, setDrag] = useState<DragPayload | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [employeeDrawer, setEmployeeDrawer] = useState<Employee | null>(null);
@@ -79,6 +83,17 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   }, [fullscreen]);
 
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const todayISO = fmtISO(new Date(2026, 4, 4));
+
+  // Day view opens on a day that actually has work booked.
+  const [dayIso, setDayIso] = useState<string>(() => {
+    const withWork = weekDays
+      .map((d) => fmtISO(d))
+      .find((iso) =>
+        jobs.some((j) => (j.assignments ?? []).some((a) => a.date === iso)),
+      );
+    return withWork ?? todayISO;
+  });
 
   const visibleEmployees = useMemo(() => {
     if (tradeFilter === "All") return employees;
@@ -107,13 +122,9 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
     return map;
   }, [jobs]);
 
-  // Unscheduled jobs that should be schedule-able (booked / in progress / completed without time)
+  // Unscheduled: any job without a booked visit, whatever its stage or board.
   const unscheduled = useMemo(() => {
-    return jobs.filter(
-      (j) =>
-        (j.stage === "Job booked" || j.stage === "Quote sent" || j.stage === "New enquiry" || j.stage === "In progress") &&
-        (!j.assignments || j.assignments.length === 0),
-    );
+    return jobs.filter((j) => !j.assignments || j.assignments.length === 0);
   }, [jobs]);
 
   // ---------- DnD ----------
@@ -132,39 +143,53 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
     if (dragOverCell !== key) setDragOverCell(key);
   };
 
+  /** Drop a job on a person/day — lands in the first free slot with driving room. */
+  const scheduleJobOn = useCallback(
+    (jobId: string, employeeId: string, dateISO: string) => {
+      const job = jobs.find((j) => j.id === jobId);
+      if (!job) return;
+      const employee = employees.find((emp) => emp.id === employeeId);
+      if (!employee) return;
+
+      const date = parseISO(dateISO);
+      if (!employee.workingDays.includes(date.getDay()) || employee.daysOff.includes(dateISO)) {
+        toast({
+          title: "Can't assign",
+          description: `${employee.name} is off on ${date.toLocaleDateString("en-GB", { weekday: "long" })}.`,
+        });
+        return;
+      }
+
+      const duration = job.estimatedHours && job.estimatedHours > 0 ? job.estimatedHours : 2;
+      const slot = findSmartSlot({ employee, dateISO, duration, jobs, movingJobId: jobId });
+      if (slot.pastWorkday) {
+        toast({
+          title: "Heads up",
+          description: `${employee.name}'s day is full — this runs past their working hours.`,
+        });
+      }
+
+      onUpdateJob(job.id, (curr) => {
+        const from = drag;
+        const next = (curr.assignments ?? []).filter(
+          (a) =>
+            !(from?.fromEmployeeId && a.employeeId === from.fromEmployeeId && a.date === from.fromDate && a.start === from.fromStart),
+        );
+        next.push({ employeeId, date: dateISO, start: slot.start, duration });
+        return { ...curr, assignments: next };
+      });
+      setDrag(null);
+      setDragOverCell(null);
+    },
+    [jobs, drag, onUpdateJob, toast],
+  );
+
   const onCellDrop = (e: DragEvent, employeeId: string, dateISO: string) => {
     e.preventDefault();
     setDragOverCell(null);
-    if (!drag) return;
-    const job = jobs.find((j) => j.id === drag.jobId);
-    if (!job) return;
-    const employee = employees.find((emp) => emp.id === employeeId);
-    if (!employee) return;
-
-    const duration = job.estimatedHours && job.estimatedHours > 0 ? job.estimatedHours : 2;
-
-    // Default start = workStart (or 08:00)
-    const startTime = employee.workStart || "08:00";
-
-    // Validate
-    const warnings = validateAssignment(job, employee, dateISO, startTime, duration, jobs, drag);
-    if (warnings.blocking) {
-      toast({ title: "Can't assign", description: warnings.blocking });
-      return;
-    }
-    if (warnings.warning) {
-      toast({ title: "Heads up", description: warnings.warning });
-    }
-
-    // Update job: remove old assignment if moving, then add new
-    onUpdateJob(job.id, (curr) => {
-      const next = (curr.assignments ?? []).filter(
-        (a) => !(drag.fromEmployeeId && a.employeeId === drag.fromEmployeeId && a.date === drag.fromDate && a.start === drag.fromStart),
-      );
-      next.push({ employeeId, date: dateISO, start: startTime, duration });
-      const stage = curr.stage === "New enquiry" || curr.stage === "Quote sent" ? "Job booked" : curr.stage;
-      return { ...curr, assignments: next, stage };
-    });
+    const jobId = drag?.jobId ?? e.dataTransfer.getData("text/plain");
+    if (!jobId) return;
+    scheduleJobOn(jobId, employeeId, dateISO);
   };
 
   const removeAssignment = (jobId: string, a: JobAssignment) => {
@@ -211,7 +236,6 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   };
 
   const goToday = useCallback(() => setWeekStart(startOfWeek(new Date(2026, 4, 4))), []);
-  const todayISO = fmtISO(new Date(2026, 4, 4));
 
   // Workload per employee for the visible week
   const weekWorkload = (emp: Employee) => {
@@ -260,6 +284,25 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
           {weekDays[6].toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}
         </div>
 
+        <div className="inline-flex items-center h-8 rounded-md border-hairline bg-background p-0.5 ml-1">
+          <button
+            onClick={() => setMode("week")}
+            className={`h-7 px-2.5 rounded-[5px] text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+              mode === "week" ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Week
+          </button>
+          <button
+            onClick={() => setMode("day")}
+            className={`h-7 px-2.5 rounded-[5px] text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${
+              mode === "day" ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Day
+          </button>
+        </div>
+
         <div className="flex items-center gap-1 ml-3">
           {(["All", "Plumbing", "Electrical", "Window cleaning", "Landscaping", "General"] as const).map((t) => (
             <button
@@ -293,150 +336,172 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
         </div>
       </div>
 
-      <div className="grid gap-4" style={{ gridTemplateColumns: "1fr 280px" }}>
-        {/* Schedule grid */}
-        <div className="border-hairline rounded-lg overflow-hidden bg-card">
-          {/* Day header */}
-          <div
-            className="grid border-b-hairline bg-surface/40"
-            style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}
-          >
-            <div className="px-3 h-10 flex items-center text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Employee
-            </div>
-            {weekDays.map((d) => {
-              const iso = fmtISO(d);
-              const isToday = iso === todayISO;
-              return (
-                <div
-                  key={iso}
-                  className={`px-2 h-10 flex flex-col items-center justify-center border-l-hairline ${
-                    isToday ? "bg-primary/5" : ""
-                  }`}
-                >
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
-                    {DAY_LABELS[d.getDay() === 0 ? 6 : d.getDay() - 1]}
-                  </div>
-                  <div className={`text-sm font-medium tabular-nums ${isToday ? "text-primary" : ""}`}>
-                    {d.getDate()}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* Rows */}
-          {visibleEmployees.map((emp) => {
-            const { booked, capacity } = weekWorkload(emp);
-            const pct = capacity > 0 ? Math.min(100, Math.round((booked / capacity) * 100)) : 0;
-            const over = capacity > 0 && booked > capacity;
-            return (
+      <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
+        {/* Schedule */}
+        <div className="min-w-0 overflow-x-auto pb-2">
+          {mode === "week" ? (
+            <div className="border-hairline rounded-lg overflow-hidden bg-card min-w-[720px]">
+              {/* Day header */}
               <div
-                key={emp.id}
-                className="grid border-b-hairline last:border-0"
+                className="grid border-b-hairline bg-surface/40"
                 style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}
               >
-                {/* Employee column */}
-                <button
-                  onClick={() => setEmployeeDrawer(emp)}
-                  className="text-left px-3 py-2 border-r-hairline hover:bg-surface-hover transition-colors"
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[11px] font-medium text-white"
-                      style={{ backgroundColor: `hsl(${emp.color})` }}
-                    >
-                      {emp.initials}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="text-sm font-medium truncate">{emp.name}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">{emp.role}</div>
-                    </div>
-                  </div>
-                  <div className="mt-2">
-                    <div className="flex items-center justify-between text-[10px] text-muted-foreground tabular-nums mb-0.5">
-                      <span>{booked.toFixed(1)}h / {capacity}h</span>
-                      <span className={over ? "text-[hsl(var(--destructive))] font-medium" : ""}>{pct}%</span>
-                    </div>
-                    <div className="h-1 rounded-full bg-surface overflow-hidden">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${Math.min(100, pct)}%`,
-                          backgroundColor: over
-                            ? "hsl(var(--destructive))"
-                            : pct > 85
-                              ? "hsl(var(--warning))"
-                              : `hsl(${emp.color})`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                </button>
-
-                {/* Day cells */}
+                <div className="px-3 h-10 flex items-center text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Employee
+                </div>
                 {weekDays.map((d) => {
                   const iso = fmtISO(d);
-                  const dow = d.getDay();
-                  const isWorking = emp.workingDays.includes(dow) && !emp.daysOff.includes(iso);
-                  const cellKey = `${emp.id}|${iso}`;
-                  const items = grid.get(emp.id)?.get(iso) ?? [];
-                  const isOver = dragOverCell === cellKey;
-
-                  // detect overlaps within this cell
-                  const overlapping = new Set<number>();
-                  for (let i = 0; i < items.length; i++) {
-                    const aStart = timeToMinutes(items[i].assignment.start);
-                    const aEnd = aStart + items[i].assignment.duration * 60;
-                    for (let j = i + 1; j < items.length; j++) {
-                      const bStart = timeToMinutes(items[j].assignment.start);
-                      const bEnd = bStart + items[j].assignment.duration * 60;
-                      if (aStart < bEnd && bStart < aEnd) {
-                        overlapping.add(i);
-                        overlapping.add(j);
-                      }
-                    }
-                  }
-
+                  const isToday = iso === todayISO;
                   return (
-                    <div
-                      key={iso}
-                      onDragOver={(e) => onCellDragOver(e, cellKey)}
-                      onDragLeave={() => setDragOverCell((k) => (k === cellKey ? null : k))}
-                      onDrop={(e) => onCellDrop(e, emp.id, iso)}
-                      className={`min-h-[88px] border-l-hairline p-1.5 space-y-1 transition-colors ${
-                        !isWorking ? "bg-surface/40" : ""
-                      } ${isOver ? "bg-primary/10" : ""}`}
+                        <div
+                          key={iso}
+                      className={`px-2 h-10 flex flex-col items-center justify-center border-l-hairline ${
+                        isToday ? "bg-primary/5" : ""
+                      }`}
                     >
-                      {!isWorking && items.length === 0 && (
-                        <div className="text-[10px] text-muted-foreground/60 text-center pt-2">Off</div>
-                      )}
-                      {items.map((row, idx) => (
-                        <ScheduledChip
-                          key={`${row.job.id}-${row.assignment.start}`}
-                          row={row}
-                          color={emp.color}
-                          conflict={overlapping.has(idx)}
-                          onClick={() => onSelectJob(row.job)}
-                          onRemove={() => removeAssignment(row.job.id, row.assignment)}
-                          onDragStart={(e) =>
-                            onJobDragStart(e, {
-                              jobId: row.job.id,
-                              fromEmployeeId: emp.id,
-                              fromDate: iso,
-                              fromStart: row.assignment.start,
-                            })
-                          }
-                          onDragEnd={onJobDragEnd}
-                          onEdit={(patch) => updateAssignment(row.job.id, row.assignment, patch)}
-                        />
-                      ))}
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                        {DAY_LABELS[d.getDay() === 0 ? 6 : d.getDay() - 1]}
+                      </div>
+                      <div className={`text-sm font-medium tabular-nums ${isToday ? "text-primary" : ""}`}>
+                        {d.getDate()}
+                      </div>
                     </div>
                   );
                 })}
               </div>
-            );
-          })}
+
+              {/* Rows */}
+              {visibleEmployees.map((emp) => {
+                const { booked, capacity } = weekWorkload(emp);
+                const pct = capacity > 0 ? Math.min(100, Math.round((booked / capacity) * 100)) : 0;
+                const over = capacity > 0 && booked > capacity;
+                return (
+                  <div
+                    key={emp.id}
+                    className="grid border-b-hairline last:border-0"
+                    style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}
+                  >
+                    {/* Employee column */}
+                    <button
+                      onClick={() => setEmployeeDrawer(emp)}
+                      className="text-left px-3 py-2 border-r-hairline hover:bg-surface-hover transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="w-7 h-7 rounded-full inline-flex items-center justify-center text-[11px] font-medium text-white"
+                          style={{ backgroundColor: `hsl(${emp.color})` }}
+                        >
+                          {emp.initials}
+                        </span>
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{emp.name}</div>
+                          <div className="text-[11px] text-muted-foreground truncate">{emp.role}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2">
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground tabular-nums mb-0.5">
+                          <span>{booked.toFixed(1)}h / {capacity}h</span>
+                          <span className={over ? "text-[hsl(var(--destructive))] font-medium" : ""}>{pct}%</span>
+                        </div>
+                        <div className="h-1 rounded-full bg-surface overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all"
+                            style={{
+                              width: `${Math.min(100, pct)}%`,
+                              backgroundColor: over
+                                ? "hsl(var(--destructive))"
+                                : pct > 85
+                                  ? "hsl(var(--warning))"
+                                  : `hsl(${emp.color})`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </button>
+
+                    {/* Day cells */}
+                    {weekDays.map((d) => {
+                      const iso = fmtISO(d);
+                      const dow = d.getDay();
+                      const isWorking = emp.workingDays.includes(dow) && !emp.daysOff.includes(iso);
+                      const cellKey = `${emp.id}|${iso}`;
+                      const items = grid.get(emp.id)?.get(iso) ?? [];
+                      const isOver = dragOverCell === cellKey;
+
+                      // detect overlaps within this cell
+                      const overlapping = new Set<number>();
+                      for (let i = 0; i < items.length; i++) {
+                        const aStart = timeToMinutes(items[i].assignment.start);
+                        const aEnd = aStart + items[i].assignment.duration * 60;
+                        for (let j = i + 1; j < items.length; j++) {
+                          const bStart = timeToMinutes(items[j].assignment.start);
+                          const bEnd = bStart + items[j].assignment.duration * 60;
+                          if (aStart < bEnd && bStart < aEnd) {
+                            overlapping.add(i);
+                            overlapping.add(j);
+                          }
+                        }
+                      }
+
+                      return (
+                        <div
+                          key={iso}
+                          data-cell={`${emp.id}|${iso}`}
+                          onDragOver={(e) => onCellDragOver(e, cellKey)}
+                          onDragLeave={() => setDragOverCell((k) => (k === cellKey ? null : k))}
+                          onDrop={(e) => onCellDrop(e, emp.id, iso)}
+                          className={`min-h-[88px] border-l-hairline p-1.5 space-y-1 transition-colors ${
+                            !isWorking ? "bg-surface/40" : ""
+                          } ${isOver ? "bg-primary/10" : ""}`}
+                        >
+                          {!isWorking && items.length === 0 && (
+                            <div className="text-[10px] text-muted-foreground/60 text-center pt-2">Off</div>
+                          )}
+                          {items.map((row, idx) => (
+                            <ScheduledChip
+                              key={`${row.job.id}-${row.assignment.start}`}
+                              row={row}
+                              color={emp.color}
+                              conflict={overlapping.has(idx)}
+                              onClick={() => onSelectJob(row.job)}
+                              onRemove={() => removeAssignment(row.job.id, row.assignment)}
+                              onDragStart={(e) =>
+                                onJobDragStart(e, {
+                                  jobId: row.job.id,
+                                  fromEmployeeId: emp.id,
+                                  fromDate: iso,
+                                  fromStart: row.assignment.start,
+                                })
+                              }
+                              onDragEnd={onJobDragEnd}
+                              onEdit={(patch) => updateAssignment(row.job.id, row.assignment, patch)}
+                            />
+                          ))}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="border-hairline rounded-lg bg-card">
+              <DayView
+                employees={visibleEmployees}
+                jobs={jobs}
+                weekDays={weekDays}
+                date={dayIso}
+                onPickDate={setDayIso}
+                onSelectJob={onSelectJob}
+                onDropJob={scheduleJobOn}
+                dragActive={drag?.jobId ?? null}
+                onDragStateChange={(payload) => {
+                  setDrag(payload);
+                  setDragOverCell(null);
+                }}
+              />
+            </div>
+          )}
         </div>
 
         {/* Unscheduled sidebar */}
@@ -467,7 +532,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
           <div className="border-t-hairline p-2 shrink-0">
             <div className="text-[11px] text-muted-foreground flex items-start gap-1.5 px-1">
               <CalendarIcon className="w-3 h-3 mt-0.5 shrink-0" />
-              <span>Drag a job onto an employee/day to schedule. Conflicts are highlighted.</span>
+              <span>Drag a job onto an employee/day — it lands in their first free slot with driving room.</span>
             </div>
           </div>
         </aside>
@@ -490,6 +555,15 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
 }
 
 // ---------- chips & cards ----------
+function VisitMark({ type, className = "" }: { type: "survey" | "work"; className?: string }) {
+  const Icon = type === "survey" ? ClipboardList : Wrench;
+  return (
+    <Icon
+      className={`${type === "survey" ? "text-[hsl(var(--warning))]" : "text-primary"} ${className}`}
+    />
+  );
+}
+
 function ScheduledChip({
   row,
   color,
@@ -512,6 +586,7 @@ function ScheduledChip({
   const start = row.assignment.start;
   const duration = row.assignment.duration;
   const endMins = timeToMinutes(start) + duration * 60;
+  const visitType = visitTypeFor(row.job);
 
   const [editing, setEditing] = useState(false);
   const [draftStart, setDraftStart] = useState(start);
@@ -618,7 +693,7 @@ function ScheduledChip({
       onDoubleClick={beginEdit}
       className={`group relative cursor-grab active:cursor-grabbing rounded-md border-hairline bg-background px-1.5 py-1 hover:bg-surface-hover transition-colors ${
         conflict ? "ring-1 ring-[hsl(var(--destructive))]" : ""
-      }`}
+      } ${visitType === "survey" ? "bg-[hsl(var(--warning)/0.06)]" : ""}`}
       style={{ borderLeft: `2px solid hsl(${color})` }}
       title={`${row.job.customer} · ${start}–${minutesToTime(endMins)} (${duration}h) · double-click to edit`}
     >
@@ -649,7 +724,10 @@ function ScheduledChip({
           </button>
         </div>
       </div>
-      <div className="text-[11px] font-medium leading-tight truncate">{row.job.customer}</div>
+      <div className="text-[11px] font-medium leading-tight truncate inline-flex items-center gap-1 max-w-full">
+        <VisitMark type={visitType} className="w-2.5 h-2.5 shrink-0" />
+        <span className="truncate">{row.job.customer}</span>
+      </div>
       <div className="text-[10px] text-muted-foreground leading-tight truncate">{row.job.service}</div>
       {/* Resize handle */}
       <div
@@ -673,6 +751,7 @@ function UnscheduledCard({
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
 }) {
+  const visitType = visitTypeFor(job);
   return (
     <div
       draggable
@@ -683,7 +762,10 @@ function UnscheduledCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
-          <div className="text-xs font-medium truncate">{job.customer}</div>
+          <div className="text-xs font-medium truncate inline-flex items-center gap-1 max-w-full">
+            <VisitMark type={visitType} className="w-2.5 h-2.5 shrink-0" />
+            <span className="truncate">{job.customer}</span>
+          </div>
           <div className="text-[11px] text-muted-foreground truncate">{job.service}</div>
         </div>
         <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">

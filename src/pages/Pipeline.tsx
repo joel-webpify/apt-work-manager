@@ -27,7 +27,6 @@ import {
 } from "@/lib/jobPlan";
 
 
-import ScheduleView from "@/components/pipeline/ScheduleView";
 import NewJobDialog from "@/components/pipeline/NewJobDialog";
 import JobFieldInput from "@/components/pipeline/JobFieldInput";
 import ManageJobFieldsDialog from "@/components/pipeline/ManageJobFieldsDialog";
@@ -78,7 +77,7 @@ function sortTemplatesForJob(templates: MessageTemplate[], job: Job): MessageTem
   });
 }
 
-type View = "board" | "list" | "schedule";
+type View = "board" | "list";
 type SortKey = "customer" | "service" | "stage" | "value" | "daysInStage";
 type SortDir = "asc" | "desc";
 
@@ -195,6 +194,20 @@ export default function Pipeline() {
     const fresh = jobList.find((j) => j.id === selected.id);
     if (fresh && fresh !== selected) setSelected(fresh);
   }, [jobList, selected]);
+
+  // Opening a job from the Schedule page deep-links here.
+  useEffect(() => {
+    const jobId = searchParams.get("job");
+    if (!jobId) return;
+    const job = jobList.find((j) => j.id === jobId);
+    if (!job) return;
+    const p = new URLSearchParams(searchParams);
+    p.delete("job");
+    if (tab === "all" || job.pipelineId !== tab) p.set("pipeline", job.pipelineId ?? firstPipelineId);
+    setSearchParams(p, { replace: true });
+    setSelected(job);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   const handleDragStart = (e: DragEvent<HTMLDivElement>, jobId: string) => {
     setDraggingId(jobId);
@@ -340,9 +353,7 @@ export default function Pipeline() {
             ? "Every job across sales and installation, in one list"
             : view === "board"
               ? `Drag and track ${pipeline?.name.toLowerCase() ?? ""} jobs through every stage`
-              : view === "list"
-                ? "Detailed view of every job in this pipeline"
-                : "Schedule your team across the week — drag jobs onto employees"
+              : "Detailed view of every job in this pipeline"
         }
         actions={
           <>
@@ -487,15 +498,6 @@ export default function Pipeline() {
         </div>
       )}
       {tab !== "all" && view === "list" && <JobsListView jobs={boardJobs} stageNames={stageNames} colorFor={colorFor} onSelect={setSelected} />}
-      {tab !== "all" && view === "schedule" && (
-        <ScheduleView
-          jobs={jobList}
-          onUpdateJob={(jobId, updater) =>
-            setJobList((prev) => prev.map((j) => (j.id === jobId ? updater(j) : j)))
-          }
-          onSelectJob={setSelected}
-        />
-      )}
 
       {tab !== "all" && view === "list" && (
         <div className="px-6 pb-6">
@@ -1202,9 +1204,6 @@ function ViewToggle({ view, onChange }: { view: View; onChange: (v: View) => voi
       </button>
       <button onClick={() => onChange("list")} className={`h-7 px-2.5 rounded-[5px] text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${view === "list" ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
         <List className="w-3.5 h-3.5" /> List
-      </button>
-      <button onClick={() => onChange("schedule")} className={`h-7 px-2.5 rounded-[5px] text-xs font-medium inline-flex items-center gap-1.5 transition-colors ${view === "schedule" ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"}`}>
-        <CalendarDays className="w-3.5 h-3.5" /> Schedule
       </button>
     </div>
   );
