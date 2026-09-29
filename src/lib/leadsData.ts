@@ -18,8 +18,11 @@ function seeded(n: number) {
   return x - Math.floor(x);
 }
 
+// A few enquiries that never turned into a quote — keeps the lead-to-quote rate realistic.
+const NO_QUOTE_NAMES = ["Pete Harlow", "Anita Devi", "Kieran Walsh", "Mojgan Rahimi", "Tom Beckett", "Ffion Price"];
+
 function build(): LeadRecord[] {
-  const names = contacts.map((c) => c.name);
+  const names = [...contacts.map((c) => c.name), ...NO_QUOTE_NAMES];
   const now = Date.now();
   const out: LeadRecord[] = [];
   let k = 0;

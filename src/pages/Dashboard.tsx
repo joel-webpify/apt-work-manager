@@ -96,15 +96,15 @@ export default function Dashboard() {
     : decided.length ? `${won} of ${decided.length} won (90 days)` : "No decided quotes yet";
   const quoteTone: Tone = oldestWait >= 14 ? "red" : oldestWait >= 7 ? "amber" : "green";
 
-  // ---------- Cash ----------
-  const thisMonth = new Date();
-  const paidThisMonth = invoices
-    .filter((i) => {
-      if (i.status !== "Paid") return false;
-      const d = new Date(i.paidDate ?? i.issueDate);
-      return d.getMonth() === thisMonth.getMonth() && d.getFullYear() === thisMonth.getFullYear();
-    })
-    .reduce((s, i) => s + invoiceTotals(i.items).total, 0);
+  // ---------- Lead to quote ----------
+  const monthAgo = new Date(now - 30 * DAY);
+  const recentLeads = leads.filter((l) => l.status !== "Spam" && new Date(l.receivedAt) >= monthAgo);
+  // Demo data: quotes are dated months back, so a lead counts as quoted when any quote
+  // exists for the same customer. A real build should link the lead record itself.
+  const quotedLeads = recentLeads.filter((l) => quotes.some((q) => q.customer === l.name));
+  const enoughForRate = recentLeads.length >= 5;
+  const rate = enoughForRate ? Math.round((quotedLeads.length / recentLeads.length) * 100) : null;
+
   const overdueInvoices = invoices.filter((i) => (i.status === "Sent" || i.status === "Overdue") && i.dueDate < today);
   const overdueValue = overdueInvoices.reduce((s, i) => s + invoiceTotals(i.items).total, 0);
   const worstOverdue = Math.max(0, ...overdueInvoices.map((i) => daysSince(i.dueDate)));
@@ -168,7 +168,13 @@ export default function Dashboard() {
     },
     { label: "Follow-up", value: String(notContacted.length), tone: followTone, href: "/contacts?filter=not-contacted", sub: `Avg first response: ${avgResponseH.toFixed(1)}h` },
     { label: "Quotes", value: `${money.format(openValue)} · ${openQuotes.length} open`, tone: quoteTone, href: "/reporting?tab=pipeline", sub: winText },
-    { label: "Cash", value: money.format(paidThisMonth), tone: cashTone, href: "/reporting?tab=revenue", sub: overdueInvoices.length ? `${money.format(overdueValue)} overdue` : "Nothing overdue" },
+    {
+      label: "Lead to quote",
+      value: rate === null ? "—" : `${rate}%`,
+      tone: rate === null ? ("grey" as Tone) : ("green" as Tone),
+      href: "/reporting?tab=marketing",
+      sub: rate === null ? "Not enough data yet" : `${quotedLeads.length} of ${recentLeads.length} leads · last 30 days`,
+    },
     gbpConnected
       ? { label: "Reputation", value: `${rating.toFixed(1)}★ · ${reviews.length}`, tone: repTone, href: "/marketing/gbp", sub: `${newThisMonth} new this month · ${unreplied.length} unreplied` }
       : { label: "Reputation", value: "Connect Google Business", tone: "grey" as Tone, href: "/marketing/gbp", sub: "See your rating here" },
