@@ -131,7 +131,7 @@ export default function Dashboard() {
     { count: overdueInvoices.length, title: "Overdue invoices", desc: `${money.format(overdueValue)} past due`, tone: cashTone, href: "/quotes?tab=invoices" },
     ...(MULTI_USER ? [{ count: unassigned.length, title: "Jobs without an owner", desc: "Ready to assign", tone: "amber" as Tone, href: "/pipeline?pipeline=all" }] : []),
     { count: overdueSteps.length, title: "Next steps past due", desc: "Review job plans", tone: "amber" as Tone, href: "/pipeline?attention=1" },
-    ...(gbpConnected ? [{ count: unreplied.length, title: "Unreplied Google reviews", desc: "Replies help your ranking", tone: repTone, href: "/marketing/google-business" }] : []),
+    ...(gbpConnected ? [{ count: unreplied.length, title: "Unreplied Google reviews", desc: "Replies help your ranking", tone: repTone, href: "/marketing/gbp" }] : []),
   ]
     .filter((r) => r.count > 0)
     .sort((a, b) => toneRank[a.tone] - toneRank[b.tone]);
@@ -170,8 +170,8 @@ export default function Dashboard() {
     { label: "Quotes", value: `${money.format(openValue)} · ${openQuotes.length} open`, tone: quoteTone, href: "/reporting?tab=pipeline", sub: winText },
     { label: "Cash", value: money.format(paidThisMonth), tone: cashTone, href: "/reporting?tab=revenue", sub: overdueInvoices.length ? `${money.format(overdueValue)} overdue` : "Nothing overdue" },
     gbpConnected
-      ? { label: "Reputation", value: `${rating.toFixed(1)}★ · ${reviews.length}`, tone: repTone, href: "/marketing/google-business", sub: `${newThisMonth} new this month · ${unreplied.length} unreplied` }
-      : { label: "Reputation", value: "Connect Google Business", tone: "grey" as Tone, href: "/marketing/google-business", sub: "See your rating here" },
+      ? { label: "Reputation", value: `${rating.toFixed(1)}★ · ${reviews.length}`, tone: repTone, href: "/marketing/gbp", sub: `${newThisMonth} new this month · ${unreplied.length} unreplied` }
+      : { label: "Reputation", value: "Connect Google Business", tone: "grey" as Tone, href: "/marketing/gbp", sub: "See your rating here" },
   ];
 
   return (
