@@ -78,10 +78,6 @@ export default function Dashboard() {
 
   // ---------- Follow-up ----------
   const notContacted = scopedLeads.filter((l) => !l.firstContactAt && now - new Date(l.receivedAt).getTime() > DAY);
-  const responded = scopedLeads.filter((l) => l.firstContactAt);
-  const avgResponseH = responded.length
-    ? responded.reduce((s, l) => s + (new Date(l.firstContactAt!).getTime() - new Date(l.receivedAt).getTime()), 0) / responded.length / 3600_000
-    : 0;
   const followTone: Tone = notContacted.length === 0 ? "green" : notContacted.length <= 2 ? "amber" : "red";
 
   // ---------- Quotes ----------
@@ -166,7 +162,6 @@ export default function Dashboard() {
       label: "Leads", value: String(leadsThisWeek), tone: leadTone, href: "/reporting?tab=marketing",
       sub: enoughLeadData ? `${leadDelta >= 0 ? "+" : ""}${Math.round(leadDelta * 100)}% vs normal` : "Not enough data yet",
     },
-    { label: "Follow-up", value: String(notContacted.length), tone: followTone, href: "/contacts?filter=not-contacted", sub: `Avg first response: ${avgResponseH.toFixed(1)}h` },
     { label: "Quotes", value: `${money.format(openValue)} · ${openQuotes.length} open`, tone: quoteTone, href: "/reporting?tab=pipeline", sub: winText },
     {
       label: "Lead to quote",
@@ -199,19 +194,19 @@ export default function Dashboard() {
       <PageBody>
         <div className="mx-auto max-w-[1440px] space-y-5">
           {/* Health strip */}
-          <section aria-label="Business health" className="-mx-1 flex snap-x gap-3 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-5 lg:overflow-visible">
+          <section aria-label="Business health" className="-mx-1 flex snap-x gap-4 overflow-x-auto px-1 pb-1 lg:grid lg:grid-cols-4 lg:overflow-visible">
             {health.map((h) => (
               <button
                 key={h.label}
                 onClick={() => navigate(h.href)}
-                className="group min-w-[200px] snap-start rounded-lg border-hairline bg-card p-4 text-left transition-colors hover:bg-surface lg:min-w-0"
+                className="group min-w-[240px] snap-start rounded-xl border-hairline bg-card p-5 text-left transition-colors hover:bg-surface lg:min-w-0"
               >
                 <span className="flex items-center justify-between">
-                  <span className="text-xs font-medium text-muted-foreground">{h.label}</span>
+                  <span className="text-sm font-medium text-muted-foreground">{h.label}</span>
                   <Dot tone={h.tone} />
                 </span>
-                <span className="mt-2 block truncate text-xl font-semibold tabular-nums">{h.value}</span>
-                <span className="mt-1 block truncate text-xs text-muted-foreground">{h.sub}</span>
+                <span className="mt-3 block truncate text-2xl font-semibold tabular-nums">{h.value}</span>
+                <span className="mt-1.5 block truncate text-sm text-muted-foreground">{h.sub}</span>
               </button>
             ))}
           </section>
