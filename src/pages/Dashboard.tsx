@@ -111,7 +111,6 @@ export default function Dashboard() {
   const gbpConnected = Boolean(gbp?.profile);
   const rating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : 0;
   const unreplied = reviews.filter((r) => !r.reply);
-  const newThisMonth = reviews.filter((r) => r.daysAgo <= 30).length;
   const repTone: Tone = unreplied.some((r) => r.rating <= 3) ? "red" : unreplied.length ? "amber" : "green";
 
   // ---------- Needs attention ----------
