@@ -96,15 +96,15 @@ export default function Dashboard() {
     : decided.length ? `${won} of ${decided.length} won (90 days)` : "No decided quotes yet";
   const quoteTone: Tone = oldestWait >= 14 ? "red" : oldestWait >= 7 ? "amber" : "green";
 
-  // ---------- Cash ----------
-  const thisMonth = new Date();
-  const paidThisMonth = invoices
-    .filter((i) => {
-      if (i.status !== "Paid") return false;
-      const d = new Date(i.paidDate ?? i.issueDate);
-      return d.getMonth() === thisMonth.getMonth() && d.getFullYear() === thisMonth.getFullYear();
-    })
-    .reduce((s, i) => s + invoiceTotals(i.items).total, 0);
+  // ---------- Lead to quote ----------
+  const monthAgo = new Date(now - 30 * DAY);
+  const recentLeads = leads.filter((l) => l.status !== "Spam" && new Date(l.receivedAt) >= monthAgo);
+  const quotedLeads = recentLeads.filter((l) =>
+    quotes.some((q) => q.customer === l.name && new Date(q.issueDate) >= new Date(l.receivedAt)),
+  );
+  const enoughForRate = recentLeads.length >= 5;
+  const rate = enoughForRate ? Math.round((quotedLeads.length / recentLeads.length) * 100) : null;
+
   const overdueInvoices = invoices.filter((i) => (i.status === "Sent" || i.status === "Overdue") && i.dueDate < today);
   const overdueValue = overdueInvoices.reduce((s, i) => s + invoiceTotals(i.items).total, 0);
   const worstOverdue = Math.max(0, ...overdueInvoices.map((i) => daysSince(i.dueDate)));
