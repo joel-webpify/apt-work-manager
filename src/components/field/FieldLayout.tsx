@@ -10,7 +10,7 @@ const tabs = [
 ];
 
 export default function FieldLayout() {
-  const [userId, setUserId] = useFieldUser();
+  const [userId] = useFieldUser();
   const me = employees.find((e) => e.id === userId) ?? employees[0];
   const online = useOnline();
   const records = useFieldRecords();
@@ -35,18 +35,6 @@ export default function FieldLayout() {
                 <div className="text-[11px] text-muted-foreground leading-tight truncate">{me.role}</div>
               </div>
             </div>
-            <select
-              value={userId}
-              onChange={(e) => setUserId(e.target.value)}
-              className="h-8 max-w-[120px] rounded-md border-hairline bg-background px-2 text-xs"
-              aria-label="Switch worker"
-            >
-              {employees.map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.name}
-                </option>
-              ))}
-            </select>
           </div>
 
           {!online && (
