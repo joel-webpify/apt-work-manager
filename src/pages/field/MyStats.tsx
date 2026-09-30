@@ -15,7 +15,7 @@ function startOfWeek() {
 
 export default function MyStats() {
   const [jobs] = useJobs();
-  const [userId] = useFieldUser();
+  const [userId, setUserId] = useFieldUser();
   const all = useFieldRecords();
   const me = employees.find((e) => e.id === userId) ?? employees[0];
 
@@ -43,6 +43,19 @@ export default function MyStats() {
 
   return (
     <div className="flex-1 p-4 space-y-4">
+      <label className="block text-xs text-muted-foreground">
+        Signed in as
+        <select
+          value={userId}
+          onChange={(e) => setUserId(e.target.value)}
+          className="mt-1 h-11 w-full rounded-lg border-hairline bg-background px-2.5 text-sm text-foreground"
+          aria-label="Switch worker"
+        >
+          {employees.map((e) => (
+            <option key={e.id} value={e.id}>{e.name}</option>
+          ))}
+        </select>
+      </label>
       <div>
         <h1 className="text-lg font-semibold leading-tight">Your week</h1>
         <p className="text-xs text-muted-foreground">
