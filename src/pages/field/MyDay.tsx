@@ -98,6 +98,8 @@ export default function MyDay() {
   const focus = live ?? nextUp;
   const focusRec = focus ? (records[`${focus.job.id}::${userId}`] ?? emptyRecord()) : undefined;
   const doneCount = dayStops.filter((s) => records[`${s.job.id}::${userId}`]?.lockedAt).length;
+  const todoStops = dayStops.filter((s) => !records[`${s.job.id}::${userId}`]?.lockedAt);
+  const doneStops = dayStops.filter((s) => records[`${s.job.id}::${userId}`]?.lockedAt);
 
 
   return (
