@@ -101,6 +101,56 @@ export default function MyDay() {
   const todoStops = dayStops.filter((s) => !records[`${s.job.id}::${userId}`]?.lockedAt);
   const doneStops = dayStops.filter((s) => records[`${s.job.id}::${userId}`]?.lockedAt);
 
+  const renderStop = ({ job, assignment }: Stop) => {
+    const rec = records[`${job.id}::${userId}`] ?? emptyRecord();
+    const photoCount = rec.photos.length;
+    return (
+      <Link
+        key={`${job.id}-${assignment.start}`}
+        to={`/field/job/${job.id}`}
+        className="block border-hairline rounded-xl p-4 hover:bg-surface-hover transition-colors"
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-sm font-semibold tabular-nums">
+              {assignment.start} – {endTime(assignment.start, assignment.duration)}
+            </div>
+            <div className="text-base font-medium mt-0.5 truncate">{job.customer}</div>
+            <div className="text-sm text-muted-foreground truncate">{job.service}</div>
+            <VisitBadge type={visitTypeFor(job)} className="mt-1.5" />
+          </div>
+          <span
+            className={`shrink-0 h-6 px-2 rounded-full text-[11px] font-medium inline-flex items-center ${
+              rec.status === "finished"
+                ? "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]"
+                : rec.status === "not-started"
+                  ? "bg-surface text-muted-foreground"
+                  : "bg-primary/10 text-primary"
+            }`}
+          >
+            {fieldStatusLabel[rec.status]}
+          </span>
+        </div>
+
+        <div className="mt-3 flex items-start gap-1.5 text-xs text-muted-foreground">
+          <MapPin className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <span className="flex-1">{job.address}</span>
+        </div>
+        <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1">
+            <Clock className="w-3.5 h-3.5" /> {assignment.duration}h booked
+          </span>
+          {photoCount > 0 && <span>{photoCount} photo{photoCount === 1 ? "" : "s"}</span>}
+          {job.milestones?.length ? (
+            <span>
+              {job.milestones.filter((m) => m.done).length}/{job.milestones.length} steps
+            </span>
+          ) : null}
+        </div>
+      </Link>
+    );
+  };
+
 
   return (
     <div className="flex-1">
