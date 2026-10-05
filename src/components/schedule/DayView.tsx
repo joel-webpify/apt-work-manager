@@ -3,7 +3,9 @@ import { ClipboardList, Wrench } from "lucide-react";
 import type { Employee, Job } from "@/data/mockData";
 import { travelMinutes } from "@/lib/travel";
 import { visitTypeFor } from "@/lib/visitTypes";
-import type { DragPayload } from "@/components/schedule/ScheduleView";
+import { LivePill, type DragPayload } from "@/components/schedule/ScheduleView";
+import { useFieldRecords } from "@/lib/fieldStore";
+import { liveStateFor } from "@/lib/fieldLive";
 
 const DAY_START = 7 * 60; // 07:00
 const DAY_END = 19 * 60; // 19:00
@@ -60,6 +62,7 @@ export default function DayView({
   dragActive,
   onDragStateChange,
 }: Props) {
+  const fieldRecords = useFieldRecords();
   const [focus, setFocus] = useState<string>("all");
   const [overCol, setOverCol] = useState<string | null>(null);
 
@@ -304,6 +307,15 @@ export default function DayView({
                         />
                         <span className="truncate">{b.job.customer}</span>
                       </div>
+                      {(() => {
+                        const st = liveStateFor(fieldRecords, b.job.id, {
+                          employeeId: emp.id,
+                          date,
+                          start: minutesToTime(b.startMins),
+                          duration: (b.endMins - b.startMins) / 60,
+                        });
+                        return st ? <LivePill state={st} /> : null;
+                      })()}
                       {(height / 100) * INNER_PX > 40 && (
                         <div className="text-[9px] text-muted-foreground leading-tight truncate">
                           {b.job.service}
