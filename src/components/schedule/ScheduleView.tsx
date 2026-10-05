@@ -1,10 +1,14 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type DragEvent } from "react";
-import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check, ClipboardList, Wrench } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check, ClipboardList, Wrench, Radio, FileText, RotateCcw } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { employees, type Employee, type Job, type JobAssignment, type Trade } from "@/data/mockData";
 import { Btn, StatusDot } from "@/components/layout/PageShell";
 import { findSmartSlot } from "@/lib/travel";
 import { visitTypeFor } from "@/lib/visitTypes";
+import { useFieldRecords } from "@/lib/fieldStore";
+import { useQuotes } from "@/lib/quotesStore";
+import { liveLabel, liveStateFor, pendingFollowUps, quotesReadyToSend, type LiveState } from "@/lib/fieldLive";
 import DayView from "@/components/schedule/DayView";
 
 // ---------- date helpers (local, no deps) ----------
@@ -65,6 +69,9 @@ interface ScheduleViewProps {
 
 export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: ScheduleViewProps) {
   const { toast } = useToast();
+  const navigate = useNavigate();
+  const fieldRecords = useFieldRecords();
+  const [quotes] = useQuotes();
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(2026, 4, 4)));
   const [tradeFilter, setTradeFilter] = useState<Trade | "All">("All");
   const [mode, setMode] = useState<"week" | "day">("week");
@@ -126,6 +133,8 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const unscheduled = useMemo(() => {
     return jobs.filter((j) => !j.assignments || j.assignments.length === 0);
   }, [jobs]);
+  const followUps = useMemo(() => pendingFollowUps(jobs, fieldRecords), [jobs, fieldRecords]);
+  const readyQuotes = useMemo(() => quotesReadyToSend(jobs, fieldRecords, quotes), [jobs, fieldRecords, quotes]);
 
   // ---------- DnD ----------
   const onJobDragStart = (e: DragEvent, payload: DragPayload) => {
@@ -464,6 +473,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
                               color={emp.color}
                               conflict={overlapping.has(idx)}
                               onClick={() => onSelectJob(row.job)}
+                              live={liveStateFor(fieldRecords, row.job.id, row.assignment)}
                               onRemove={() => removeAssignment(row.job.id, row.assignment)}
                               onDragStart={(e) =>
                                 onJobDragStart(e, {
@@ -513,6 +523,43 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
             <span className="text-xs text-muted-foreground tabular-nums">{unscheduled.length}</span>
           </div>
           <div className="overflow-y-auto p-2 space-y-1.5">
+            <SidebarGroup title="Quotes ready to send" count={readyQuotes.length}>
+              {readyQuotes.map((q) => (
+                <button
+                  key={q.quoteId}
+                  type="button"
+                  onClick={() => navigate(`/quotes?quote=${q.quoteId}`)}
+                  className="w-full text-left rounded-md border-hairline bg-background hover:bg-surface-hover p-2"
+                >
+                  <div className="text-xs font-medium truncate inline-flex items-center gap-1 max-w-full">
+                    <FileText className="w-3 h-3 text-primary shrink-0" />
+                    <span className="truncate">{q.job.customer}</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">Survey done · draft {q.quoteId}</div>
+                </button>
+              ))}
+            </SidebarGroup>
+            <SidebarGroup title="Needs another visit" count={followUps.length}>
+              {followUps.map((f) => (
+                <div
+                  key={f.job.id}
+                  draggable
+                  onDragStart={(e) => onJobDragStart(e, { jobId: f.job.id })}
+                  onDragEnd={onJobDragEnd}
+                  onClick={() => onSelectJob(f.job)}
+                  className="cursor-grab rounded-md border-hairline bg-[hsl(var(--warning)/0.06)] hover:bg-surface-hover p-2"
+                >
+                  <div className="text-xs font-medium truncate inline-flex items-center gap-1 max-w-full">
+                    <RotateCcw className="w-3 h-3 shrink-0" />
+                    <span className="truncate">{f.job.customer}</span>
+                  </div>
+                  <div className="text-[11px] text-muted-foreground">
+                    {f.kind === "parts-needed" ? "Waiting on parts" : "Return visit"}
+                    {f.note ? ` · ${f.note}` : ""}
+                  </div>
+                </div>
+              ))}
+            </SidebarGroup>
             {unscheduled.length === 0 ? (
               <div className="text-xs text-muted-foreground text-center py-6">
                 Everything's scheduled. ✨
@@ -555,6 +602,32 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
 }
 
 // ---------- chips & cards ----------
+export function LivePill({ state }: { state: Exclude<LiveState, null> }) {
+  const tone =
+    state === "late"
+      ? "bg-[hsl(var(--warning)/0.15)] text-foreground"
+      : state === "signed-off"
+        ? "bg-[hsl(var(--success)/0.12)] text-[hsl(var(--success))]"
+        : "bg-primary/10 text-primary";
+  return (
+    <span data-live={state} className={`mt-0.5 inline-flex items-center gap-1 rounded px-1 text-[9px] font-medium ${tone}`}>
+      <Radio className="w-2.5 h-2.5" /> {liveLabel[state]}
+    </span>
+  );
+}
+
+function SidebarGroup({ title, count, children }: { title: string; count: number; children: React.ReactNode }) {
+  if (count === 0) return null;
+  return (
+    <div className="space-y-1.5 pb-2 mb-1 border-b-hairline">
+      <div className="px-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground flex justify-between">
+        <span>{title}</span>
+        <span className="tabular-nums">{count}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
 function VisitMark({ type, className = "" }: { type: "survey" | "work"; className?: string }) {
   const Icon = type === "survey" ? ClipboardList : Wrench;
   return (
@@ -573,6 +646,7 @@ function ScheduledChip({
   onDragStart,
   onDragEnd,
   onEdit,
+  live,
 }: {
   row: AssignmentRow;
   color: string;
@@ -582,6 +656,7 @@ function ScheduledChip({
   onDragStart: (e: DragEvent<HTMLDivElement>) => void;
   onDragEnd: () => void;
   onEdit: (patch: { start?: string; duration?: number }) => void;
+  live?: LiveState;
 }) {
   const start = row.assignment.start;
   const duration = row.assignment.duration;
@@ -729,6 +804,7 @@ function ScheduledChip({
         <span className="truncate">{row.job.customer}</span>
       </div>
       <div className="text-[10px] text-muted-foreground leading-tight truncate">{row.job.service}</div>
+      {live && <LivePill state={live} />}
       {/* Resize handle */}
       <div
         onMouseDown={onResizeMouseDown}
