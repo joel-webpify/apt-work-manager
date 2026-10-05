@@ -310,7 +310,7 @@ export default function DayView({
                       {(() => {
                         const st = liveStateFor(fieldRecords, b.job.id, {
                           employeeId: emp.id,
-                          date: fmtISO(date),
+                          date,
                           start: minutesToTime(b.startMins),
                           duration: (b.endMins - b.startMins) / 60,
                         });
