@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import {
   Plus,
@@ -108,6 +109,17 @@ export default function Quotes() {
     setPreviewing(doc);
     setPreviewOpen(true);
   };
+  // Deep link from the schedule: /quotes?quote=<id> opens that draft.
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    const qid = params.get("quote");
+    if (!qid) return;
+    const q = quotes.find((x) => x.id === qid);
+    if (q) openEdit(q);
+    params.delete("quote");
+    setParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, quotes]);
 
   const saveDoc = (doc: Quote) => {
     if (tab === "quotes") {
