@@ -64,8 +64,8 @@ export function quotesReadyToSend(jobs: Job[], records: Record<string, FieldReco
   for (const [key, r] of Object.entries(records)) {
     if (!r.lockedAt || !r.surveyQuoteId || seen.has(r.surveyQuoteId)) continue;
     const q = quotes.find((x) => x.id === r.surveyQuoteId);
-    if (q && q.status !== "draft") continue;
-    const job = jobs.find((j) => key.startsWith(`${j.id}`) && recordKey(j.id, key.slice(j.id.length + 1)) === key);
+    if (q && q.status !== "Draft") continue;
+    const job = jobs.find((j) => j.id === key.split("::")[0]);
     if (!job) continue;
     seen.add(r.surveyQuoteId);
     out.push({ job, quoteId: r.surveyQuoteId });
