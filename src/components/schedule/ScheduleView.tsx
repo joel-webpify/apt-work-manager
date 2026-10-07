@@ -1,10 +1,11 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type DragEvent } from "react";
-import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check, ClipboardList, Wrench, Radio, FileText, RotateCcw } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check, ClipboardList, Wrench, Radio, FileText, RotateCcw, UserPlus } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { employees, type Employee, type Job, type JobAssignment, type Trade } from "@/data/mockData";
 import { Btn, StatusDot } from "@/components/layout/PageShell";
-import { findSmartSlot } from "@/lib/travel";
+import { findSmartSlot, findTeamSlot } from "@/lib/travel";
+import { useTeams, type Team } from "@/lib/teamsStore";
 import { visitTypeFor } from "@/lib/visitTypes";
 import { useFieldRecords } from "@/lib/fieldStore";
 import { useQuotes } from "@/lib/quotesStore";
@@ -58,6 +59,13 @@ export interface DragPayload {
   fromEmployeeId?: string;
   fromDate?: string;
   fromStart?: string;
+  /** Shift held while dragging: move just this person, not the whole crew. */
+  solo?: boolean;
+}
+
+/** People booked on the same job, day and start time form one shared visit. */
+export function crewOf(job: Job, a: JobAssignment): JobAssignment[] {
+  return (job.assignments ?? []).filter((x) => x.date === a.date && x.start === a.start);
 }
 
 // ---------- component ----------
@@ -72,6 +80,8 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const navigate = useNavigate();
   const fieldRecords = useFieldRecords();
   const [quotes] = useQuotes();
+  const teams = useTeams();
+  const [rowMode, setRowMode] = useState<"people" | "teams">("people");
   const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(2026, 4, 4)));
   const [tradeFilter, setTradeFilter] = useState<Trade | "All">("All");
   const [mode, setMode] = useState<"week" | "day">("week");
@@ -138,6 +148,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
 
   // ---------- DnD ----------
   const onJobDragStart = (e: DragEvent, payload: DragPayload) => {
+    payload = { ...payload, solo: e.shiftKey };
     setDrag(payload);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", payload.jobId);
@@ -169,6 +180,32 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
         return;
       }
 
+      const from = drag;
+      const fromA = from?.fromEmployeeId
+        ? job.assignments?.find(
+            (a) => a.employeeId === from.fromEmployeeId && a.date === from.fromDate && a.start === from.fromStart,
+          )
+        : undefined;
+      const crew = fromA ? crewOf(job, fromA) : [];
+      // Dragging a shared visit to another day for the same person moves the whole crew.
+      if (fromA && crew.length > 1 && !from?.solo && from?.fromEmployeeId === employeeId) {
+        const members = crew.map((c) => employees.find((e) => e.id === c.employeeId)).filter(Boolean) as Employee[];
+        const working = members.filter((m) => m.workingDays.includes(date.getDay()) && !m.daysOff.includes(dateISO));
+        const slot = findTeamSlot({ members: working, dateISO, duration: fromA.duration, jobs, movingJobId: jobId });
+        const left = members.filter((m) => !working.includes(m));
+        if (left.length) toast({ title: "Heads up", description: `${left.map((m) => m.name).join(", ")} off that day — left off the visit.` });
+        onUpdateJob(job.id, (curr) => ({
+          ...curr,
+          assignments: [
+            ...(curr.assignments ?? []).filter((a) => !(a.date === fromA.date && a.start === fromA.start)),
+            ...working.map((m) => ({ ...fromA, employeeId: m.id, date: dateISO, start: slot.start })),
+          ],
+        }));
+        setDrag(null);
+        setDragOverCell(null);
+        return;
+      }
+
       const duration = job.estimatedHours && job.estimatedHours > 0 ? job.estimatedHours : 2;
       const slot = findSmartSlot({ employee, dateISO, duration, jobs, movingJobId: jobId });
       if (slot.pastWorkday) {
@@ -179,7 +216,6 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
       }
 
       onUpdateJob(job.id, (curr) => {
-        const from = drag;
         const next = (curr.assignments ?? []).filter(
           (a) =>
             !(from?.fromEmployeeId && a.employeeId === from.fromEmployeeId && a.date === from.fromDate && a.start === from.fromStart),
@@ -210,6 +246,64 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
     }));
   };
 
+  /** Book every member of a team at the first time they're all free. */
+  const scheduleTeamOn = (jobId: string, team: Team, dateISO: string) => {
+    const job = jobs.find((j) => j.id === jobId);
+    if (!job) return;
+    const date = parseISO(dateISO);
+    const members = team.memberIds.map((id) => employees.find((e) => e.id === id)).filter(Boolean) as Employee[];
+    const working = members.filter((m) => m.workingDays.includes(date.getDay()) && !m.daysOff.includes(dateISO));
+    if (working.length === 0) {
+      toast({ title: "Can't assign", description: `Nobody in ${team.name} is working that day.` });
+      return;
+    }
+    const duration = job.estimatedHours && job.estimatedHours > 0 ? job.estimatedHours : 2;
+    const slot = findTeamSlot({ members: working, dateISO, duration, jobs, movingJobId: jobId });
+    const left = members.filter((m) => !working.includes(m));
+    if (left.length) toast({ title: "Heads up", description: `${left.map((m) => m.name).join(", ")} off that day — booked the rest.` });
+    else if (slot.pastWorkday) toast({ title: "Heads up", description: `${team.name}'s day is full — this runs past working hours.` });
+    const from = drag;
+    onUpdateJob(jobId, (curr) => ({
+      ...curr,
+      assignments: [
+        ...(curr.assignments ?? []).filter(
+          (a) => !(from?.fromDate && a.date === from.fromDate && a.start === from.fromStart),
+        ),
+        ...working.map((m) => ({ employeeId: m.id, date: dateISO, start: slot.start, duration, teamId: team.id })),
+      ],
+    }));
+    setDrag(null);
+    setDragOverCell(null);
+  };
+
+  /** People who could join a visit: working that day and not already booked over it. */
+  const freeFor = (job: Job, a: JobAssignment): Employee[] => {
+    const crewIds = crewOf(job, a).map((c) => c.employeeId);
+    const s = timeToMinutes(a.start);
+    const e = s + a.duration * 60;
+    const d = parseISO(a.date);
+    return employees
+      .filter((emp) => !crewIds.includes(emp.id))
+      .filter((emp) => emp.workingDays.includes(d.getDay()) && !emp.daysOff.includes(a.date))
+      .filter(
+        (emp) =>
+          !jobs.some((j) =>
+            (j.assignments ?? []).some((x) => {
+              if (x.employeeId !== emp.id || x.date !== a.date) return false;
+              const xs = timeToMinutes(x.start);
+              return xs < e && s < xs + x.duration * 60;
+            }),
+          ),
+      )
+      .sort((x, y) => Number(y.trades.includes(job.trade as Trade)) - Number(x.trades.includes(job.trade as Trade)));
+  };
+
+  const addPerson = (jobId: string, a: JobAssignment, employeeId: string) => {
+    onUpdateJob(jobId, (curr) => ({ ...curr, assignments: [...(curr.assignments ?? []), { ...a, employeeId }] }));
+    const emp = employees.find((e) => e.id === employeeId);
+    toast({ title: `${emp?.name ?? "Person"} added`, description: `${a.start} on ${a.date}` });
+  };
+
   const updateAssignment = (
     jobId: string,
     original: JobAssignment,
@@ -237,7 +331,9 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
     onUpdateJob(jobId, (curr) => ({
       ...curr,
       assignments: (curr.assignments ?? []).map((x) =>
-        x.employeeId === original.employeeId && x.date === original.date && x.start === original.start
+        (patch.employeeId ? x.employeeId === original.employeeId : true) &&
+        x.date === original.date &&
+        x.start === original.start
           ? { ...x, ...patch }
           : x,
       ),
@@ -312,6 +408,22 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
           </button>
         </div>
 
+        {mode === "week" && (
+          <div className="inline-flex items-center h-8 rounded-md border-hairline bg-background p-0.5">
+            {(["people", "teams"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setRowMode(m)}
+                className={`h-7 px-2.5 rounded-[5px] text-xs font-medium transition-colors ${
+                  rowMode === m ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {m === "people" ? "People" : "Teams"}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex items-center gap-1 ml-3">
           {(["All", "Plumbing", "Electrical", "Window cleaning", "Landscaping", "General"] as const).map((t) => (
             <button
@@ -380,7 +492,24 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
               </div>
 
               {/* Rows */}
-              {visibleEmployees.map((emp) => {
+              {rowMode === "teams" && (
+                <TeamRows
+                  teams={teams}
+                  weekDays={weekDays}
+                  jobs={jobs}
+                  dragOverCell={dragOverCell}
+                  onCellDragOver={onCellDragOver}
+                  onLeave={(k) => setDragOverCell((c) => (c === k ? null : c))}
+                  onDrop={(e, team, iso) => {
+                    e.preventDefault();
+                    setDragOverCell(null);
+                    const jobId = drag?.jobId ?? e.dataTransfer.getData("text/plain");
+                    if (jobId) scheduleTeamOn(jobId, team, iso);
+                  }}
+                  onSelectJob={onSelectJob}
+                />
+              )}
+              {rowMode === "people" && visibleEmployees.map((emp) => {
                 const { booked, capacity } = weekWorkload(emp);
                 const pct = capacity > 0 ? Math.min(100, Math.round((booked / capacity) * 100)) : 0;
                 const over = capacity > 0 && booked > capacity;
@@ -474,6 +603,12 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
                               conflict={overlapping.has(idx)}
                               onClick={() => onSelectJob(row.job)}
                               live={liveStateFor(fieldRecords, row.job.id, row.assignment)}
+                              crew={crewOf(row.job, row.assignment)
+                                .filter((c) => c.employeeId !== emp.id)
+                                .map((c) => employees.find((x) => x.id === c.employeeId))
+                                .filter((x): x is Employee => Boolean(x))}
+                              freePeople={() => freeFor(row.job, row.assignment)}
+                              onAddPerson={(id) => addPerson(row.job.id, row.assignment, id)}
                               onRemove={() => removeAssignment(row.job.id, row.assignment)}
                               onDragStart={(e) =>
                                 onJobDragStart(e, {
@@ -647,6 +782,9 @@ function ScheduledChip({
   onDragEnd,
   onEdit,
   live,
+  crew = [],
+  freePeople,
+  onAddPerson,
 }: {
   row: AssignmentRow;
   color: string;
@@ -657,7 +795,11 @@ function ScheduledChip({
   onDragEnd: () => void;
   onEdit: (patch: { start?: string; duration?: number }) => void;
   live?: LiveState;
+  crew?: Employee[];
+  freePeople?: () => Employee[];
+  onAddPerson?: (employeeId: string) => void;
 }) {
+  const [adding, setAdding] = useState(false);
   const start = row.assignment.start;
   const duration = row.assignment.duration;
   const endMins = timeToMinutes(start) + duration * 60;
@@ -805,6 +947,59 @@ function ScheduledChip({
       </div>
       <div className="text-[10px] text-muted-foreground leading-tight truncate">{row.job.service}</div>
       {live && <LivePill state={live} />}
+      {crew.length > 0 && (
+        <div className="mt-0.5 flex items-center gap-0.5" title={`With ${crew.map((c) => c.name).join(", ")}`}>
+          <span className="text-[9px] text-muted-foreground">with</span>
+          {crew.map((c) => (
+            <span
+              key={c.id}
+              className="w-3.5 h-3.5 rounded-full text-[7px] font-medium text-white inline-flex items-center justify-center"
+              style={{ backgroundColor: `hsl(${c.color})` }}
+            >
+              {c.initials}
+            </span>
+          ))}
+        </div>
+      )}
+      {onAddPerson && (
+        <button
+          type="button"
+          aria-label="Add person"
+          onClick={(e) => {
+            e.stopPropagation();
+            setAdding((v) => !v);
+          }}
+          className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+        >
+          <UserPlus className="w-3 h-3" />
+        </button>
+      )}
+      {adding && freePeople && onAddPerson && (
+        <div
+          onClick={(e) => e.stopPropagation()}
+          className="absolute z-30 left-0 top-full mt-1 w-48 rounded-md border-hairline bg-popover shadow-md p-1"
+        >
+          <div className="px-2 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">Free at {start}</div>
+          {freePeople().length === 0 && <div className="px-2 py-1.5 text-xs text-muted-foreground">Nobody free then.</div>}
+          {freePeople().map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => {
+                onAddPerson(p.id);
+                setAdding(false);
+              }}
+              className="w-full text-left px-2 py-1.5 rounded text-xs hover:bg-surface-hover flex items-center gap-1.5"
+            >
+              <span className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${p.color})` }} />
+              <span className="truncate">{p.name}</span>
+              {p.trades.includes(row.job.trade as Trade) && (
+                <span className="ml-auto text-[9px] text-muted-foreground">{row.job.trade}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
       {/* Resize handle */}
       <div
         onMouseDown={onResizeMouseDown}
@@ -1046,4 +1241,111 @@ function validateAssignment(
     }
   }
   return warnings.length ? { warning: warnings.join(" ") } : {};
+}
+
+// ---------- Team rows ----------
+function TeamRows({
+  teams,
+  weekDays,
+  jobs,
+  dragOverCell,
+  onCellDragOver,
+  onLeave,
+  onDrop,
+  onSelectJob,
+}: {
+  teams: Team[];
+  weekDays: Date[];
+  jobs: Job[];
+  dragOverCell: string | null;
+  onCellDragOver: (e: DragEvent, key: string) => void;
+  onLeave: (key: string) => void;
+  onDrop: (e: DragEvent, team: Team, iso: string) => void;
+  onSelectJob: (j: Job) => void;
+}) {
+  if (teams.length === 0) {
+    return (
+      <div className="p-6 text-center text-sm text-muted-foreground">
+        No teams yet — set them up in Settings → Teams.
+      </div>
+    );
+  }
+  return (
+    <>
+      {teams.map((team) => {
+        const members = team.memberIds.map((id) => employees.find((e) => e.id === id)).filter(Boolean) as Employee[];
+        return (
+          <div
+            key={team.id}
+            className="grid border-b-hairline last:border-0"
+            style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}
+          >
+            <div className="px-3 py-2 border-r-hairline">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: `hsl(${team.color})` }} />
+                <span className="text-sm font-medium truncate">{team.name}</span>
+              </div>
+              <div className="mt-1.5 flex -space-x-1">
+                {members.map((m) => (
+                  <span
+                    key={m.id}
+                    title={m.name}
+                    className="w-5 h-5 rounded-full ring-2 ring-card text-[8px] font-medium text-white inline-flex items-center justify-center"
+                    style={{ backgroundColor: `hsl(${m.color})` }}
+                  >
+                    {m.initials}
+                  </span>
+                ))}
+              </div>
+            </div>
+            {weekDays.map((d) => {
+              const iso = fmtISO(d);
+              const key = `team:${team.id}|${iso}`;
+              // One entry per visit that any member is on.
+              const visits = new Map<string, { job: Job; a: JobAssignment; names: string[] }>();
+              for (const job of jobs) {
+                for (const a of job.assignments ?? []) {
+                  if (a.date !== iso || !team.memberIds.includes(a.employeeId)) continue;
+                  const k = `${job.id}|${a.start}`;
+                  const name = employees.find((e) => e.id === a.employeeId)?.initials ?? "";
+                  const v = visits.get(k);
+                  if (v) v.names.push(name);
+                  else visits.set(k, { job, a, names: [name] });
+                }
+              }
+              const list = [...visits.values()].sort((x, y) => x.a.start.localeCompare(y.a.start));
+              return (
+                <div
+                  key={iso}
+                  data-teamcell={`${team.id}|${iso}`}
+                  onDragOver={(e) => onCellDragOver(e, key)}
+                  onDragLeave={() => onLeave(key)}
+                  onDrop={(e) => onDrop(e, team, iso)}
+                  className={`min-h-[88px] border-l-hairline p-1.5 space-y-1 transition-colors ${
+                    dragOverCell === key ? "bg-primary/10" : ""
+                  }`}
+                >
+                  {list.map((v) => (
+                    <button
+                      key={`${v.job.id}-${v.a.start}`}
+                      type="button"
+                      onClick={() => onSelectJob(v.job)}
+                      className="w-full text-left rounded-md border-hairline bg-background hover:bg-surface-hover px-1.5 py-1"
+                      style={{ borderLeft: `2px solid hsl(${team.color})` }}
+                    >
+                      <div className="text-[10px] tabular-nums text-muted-foreground">{v.a.start}</div>
+                      <div className="text-[11px] font-medium truncate">{v.job.customer}</div>
+                      <div className="text-[9px] text-muted-foreground truncate">
+                        {v.names.length === members.length ? "Whole team" : v.names.join(", ")}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
+    </>
+  );
 }

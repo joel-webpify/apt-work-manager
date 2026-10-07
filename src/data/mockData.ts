@@ -84,6 +84,8 @@ export interface JobAssignment {
   start: string;
   /** hours */
   duration: number;
+  /** Team the visit was booked for, when dropped on a team. */
+  teamId?: string;
 }
 
 export interface Job {
