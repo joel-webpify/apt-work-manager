@@ -54,8 +54,10 @@ export function findSmartSlot(opts: {
   duration: number; // hours
   jobs: Job[];
   movingJobId?: string;
+  /** Earliest start, in minutes after midnight. */
+  notBefore?: number;
 }): SmartSlot {
-  const { employee, dateISO, duration, jobs, movingJobId } = opts;
+  const { employee, dateISO, duration, jobs, movingJobId, notBefore = 0 } = opts;
   const job = jobs.find((j) => j.id === movingJobId);
   const workStart = timeToMinutes(employee.workStart || "08:00");
   const workEnd = timeToMinutes(employee.workEnd || "17:00");
@@ -70,7 +72,7 @@ export function findSmartSlot(opts: {
     )
     .sort((x, y) => timeToMinutes(x.a.start) - timeToMinutes(y.a.start));
 
-  let cursor = workStart;
+  let cursor = Math.max(workStart, notBefore);
   let prev: { job: Job; end: number } | null = null;
 
   for (const { job: other, a } of blocks) {
@@ -92,4 +94,24 @@ export function findSmartSlot(opts: {
   }
 
   return { start: minutesToTime(cursor), pastWorkday: cursor + duration * 60 > workEnd };
+}
+
+/** First start that works for every person on a shared visit. */
+export function findTeamSlot(opts: {
+  members: Employee[];
+  dateISO: string;
+  duration: number;
+  jobs: Job[];
+  movingJobId?: string;
+}): SmartSlot {
+  let notBefore = 0;
+  let result: SmartSlot = { start: "08:00", pastWorkday: false };
+  for (let i = 0; i < 6; i++) {
+    const slots = opts.members.map((employee) => findSmartSlot({ ...opts, employee, notBefore }));
+    const latest = Math.max(...slots.map((s) => timeToMinutes(s.start)));
+    result = { start: minutesToTime(latest), pastWorkday: slots.some((s) => s.pastWorkday) };
+    if (latest === notBefore || slots.every((s) => timeToMinutes(s.start) === latest)) break;
+    notBefore = latest;
+  }
+  return result;
 }
