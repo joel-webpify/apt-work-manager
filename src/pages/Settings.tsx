@@ -4,13 +4,15 @@ import { ProductsTab } from "@/components/forms/ProductsTab";
 import ChannelGroupsTab from "@/components/settings/ChannelGroupsTab";
 import PipelinesTab from "@/components/settings/PipelinesTab";
 import SurveysTab from "@/components/settings/SurveysTab";
+import TeamsTab from "@/components/settings/TeamsTab";
 
-type Tab = "products" | "pipelines" | "surveys" | "channels";
+type Tab = "products" | "pipelines" | "surveys" | "teams" | "channels";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "products", label: "Products & services" },
   { id: "pipelines", label: "Pipelines & stages" },
   { id: "surveys", label: "Site visit surveys" },
+  { id: "teams", label: "Teams" },
   { id: "channels", label: "Channel grouping" },
 ];
 
@@ -45,6 +47,7 @@ export default function Settings() {
         {tab === "products" && <ProductsTab />}
         {tab === "pipelines" && <PipelinesTab />}
         {tab === "surveys" && <SurveysTab />}
+        {tab === "teams" && <TeamsTab />}
         {tab === "channels" && <ChannelGroupsTab />}
       </PageBody>
     </>
