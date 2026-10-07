@@ -468,7 +468,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
                 style={{ gridTemplateColumns: "200px repeat(7, minmax(0, 1fr))" }}
               >
                 <div className="px-3 h-10 flex items-center text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                  Employee
+                  {rowMode === "teams" ? "Team" : "Employee"}
                 </div>
                 {weekDays.map((d) => {
                   const iso = fmtISO(d);
