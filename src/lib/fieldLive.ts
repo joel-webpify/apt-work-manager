@@ -1,4 +1,5 @@
 import type { Job, JobAssignment, Quote } from "@/data/mockData";
+import { employees } from "@/data/mockData";
 import { recordKey, type FieldRecord } from "@/lib/fieldStore";
 
 export type LiveState = "on-my-way" | "on-site" | "finished" | "signed-off" | "late" | null;
@@ -71,4 +72,12 @@ export function quotesReadyToSend(jobs: Job[], records: Record<string, FieldReco
     out.push({ job, quoteId: r.surveyQuoteId });
   }
   return out;
+}
+
+/** First names of everyone else booked on the same visit (same job, day and start). */
+export function crewNames(job: Job, a: JobAssignment): string[] {
+  return (job.assignments ?? [])
+    .filter((x) => x.date === a.date && x.start === a.start && x.employeeId !== a.employeeId)
+    .map((x) => employees.find((e) => e.id === x.employeeId)?.name.split(" ")[0] ?? "")
+    .filter(Boolean);
 }

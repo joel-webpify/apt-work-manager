@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { travelMinutes } from "@/lib/travel";
+import { crewNames } from "@/lib/fieldLive";
 import {
   ArrowLeft,
   Navigation,
@@ -244,6 +245,9 @@ export default function FieldJob() {
                 <p className="inline-flex items-center gap-2 text-muted-foreground">
                   <Clock className="w-4 h-4" /> {mine.start} · {mine.duration}h booked
                 </p>
+              )}
+              {mine && crewNames(job, mine).length > 0 && (
+                <p className="text-muted-foreground">With {crewNames(job, mine).join(", ")}</p>
               )}
             </div>
             <div className="grid grid-cols-2 gap-2 mt-4">

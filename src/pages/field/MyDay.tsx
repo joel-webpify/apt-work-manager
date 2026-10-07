@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronLeft, ChevronRight, Navigation, Clock, MapPin, CalendarDays } from "lucide-react";
+import { crewNames } from "@/lib/fieldLive";
 import { employees, type Job, type JobAssignment } from "@/data/mockData";
 import { useJobs } from "@/lib/jobsStore";
 import { useFieldRecords, useFieldUser, fieldStatusLabel, emptyRecord } from "@/lib/fieldStore";
@@ -140,6 +141,9 @@ export default function MyDay() {
           <span className="inline-flex items-center gap-1">
             <Clock className="w-3.5 h-3.5" /> {assignment.duration}h booked
           </span>
+          {crewNames(job, assignment).length > 0 && (
+            <span data-crew>With {crewNames(job, assignment).join(", ")}</span>
+          )}
           {photoCount > 0 && <span>{photoCount} photo{photoCount === 1 ? "" : "s"}</span>}
           {job.milestones?.length ? (
             <span>

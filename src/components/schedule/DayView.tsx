@@ -316,6 +316,29 @@ export default function DayView({
                         });
                         return st ? <LivePill state={st} /> : null;
                       })()}
+                      {(() => {
+                        const others = (b.job.assignments ?? []).filter(
+                          (x) => x.date === date && x.start === minutesToTime(b.startMins) && x.employeeId !== emp.id,
+                        );
+                        if (!others.length) return null;
+                        return (
+                          <div className="flex items-center gap-0.5 mt-0.5">
+                            {others.map((o) => {
+                              const p = employees.find((e) => e.id === o.employeeId);
+                              return p ? (
+                                <span
+                                  key={p.id}
+                                  title={p.name}
+                                  className="w-3.5 h-3.5 rounded-full text-[7px] font-medium text-white inline-flex items-center justify-center"
+                                  style={{ backgroundColor: `hsl(${p.color})` }}
+                                >
+                                  {p.initials}
+                                </span>
+                              ) : null;
+                            })}
+                          </div>
+                        );
+                      })()}
                       {(height / 100) * INNER_PX > 40 && (
                         <div className="text-[9px] text-muted-foreground leading-tight truncate">
                           {b.job.service}
