@@ -922,6 +922,19 @@ function ScheduledChip({
           {conflict && (
             <AlertTriangle className="w-3 h-3 text-[hsl(var(--destructive))] shrink-0" />
           )}
+    {onAddPerson && (
+            <button
+              type="button"
+              aria-label="Add person"
+              onClick={(e) => {
+                e.stopPropagation();
+                setAdding((v) => !v);
+              }}
+              className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
+            >
+              <UserPlus className="w-3 h-3" />
+            </button>
+          )}
           <button
             onClick={beginEdit}
             className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
@@ -960,19 +973,6 @@ function ScheduledChip({
             </span>
           ))}
         </div>
-      )}
-      {onAddPerson && (
-        <button
-          type="button"
-          aria-label="Add person"
-          onClick={(e) => {
-            e.stopPropagation();
-            setAdding((v) => !v);
-          }}
-          className="absolute top-1 right-9 opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-foreground"
-        >
-          <UserPlus className="w-3 h-3" />
-        </button>
       )}
       {adding && freePeople && onAddPerson && (
         <div
