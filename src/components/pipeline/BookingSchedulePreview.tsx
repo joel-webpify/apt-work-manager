@@ -1,17 +1,42 @@
-import { CalendarDays, ChevronLeft, ChevronRight, ClipboardList, Wrench } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { AlertTriangle, ChevronLeft, ChevronRight, ClipboardList, Clock3, Route, Wrench } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { employees, type Job } from "@/data/mockData";
+import { employees, type Employee, type Job } from "@/data/mockData";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { worksOn } from "@/lib/booking";
 import { visitTypeFor } from "@/lib/visitTypes";
 import { travelMinutes } from "@/lib/travel";
 
-const minutes = (time: string) => {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
+const SLOT_MINUTES = 15;
+const SLOT_HEIGHT = 12;
+
+export const minutesFromTime = (time: string) => {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
 };
-const timeOf = (n: number) => `${String(Math.floor(n / 60)).padStart(2, "0")}:${String(n % 60).padStart(2, "0")}`;
+
+export const timeFromMinutes = (value: number) =>
+  `${String(Math.floor(value / 60)).padStart(2, "0")}:${String(value % 60).padStart(2, "0")}`;
+
+type ScheduleBlock = {
+  job: Job;
+  start: number;
+  end: number;
+};
+
+function dayRange(selected: Employee[], blocks: ScheduleBlock[], start: string, duration: number) {
+  const starts = [7 * 60, minutesFromTime(start), ...selected.map((person) => minutesFromTime(person.workStart)), ...blocks.map((block) => block.start)];
+  const ends = [19 * 60, minutesFromTime(start) + duration * 60, ...selected.map((person) => minutesFromTime(person.workEnd)), ...blocks.map((block) => block.end)];
+  return {
+    from: Math.floor(Math.min(...starts) / 60) * 60,
+    to: Math.ceil(Math.max(...ends) / 60) * 60,
+  };
+}
+
+function dateLabel(date: string) {
+  return new Date(`${date}T12:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+}
 
 export default function BookingSchedulePreview({ job, jobs, people, date, start, duration, ignoreKey, onDate, onStart }: {
   job: Job;
@@ -24,79 +49,174 @@ export default function BookingSchedulePreview({ job, jobs, people, date, start,
   onDate: (date: string) => void;
   onStart: (start: string) => void;
 }) {
-  const selected = employees.filter((e) => people.includes(e.id));
-  const blocks = jobs.flatMap((j) => (j.assignments ?? []).map((a) => ({ job: j, assignment: a })))
-    .filter(({ job: j, assignment: a }) => a.date === date && people.includes(a.employeeId)
-      && !(j.id === job.id && `${a.date}|${a.start}` === ignoreKey))
-    .sort((a, b) => minutes(a.assignment.start) - minutes(b.assignment.start));
-  const from = Math.floor(Math.min(420, minutes(start), ...selected.map((e) => minutes(e.workStart)), ...blocks.map((b) => minutes(b.assignment.start))) / 60) * 60;
-  const to = Math.ceil(Math.max(1140, minutes(start) + duration * 60, ...selected.map((e) => minutes(e.workEnd)), ...blocks.map((b) => minutes(b.assignment.start) + b.assignment.duration * 60)) / 60) * 60;
-  const position = (s: number, length: number) => ({ left: `${(s - from) / (to - from) * 100}%`, width: `${length / (to - from) * 100}%` });
+  const isMobile = useIsMobile();
+  const selected = employees.filter((employee) => people.includes(employee.id));
+  const [activePerson, setActivePerson] = useState(people[0] ?? "");
+
+  useEffect(() => {
+    if (!people.includes(activePerson)) setActivePerson(people[0] ?? "");
+  }, [activePerson, people]);
+
+  const allBlocks = useMemo(
+    () => jobs
+      .flatMap((bookedJob) => (bookedJob.assignments ?? []).map((assignment) => ({ bookedJob, assignment })))
+      .filter(({ bookedJob, assignment }) => assignment.date === date && people.includes(assignment.employeeId)
+        && !(bookedJob.id === job.id && `${assignment.date}|${assignment.start}` === ignoreKey))
+      .map(({ bookedJob, assignment }) => ({
+        employeeId: assignment.employeeId,
+        job: bookedJob,
+        start: minutesFromTime(assignment.start),
+        end: minutesFromTime(assignment.start) + assignment.duration * 60,
+      }))
+      .sort((a, b) => a.start - b.start),
+    [date, ignoreKey, job.id, jobs, people],
+  );
+
+  const { from, to } = dayRange(selected, allBlocks, start, duration);
+  const totalMinutes = to - from;
+  const timelineHeight = (totalMinutes / SLOT_MINUTES) * SLOT_HEIGHT;
+  const shownPeople = isMobile ? selected.filter((person) => person.id === activePerson) : selected;
+  const proposedStart = minutesFromTime(start);
+  const proposedEnd = proposedStart + duration * 60;
+  const topFor = (value: number) => ((value - from) / SLOT_MINUTES) * SLOT_HEIGHT;
+  const heightFor = (value: number) => Math.max(24, (value / SLOT_MINUTES) * SLOT_HEIGHT);
+
   const changeDay = (offset: number) => {
     const next = new Date(`${date}T12:00:00`);
     next.setDate(next.getDate() + offset);
     onDate(`${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, "0")}-${String(next.getDate()).padStart(2, "0")}`);
   };
 
+  if (!selected.length) {
+    return (
+      <div className="rounded-md border border-dashed border-border bg-surface/40 px-4 py-5 text-center">
+        <Clock3 className="mx-auto mb-2 h-4 w-4 text-muted-foreground" />
+        <p className="text-sm font-medium">Choose who is going</p>
+        <p className="mt-1 text-xs text-muted-foreground">Their day schedule will appear here.</p>
+      </div>
+    );
+  }
+
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full" disabled={!people.length || !date}>
-          <CalendarDays /> View schedule
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="center" className="w-[600px] max-w-[calc(100vw-2rem)] p-3" data-booking-schedule>
-        <div className="flex items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm font-medium">Day schedule</h3>
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Previous day" onClick={() => changeDay(-1)}><ChevronLeft /></Button>
-            <Input aria-label="Schedule day" type="date" value={date} onChange={(e) => e.target.value && onDate(e.target.value)} className="h-8 w-36" />
-            <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Next day" onClick={() => changeDay(1)}><ChevronRight /></Button>
-          </div>
+    <section className="overflow-hidden rounded-md border border-border bg-background" data-booking-schedule>
+      <div className="flex flex-col gap-3 border-b border-border bg-surface/40 p-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h3 className="text-sm font-medium">Day planner</h3>
+          <p className="text-xs text-muted-foreground">Tap a free time to move this visit.</p>
         </div>
-        <div className="overflow-auto max-h-[360px]">
-          <div className="min-w-[520px]">
-            <div className="relative h-6 ml-20 mr-4 text-[10px] text-muted-foreground">
-              {Array.from({ length: (to - from) / 60 + 1 }, (_, i) => <span key={i} className="absolute -translate-x-1/2" style={{ left: `${i * 60 / (to - from) * 100}%` }}>{timeOf(from + i * 60)}</span>)}
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Previous day" onClick={() => changeDay(-1)}>
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <label className="relative min-w-0 flex-1 sm:flex-none">
+            <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs font-medium sm:hidden">{dateLabel(date)}</span>
+            <Input aria-label="Schedule day" type="date" value={date} onChange={(event) => event.target.value && onDate(event.target.value)} className="h-9 w-full text-transparent sm:w-36 sm:text-foreground" />
+          </label>
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label="Next day" onClick={() => changeDay(1)}>
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {isMobile && selected.length > 1 && (
+        <div className="flex gap-1.5 overflow-x-auto border-b border-border p-2" aria-label="People schedule">
+          {selected.map((person) => (
+            <Button
+              key={person.id}
+              type="button"
+              variant={activePerson === person.id ? "secondary" : "ghost"}
+              size="sm"
+              className="h-9 shrink-0"
+              aria-pressed={activePerson === person.id}
+              onClick={() => setActivePerson(person.id)}
+            >
+              {person.name.split(" ")[0]}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      <div className="max-h-[46dvh] overflow-auto" data-planner-scroll>
+        <div className="grid min-w-0" style={{ gridTemplateColumns: `52px repeat(${shownPeople.length}, minmax(0, 1fr))` }}>
+          <div className="sticky top-0 z-20 h-11 border-b border-border bg-background" />
+          {shownPeople.map((person) => (
+            <div key={person.id} className="sticky top-0 z-20 flex h-11 min-w-0 items-center border-b border-l border-border bg-background px-2">
+              <div className="min-w-0">
+                <p className="truncate text-xs font-medium">{person.name}</p>
+                <p className="truncate text-[10px] text-muted-foreground">{worksOn(person, date) ? `${person.workStart}–${person.workEnd}` : "Day off"}</p>
+              </div>
             </div>
-            {selected.map((person) => {
-              const visits = blocks.filter((b) => b.assignment.employeeId === person.id);
-              const off = !worksOn(person, date);
-              return (
-                <div key={person.id} className="flex gap-2 border-t border-border py-2">
-                  <div className="w-[72px] shrink-0 pt-1 text-xs font-medium">{person.name.split(" ")[0]}<p className="text-[10px] font-normal text-muted-foreground">{off ? "Day off" : `${person.workStart}–${person.workEnd}`}</p></div>
-                  <div className={`relative h-24 flex-1 mr-4 ${off ? "bg-muted" : "bg-background"}`}>
-                    <div className="absolute inset-0 flex">
-                      {Array.from({ length: (to - from) / 15 }, (_, i) => <Button key={i} variant="ghost" aria-label={`${person.name}: ${timeOf(from + i * 15)}`} className={`h-full flex-1 min-w-0 p-0 rounded-none ${i % 4 === 0 ? "border-l border-border" : ""}`} onClick={() => onStart(timeOf(from + i * 15))} />)}
-                    </div>
-                    {visits.map(({ job: booked, assignment: a }, i) => {
-                      const survey = visitTypeFor(booked) === "survey";
-                      const previous = visits[i - 1];
-                      const drive = previous ? travelMinutes(previous.job.address, booked.address) : 0;
-                      const previousEnd = previous ? minutes(previous.assignment.start) + previous.assignment.duration * 60 : 0;
-                      return <div key={`${booked.id}|${a.start}`}>
-                        {drive > 0 && <div className="absolute top-1 h-10 border border-dashed border-border bg-muted text-[9px] text-muted-foreground overflow-hidden pointer-events-none" style={position(previousEnd, Math.min(drive, Math.max(0, minutes(a.start) - previousEnd)))} title={`Estimated drive: ${drive} min`}>≈{drive}m</div>}
-                        <div className={`absolute top-1 h-10 rounded border px-1 overflow-hidden pointer-events-none ${survey ? "bg-warning/10 border-warning/40" : "bg-surface border-border"}`} style={position(minutes(a.start), a.duration * 60)} title={`${booked.customer} · ${booked.service} · ${a.start}–${timeOf(minutes(a.start) + a.duration * 60)}`}>
-                          <p className="flex items-center gap-1 text-[10px] font-medium truncate">{survey ? <ClipboardList className="w-3 h-3 shrink-0 text-warning" /> : <Wrench className="w-3 h-3 shrink-0" />}{booked.customer}</p>
-                          <p className="text-[9px] text-muted-foreground truncate">{a.start} · {a.duration}h</p>
-                        </div>
-                      </div>;
-                    })}
-                    <div className="absolute top-14 h-9 rounded border border-dashed border-primary bg-primary/10 px-1 text-primary overflow-hidden pointer-events-none" style={position(minutes(start), duration * 60)}>
-                      <p className="text-[10px] font-medium truncate">This visit</p><p className="text-[9px] truncate">{start} · {duration}h</p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+          ))}
+
+          <div className="relative border-r border-border" style={{ height: timelineHeight }}>
+            {Array.from({ length: totalMinutes / 60 + 1 }, (_, index) => (
+              <span key={index} className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-muted-foreground" style={{ top: topFor(from + index * 60) }}>
+                {timeFromMinutes(from + index * 60)}
+              </span>
+            ))}
           </div>
+
+          {shownPeople.map((person) => {
+            const blocks = allBlocks.filter((block) => block.employeeId === person.id);
+            const off = !worksOn(person, date);
+            const conflict = off || proposedStart < minutesFromTime(person.workStart) || proposedEnd > minutesFromTime(person.workEnd)
+              || blocks.some((block) => block.start < proposedEnd && proposedStart < block.end);
+            return (
+              <div key={person.id} className={`relative min-w-0 border-l border-border ${off ? "bg-surface/60" : "bg-background"}`} style={{ height: timelineHeight }}>
+                {Array.from({ length: totalMinutes / SLOT_MINUTES }, (_, index) => {
+                  const slot = from + index * SLOT_MINUTES;
+                  return (
+                    <Button
+                      key={slot}
+                      type="button"
+                      variant="ghost"
+                      className={`absolute inset-x-0 h-3 min-w-0 rounded-none p-0 ${index % 4 === 0 ? "border-t border-border" : "border-t border-border/30"}`}
+                      style={{ top: index * SLOT_HEIGHT }}
+                      aria-label={`${person.name}: choose ${timeFromMinutes(slot)}`}
+                      onClick={() => onStart(timeFromMinutes(slot))}
+                    />
+                  );
+                })}
+
+                {blocks.map((block, index) => {
+                  const previous = blocks[index - 1];
+                  const drive = previous ? travelMinutes(previous.job.address, block.job.address) : 0;
+                  const availableDrive = previous ? Math.min(drive, Math.max(0, block.start - previous.end)) : 0;
+                  const survey = visitTypeFor(block.job) === "survey";
+                  const Icon = survey ? ClipboardList : Wrench;
+                  return (
+                    <div key={`${block.job.id}-${block.start}`}>
+                      {availableDrive > 0 && (
+                        <div className="pointer-events-none absolute inset-x-2 z-10 overflow-hidden rounded border border-dashed border-border bg-surface px-1 text-[9px] text-muted-foreground" style={{ top: topFor(previous.end), height: heightFor(availableDrive) }} title={`Estimated drive: ${drive} min`}>
+                          <span className="inline-flex items-center gap-1"><Route className="h-2.5 w-2.5" /> ≈{drive}m</span>
+                        </div>
+                      )}
+                      <div className={`pointer-events-none absolute inset-x-1.5 z-10 overflow-hidden rounded border px-1.5 py-1 ${survey ? "border-warning/40 bg-warning/10" : "border-border bg-surface"}`} style={{ top: topFor(block.start), height: heightFor(block.end - block.start) }} title={`${block.job.customer} · ${timeFromMinutes(block.start)}–${timeFromMinutes(block.end)}`}>
+                        <p className="flex items-center gap-1 truncate text-[10px] font-medium"><Icon className={`h-3 w-3 shrink-0 ${survey ? "text-warning" : "text-primary"}`} />{block.job.customer}</p>
+                        <p className="truncate text-[9px] text-muted-foreground">{timeFromMinutes(block.start)}–{timeFromMinutes(block.end)}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className={`pointer-events-none absolute inset-x-1 z-10 overflow-hidden rounded border-2 border-dashed px-1.5 py-1 ${conflict ? "border-destructive bg-destructive/10 text-destructive" : "border-primary bg-primary/10 text-primary"}`} style={{ top: topFor(proposedStart), height: heightFor(duration * 60) }} data-proposed-visit>
+                  <p className="flex items-center gap-1 truncate text-[10px] font-semibold">
+                    {conflict && <AlertTriangle className="h-3 w-3 shrink-0" />} This visit
+                  </p>
+                  <p className="truncate text-[9px]">{start}–{timeFromMinutes(proposedEnd)}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
-        <div className="flex flex-wrap gap-3 mt-2 text-[10px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><Wrench className="w-3 h-3" /> Work</span>
-          <span className="inline-flex items-center gap-1"><ClipboardList className="w-3 h-3 text-warning" /> Survey</span>
-          <span className="text-primary">This visit · {start}</span>
-        </div>
-      </PopoverContent>
-    </Popover>
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-border bg-surface/40 px-3 py-2 text-[10px] text-muted-foreground">
+        <span className="inline-flex items-center gap-1"><Wrench className="h-3 w-3 text-primary" /> Work</span>
+        <span className="inline-flex items-center gap-1"><ClipboardList className="h-3 w-3 text-warning" /> Survey</span>
+        <span className="inline-flex items-center gap-1"><Route className="h-3 w-3" /> Travel</span>
+        <span className="font-medium text-primary">This visit · {start}</span>
+      </div>
+    </section>
   );
 }

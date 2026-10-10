@@ -186,12 +186,12 @@ function BookVisitDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
+      <DialogContent className="h-[100dvh] max-h-[100dvh] w-full max-w-none gap-0 overflow-hidden p-0 sm:h-auto sm:max-h-[92dvh] sm:max-w-4xl sm:gap-4 sm:p-6">
         <DialogHeader>
-          <DialogTitle>{edit ? "Move visit" : "Book a visit"}</DialogTitle>
+          <DialogTitle className="border-b border-border px-4 py-4 pr-12 text-left sm:border-0 sm:p-0">{edit ? "Move visit" : "Book a visit"}</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto px-4 py-4 sm:px-0 sm:py-0">
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-1.5">Who</p>
             {teams.length > 0 && (
@@ -266,7 +266,7 @@ function BookVisitDialog({
           />
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="border-t border-border bg-background p-3 sm:border-0 sm:p-0">
           <Button variant="ghost" onClick={onClose}>Leave for the schedule</Button>
           <Button disabled={!people.length} onClick={() => save()}>{edit ? "Save" : "Book"}</Button>
         </DialogFooter>
