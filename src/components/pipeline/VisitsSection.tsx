@@ -12,7 +12,7 @@ import { useFieldRecords } from "@/lib/fieldStore";
 import { liveLabel, liveStateFor, pendingFollowUps } from "@/lib/fieldLive";
 import { visitTypeFor } from "@/lib/visitTypes";
 import BookingSchedulePreview from "./BookingSchedulePreview";
-import { bookVisit, bookingWarnings, cancelVisit, moveVisit, suggestSlots, visitsOf, type Visit } from "@/lib/booking";
+import { bookVisit, bookingWarnings, cancelVisit, suggestSlots, visitsOf, type Visit } from "@/lib/booking";
 
 /** Demo "today" — the sample data lives in this week, same as the schedule. */
 const TODAY = "2026-05-04";
