@@ -82,10 +82,10 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const [quotes] = useQuotes();
   const teams = useTeams();
   const [rowMode, setRowMode] = useState<"people" | "teams">("people");
-  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(linkDate ? new Date(`${linkDate}T00:00:00`) : new Date(2026, 4, 4)));
-  const [tradeFilter, setTradeFilter] = useState<Trade | "All">("All");
   const [params] = useSearchParams();
   const linkDate = params.get("date");
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(linkDate ? new Date(`${linkDate}T00:00:00`) : new Date(2026, 4, 4)));
+  const [tradeFilter, setTradeFilter] = useState<Trade | "All">("All");
   const [mode, setMode] = useState<"week" | "day">(params.get("view") === "day" ? "day" : "week");
   const [drag, setDrag] = useState<DragPayload | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
