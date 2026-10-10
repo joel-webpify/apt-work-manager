@@ -11,6 +11,7 @@ import { useTeams } from "@/lib/teamsStore";
 import { useFieldRecords } from "@/lib/fieldStore";
 import { liveLabel, liveStateFor, pendingFollowUps } from "@/lib/fieldLive";
 import { visitTypeFor } from "@/lib/visitTypes";
+import BookingSchedulePreview from "./BookingSchedulePreview";
 import { bookVisit, bookingWarnings, cancelVisit, moveVisit, suggestSlots, visitsOf, type Visit } from "@/lib/booking";
 
 /** Demo "today" — the sample data lives in this week, same as the schedule. */
@@ -185,7 +186,7 @@ function BookVisitDialog({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{edit ? "Move visit" : "Book a visit"}</DialogTitle>
         </DialogHeader>
@@ -259,6 +260,10 @@ function BookVisitDialog({
           {warnings.length > 0 && (
             <p className="text-xs text-warning">{warnings.join(" · ")}</p>
           )}
+          <BookingSchedulePreview
+            job={job} jobs={jobs} people={people} date={date} start={start} duration={duration}
+            ignoreKey={edit?.key} onDate={setDate} onStart={setStart}
+          />
         </div>
 
         <DialogFooter>
