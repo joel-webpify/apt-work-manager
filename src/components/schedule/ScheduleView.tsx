@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useRef, type DragEvent } from "react";
 import { ChevronLeft, ChevronRight, AlertTriangle, MapPin, Clock, Users, X, Calendar as CalendarIcon, Maximize2, Minimize2, Pencil, Check, ClipboardList, Wrench, Radio, FileText, RotateCcw, UserPlus } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { employees, type Employee, type Job, type JobAssignment, type Trade } from "@/data/mockData";
 import { Btn, StatusDot } from "@/components/layout/PageShell";
@@ -82,9 +82,11 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
   const [quotes] = useQuotes();
   const teams = useTeams();
   const [rowMode, setRowMode] = useState<"people" | "teams">("people");
-  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(new Date(2026, 4, 4)));
+  const [weekStart, setWeekStart] = useState<Date>(() => startOfWeek(linkDate ? new Date(`${linkDate}T00:00:00`) : new Date(2026, 4, 4)));
   const [tradeFilter, setTradeFilter] = useState<Trade | "All">("All");
-  const [mode, setMode] = useState<"week" | "day">("week");
+  const [params] = useSearchParams();
+  const linkDate = params.get("date");
+  const [mode, setMode] = useState<"week" | "day">(params.get("view") === "day" ? "day" : "week");
   const [drag, setDrag] = useState<DragPayload | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
   const [employeeDrawer, setEmployeeDrawer] = useState<Employee | null>(null);
@@ -104,6 +106,7 @@ export default function ScheduleView({ jobs, onUpdateJob, onSelectJob }: Schedul
 
   // Day view opens on a day that actually has work booked.
   const [dayIso, setDayIso] = useState<string>(() => {
+    if (linkDate) return linkDate;
     const withWork = weekDays
       .map((d) => fmtISO(d))
       .find((iso) =>

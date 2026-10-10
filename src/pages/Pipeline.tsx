@@ -1,3 +1,4 @@
+import VisitsSection, { visitSummary } from "@/components/pipeline/VisitsSection";
 import { useEffect, useMemo, useState, type DragEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useToast, toast as topToast } from "@/hooks/use-toast";
@@ -1166,6 +1167,9 @@ function BoardCard({
           </div>
         );
       })()}
+      {!(job.assignments && job.assignments.length > 0) && (
+        <div className="mt-2 pt-2 border-t-hairline text-[10px] text-muted-foreground">Not booked</div>
+      )}
       {job.assignments && job.assignments.length > 0 && (
         <div className="flex items-center gap-1 mt-2 pt-2 border-t-hairline">
           <Users className="w-3 h-3 text-muted-foreground" />
@@ -1187,7 +1191,7 @@ function BoardCard({
           </div>
           <span className="text-[10px] text-muted-foreground tabular-nums ml-auto inline-flex items-center gap-0.5">
             <Clock className="w-2.5 h-2.5" />
-            {job.assignments[0].date.slice(5)}
+            {visitSummary(job)}
           </span>
         </div>
       )}
@@ -1593,6 +1597,10 @@ function JobDrawer({
                   <OverviewRow icon={<Wrench className="w-4 h-4" />} label="Trade" value={job.trade ?? "General"} />
                   <OverviewRow icon={<Clock className="w-4 h-4" />} label="Estimated time" value={job.estimatedHours ? `${job.estimatedHours} hours` : "Not estimated"} />
                 </div>
+              </Section>
+
+              <Section title="Visits">
+                <VisitsSection job={job} onUpdate={onUpdate} />
               </Section>
 
               <Section title="Job plan">
