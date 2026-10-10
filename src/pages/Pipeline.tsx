@@ -173,9 +173,13 @@ export default function Pipeline() {
   const setJobList = setJobListInternal;
 
   const [onlyAttention, setOnlyAttention] = useState(false);
+  const [onlyUnbooked, setOnlyUnbooked] = useState(false);
   const shownJobs = useMemo(
-    () => (onlyAttention ? boardJobs.filter(needsAttention) : boardJobs),
-    [boardJobs, onlyAttention],
+    () =>
+      boardJobs
+        .filter((j) => (onlyAttention ? needsAttention(j) : true))
+        .filter((j) => (onlyUnbooked ? !(j.assignments ?? []).length : true)),
+    [boardJobs, onlyAttention, onlyUnbooked],
   );
 
   const [selected, setSelected] = useState<Job | null>(null);
@@ -417,8 +421,19 @@ export default function Pipeline() {
         </button>
         {tab !== "all" && (
           <button
-            onClick={() => setOnlyAttention((v) => !v)}
+            onClick={() => setOnlyUnbooked((v) => !v)}
             className={`ml-auto h-7 px-2 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-hairline transition-colors ${
+              onlyUnbooked ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            Not booked
+            <span className="tabular-nums">{boardJobs.filter((j) => !(j.assignments ?? []).length).length}</span>
+          </button>
+        )}
+        {tab !== "all" && (
+          <button
+            onClick={() => setOnlyAttention((v) => !v)}
+            className={`h-7 px-2 rounded-md text-xs font-medium inline-flex items-center gap-1.5 border-hairline transition-colors ${
               onlyAttention
                 ? "bg-[hsl(var(--destructive)/0.1)] text-[hsl(var(--destructive))]"
                 : "text-muted-foreground hover:text-foreground"
