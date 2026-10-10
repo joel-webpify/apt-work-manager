@@ -9,7 +9,7 @@ const emp = (id: string, over: Partial<Employee> = {}): Employee => ({
 const job = (id: string, address: string, assignments: Job["assignments"] = []): Job => ({
   id, contactId: "c", customer: id, service: "x", value: 0, stage: "New", daysInStage: 0, address, notes: "",
   quoteValue: 0, timeline: [], assignments,
-} as Job);
+} as unknown as Job);
 
 const MON = "2026-05-04";
 
