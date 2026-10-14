@@ -22,7 +22,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
     triggerConfig: { beforeAmount: 24, beforeUnit: "hours", visitType: "any" },
     actions: [
       a("t1", { type: "send_sms", smsMessage: "Hi {{first_name}}, just a reminder we're booked in with you tomorrow at {{visit_time}}." }),
-      a("t2", { type: "notify_team", notifyChannel: "in_app", notifyRecipients: "assigned", notifyMessage: "Visit tomorrow at {{visit_time}} — {{job_address}}" }),
+      a("t2", { type: "notify_team", notifyChannel: "in_app", notifyRecipients: "People booked on the visit", notifyMessage: "Visit tomorrow at {{visit_time}} — {{job_address}}" }),
     ],
   },
   {
@@ -33,7 +33,7 @@ export const workflowTemplates: WorkflowTemplate[] = [
     trigger: "visit_rescheduled",
     actions: [
       a("t1", { type: "send_sms", smsMessage: "Hi {{first_name}}, your visit has moved to {{visit_date}} at {{visit_time}}." }),
-      a("t2", { type: "notify_team", notifyChannel: "in_app", notifyRecipients: "assigned", notifyMessage: "A visit you're on has moved to {{visit_date}} {{visit_time}}" }),
+      a("t2", { type: "notify_team", notifyChannel: "in_app", notifyRecipients: "People booked on the visit", notifyMessage: "A visit you're on has moved to {{visit_date}} {{visit_time}}" }),
     ],
   },
   {
