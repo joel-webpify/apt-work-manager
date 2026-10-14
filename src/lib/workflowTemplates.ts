@@ -14,6 +14,29 @@ const a = (id: string, action: Omit<WorkflowAction, "id">): WorkflowAction => ({
 
 export const workflowTemplates: WorkflowTemplate[] = [
   {
+    id: "tpl-visit-reminder",
+    name: "Remind the customer and crew before a visit",
+    blurb: "A text to the customer the day before, and a heads-up to whoever is booked on it.",
+    category: "Keep customers",
+    trigger: "visit_upcoming",
+    triggerConfig: { beforeAmount: 24, beforeUnit: "hours", visitType: "any" },
+    actions: [
+      a("t1", { type: "send_sms", smsMessage: "Hi {{first_name}}, just a reminder we're booked in with you tomorrow at {{visit_time}}." }),
+      a("t2", { type: "notify_team", notifyChannel: "in_app", notifyRecipients: "People booked on the visit", notifyMessage: "Visit tomorrow at {{visit_time}} — {{job_address}}" }),
+    ],
+  },
+  {
+    id: "tpl-visit-changed",
+    name: "Let the customer know when a visit moves",
+    blurb: "Sends the new day and time as soon as a booking is moved.",
+    category: "Keep customers",
+    trigger: "visit_rescheduled",
+    actions: [
+      a("t1", { type: "send_sms", smsMessage: "Hi {{first_name}}, your visit has moved to {{visit_date}} at {{visit_time}}." }),
+      a("t2", { type: "notify_team", notifyChannel: "in_app", notifyRecipients: "People booked on the visit", notifyMessage: "A visit you're on has moved to {{visit_date}} {{visit_time}}" }),
+    ],
+  },
+  {
     id: "tpl-quote-chase",
     name: "Chase a quote that has gone quiet",
     blurb: "Three gentle nudges over two weeks, stopping the moment they accept.",
