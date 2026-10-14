@@ -1127,6 +1127,47 @@ export default function WorkflowDetail() {
                     </SelectContent>
                   </Select>
                 )}
+                {["visit_booked", "visit_upcoming", "visit_rescheduled", "visit_cancelled", "visit_completed"].includes(draft.trigger) && (
+                  <div className="space-y-2">
+                    {draft.trigger === "visit_upcoming" && (
+                      <div className="flex items-center gap-2">
+                        <Input
+                          type="number"
+                          min={1}
+                          className="h-8 text-xs w-20"
+                          value={(draft.triggerConfig?.beforeAmount as number) ?? 24}
+                          onChange={(e) => patch({ triggerConfig: { ...draft.triggerConfig, beforeAmount: Number(e.target.value) } })}
+                        />
+                        <Select
+                          value={(draft.triggerConfig?.beforeUnit as string) ?? "hours"}
+                          onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, beforeUnit: v } })}
+                        >
+                          <SelectTrigger className="h-8 text-xs w-28"><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="minutes">minutes</SelectItem>
+                            <SelectItem value="hours">hours</SelectItem>
+                            <SelectItem value="days">days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <span className="text-xs text-muted-foreground">before the visit starts</span>
+                      </div>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">Type of visit</span>
+                      <Select
+                        value={(draft.triggerConfig?.visitType as string) ?? "any"}
+                        onValueChange={(v) => patch({ triggerConfig: { ...draft.triggerConfig, visitType: v } })}
+                      >
+                        <SelectTrigger className="h-8 text-xs w-40"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="any">Any visit</SelectItem>
+                          <SelectItem value="survey">Surveys only</SelectItem>
+                          <SelectItem value="work">Work visits only</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
                 {draft.trigger === "low_rating_review" && (
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">Anything at or below</span>

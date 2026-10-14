@@ -15,6 +15,9 @@ export type WorkflowTrigger =
   | "job_lost"
   | "visit_booked"
   | "visit_completed"
+  | "visit_upcoming"
+  | "visit_rescheduled"
+  | "visit_cancelled"
   | "job_sheet_completed"
   | "extra_work_added"
   | "invoice_sent"
@@ -467,6 +470,9 @@ export const triggerMeta: Record<WorkflowTrigger, { label: string; group: string
   job_won: { label: "A job is won", group: "Jobs", description: "A job is marked as won" },
   job_lost: { label: "A job is lost", group: "Jobs", description: "A job is marked as lost" },
   visit_booked: { label: "A visit is booked in", group: "Jobs", description: "An appointment goes in the diary" },
+  visit_upcoming: { label: "A booked visit is coming up", group: "Jobs", description: "A set time before a scheduled visit — great for reminders to the customer or crew" },
+  visit_rescheduled: { label: "A visit is moved", group: "Jobs", description: "A booked visit changes day or time" },
+  visit_cancelled: { label: "A visit is cancelled", group: "Jobs", description: "A booked visit is taken out of the diary" },
   visit_completed: { label: "A visit is finished", group: "Jobs", description: "An engineer marks a visit as done in the field app" },
   job_sheet_completed: { label: "A job sheet is filled in", group: "Jobs", description: "Photos and notes are completed on site" },
   extra_work_added: { label: "Extra work is spotted on site", group: "Jobs", description: "An engineer adds extra work during a visit" },
