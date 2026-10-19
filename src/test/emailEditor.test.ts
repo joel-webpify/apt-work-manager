@@ -11,6 +11,12 @@ describe("email subject length warning", () => {
 });
 
 describe("required email footer", () => {
+  it("uses the business logo by default and keeps an email-specific override", () => {
+    saveBusinessSettings({ name: "", address: "", phone: "", logo: "/business-logo.png", brandColour: "#347ba8", bookingLink: "" });
+    expect(renderBlocksToHtml([createBlock("logo")])).toContain('src="/business-logo.png"');
+    expect(renderBlocksToHtml([{ ...createBlock("logo"), src: "/custom-logo.png" }])).toContain('src="/custom-logo.png"');
+    localStorage.removeItem("business.settings.v1");
+  });
   it("always adds a business name, address and unsubscribe footer", () => {
     const blocks = ensureEmailFooter([createBlock("text")]);
     expect(blocks.at(-1)).toMatchObject({ type: "footer", company: "{{business_name}}", address: "{{business_address}}", url: "{{unsubscribe_link}}" });
