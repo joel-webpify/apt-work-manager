@@ -9,6 +9,7 @@ import { contacts as sampleContacts } from "@/data/mockData";
 import { applyExtrasTo, mergeWithMock, useContactExtras, useImportedContacts } from "@/lib/contactsStore";
 import { toast } from "@/hooks/use-toast";
 import type { EmailBlock } from "./EmailDesigner";
+import { subjectNeedsLengthWarning } from "@/lib/emailEditor";
 
 export interface EmailEditorDraft {
   name: string;
@@ -81,7 +82,7 @@ export function EmailEditorPage({ initial, onBack, onSave, children, canSave = t
       <div className="shrink-0 border-b-hairline px-6 py-2 text-xs text-muted-foreground">Editing a copy — the original email is unchanged.</div>
       <div className="grid shrink-0 grid-cols-1 gap-4 border-b-hairline px-6 py-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <div className="flex items-center justify-between gap-2"><Label htmlFor="editor-subject">Subject line</Label><span className={`text-xs tabular-nums ${draft.subject.length > 60 ? "text-[hsl(var(--warning))]" : "text-muted-foreground"}`}>{draft.subject.length} characters{draft.subject.length > 60 ? " · Above 60" : ""}</span></div>
+          <div className="flex items-center justify-between gap-2"><Label htmlFor="editor-subject">Subject line</Label><span className={`text-xs tabular-nums ${subjectNeedsLengthWarning(draft.subject) ? "text-[hsl(var(--warning))]" : "text-muted-foreground"}`}>{draft.subject.length} characters{subjectNeedsLengthWarning(draft.subject) ? " · Above 60" : ""}</span></div>
           <Input id="editor-subject" value={draft.subject} onChange={(e) => edit({ subject: e.target.value })} placeholder="What will land in their inbox?" />
         </div>
         <div className="space-y-2">
