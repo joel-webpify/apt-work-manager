@@ -1,8 +1,8 @@
 # Email editor refactor
-- [ ] Expand field groups, insertion controls and editable fallbacks.
-- [ ] Resolve fields from existing customer, booking, job, quote, invoice and business records with locale/timezone/currency formatting.
-- [ ] Restrict field availability by trigger and warn on save without changing persistence.
-- [ ] Verify real-data previews, fallbacks and trigger rules with tests and browser checks.
+- [x] Expand field groups, insertion controls and editable fallbacks.
+- [x] Resolve fields from existing customer, booking, job, quote, invoice and business records with locale/timezone/currency formatting.
+- [x] Restrict field availability by trigger and warn on save without changing persistence.
+- [x] Verify real-data previews, fallbacks and trigger rules with tests and browser checks.
 - [x] Replace merge chips with searchable grouped field insertion and {{ autocomplete; show token pills until a contact is selected.
 - [x] Default branding from business settings and protect required footer content and deletion.
 - [x] Refine row selection/toolbars, inline insertion, grouped palette and real spacer/divider heights.

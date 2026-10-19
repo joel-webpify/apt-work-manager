@@ -38,8 +38,8 @@ describe('merge field rules', () => {
   it('uses actual records and currency without leaking another customer context', () => {
     saveBusinessSettings({name:'Nordic Services',address:'Stockholm',phone:'123',logo:'',brandColour:'#347ba8',bookingLink:'https://example.com/book',locale:'sv-SE',timezone:'Europe/Stockholm',currency:'SEK'});
     const id = createContact({name:'Anna Example',email:'anna@example.test',phone:'070123',postcode:'11122'});
-    addJob({id:'merge-job',contactId:id,customer:'Anna Example',service:'Cleaning',stage:'New',value:100,quoteValue:100,address:'Test Street',notes:'Bring ladder',daysInStage:0,timeline:[],assignments:[{employeeId:'e1',date:'2026-10-21',start:'09:00',duration:2}]});
-    const items = [{id:'line',description:'Work',qty:2,unitPrice:100,taxRate:25}];
+    addJob({id:'merge-job',contactId:id,customer:'Anna Example',service:'Cleaning',stage:'New enquiry',value:100,quoteValue:100,address:'Test Street',notes:'Bring ladder',daysInStage:0,timeline:[],assignments:[{employeeId:'e1',date:'2026-10-21',start:'09:00',duration:2}]});
+    const items = [{id:'line',name:'Work',unit:'each' as const,description:'Work',qty:2,unitPrice:100,taxRate:25}];
     addQuote({id:'merge-quote',number:'Q-1',contactId:id,jobId:'merge-job',customer:'Anna Example',status:'Sent',issueDate:'2026-10-19',validUntil:'2026-11-01',items});
     addInvoice({id:'merge-invoice',number:'I-1',contactId:id,jobId:'merge-job',customer:'Anna Example',status:'Overdue',issueDate:'2026-10-01',dueDate:'2026-10-15',items});
     const values = resolveMergeFields(id,{job_id:'merge-job',booking_id:'merge-job:2026-10-21:09:00',quote_id:'merge-quote',invoice_id:'merge-invoice',now:new Date('2026-10-19T00:00:00Z')});
