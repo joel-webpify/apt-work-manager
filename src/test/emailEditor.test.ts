@@ -36,3 +36,13 @@ describe("required email footer", () => {
     localStorage.removeItem("business.settings.v1");
   });
 });
+describe("column rows", () => {
+  it("render any block inside a column, and keep old text-only columns", async () => {
+    const { columnCells } = await import("@/components/email/EmailDesigner");
+    const row = { ...createBlock("columns"), cells: [[{ ...createBlock("image"), src: "/a.png" }], [createBlock("text"), { ...createBlock("button"), label: "Book now" }]] };
+    const html = renderBlocksToHtml([row]);
+    expect(html).toContain('src="/a.png"');
+    expect(html).toContain("Book now");
+    expect(columnCells({ ...createBlock("columns"), leftText: "Old" })[0][0]).toMatchObject({ type: "text", text: "Old" });
+  });
+});
