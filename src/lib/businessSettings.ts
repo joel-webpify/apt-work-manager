@@ -7,9 +7,16 @@ export interface BusinessSettings {
   logo: string;
   brandColour: string;
   bookingLink: string;
+  locale?: string;
+  timezone?: string;
+  currency?: string;
+  email?: string;
+  website?: string;
+  orgNumber?: string;
+  senderName?: string;
 }
 const KEY = "business.settings.v1";
-const defaults: BusinessSettings = { name: "", phone: "", address: "", logo: "", brandColour: "#347ba8", bookingLink: "" };
+const defaults: BusinessSettings = { name: "", phone: "", address: "", logo: "", brandColour: "#347ba8", bookingLink: "", locale: "en-GB", timezone: "Europe/London", currency: "GBP" };
 export function readBusinessSettings(): BusinessSettings {
   try { return { ...defaults, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; }
   catch { return defaults; }
