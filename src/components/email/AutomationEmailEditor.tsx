@@ -2,6 +2,7 @@ import { EmailEditorPage } from "./EmailEditorPage";
 import { createBlock, renderBlocksToHtml } from "./EmailDesigner";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { decorateMergePills } from "@/lib/emailEditor";
 
 const templateLabels: Record<string, string> = {
   default: "Default template", review_request: "Review request", winback: "Win-back offer", reminder: "Reminder", welcome: "Welcome",
@@ -34,7 +35,7 @@ export function AutomationEmailEditor({ subject, template, onBack, onSave }: {
           </Select>
         </aside>
         <div className="overflow-auto bg-surface-hover p-6">
-          <div aria-label="Email canvas" className={`email-editor-paper mx-auto border-hairline p-6 min-h-[420px] ${device === "mobile" ? "w-[375px]" : "w-full max-w-[600px]"}`} dangerouslySetInnerHTML={{ __html: renderBlocksToHtml(blocks, vars) }} />
+          <div aria-label="Email canvas" className={`email-editor-paper mx-auto border-hairline p-6 min-h-[420px] ${device === "mobile" ? "w-[375px]" : "w-full max-w-[600px]"}`} dangerouslySetInnerHTML={{ __html: decorateMergePills(renderBlocksToHtml(blocks, vars)) }} />
         </div>
         <aside className="border-l-hairline p-5 space-y-4">
           <h2 className="text-sm font-medium">Email properties</h2>
