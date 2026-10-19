@@ -75,9 +75,20 @@ export interface EmailBlock {
   unsubLabel?: string;
   /** Column rows: blocks inside each column. Legacy rows fall back to leftText/midText/rightText. */
   cells?: EmailBlock[][];
+  /** Column widths in percent, one per column. */
+  widths?: number[];
 }
 
 const COLUMN_CHILD_TYPES: BlockType[] = ["heading", "text", "button", "image", "list", "quote", "divider", "spacer", "video", "social", "logo"];
+
+export const WIDTH_PRESETS: Record<2 | 3, number[][]> = {
+  2: [[50, 50], [33, 67], [67, 33], [25, 75], [75, 25]],
+  3: [[33, 34, 33], [25, 50, 25], [50, 25, 25], [25, 25, 50]],
+};
+export function columnWidths(b: EmailBlock): number[] {
+  const count = b.type === "columns3" ? 3 : 2;
+  return b.widths?.length === count ? b.widths : WIDTH_PRESETS[count][0];
+}
 
 export function columnCells(b: EmailBlock): EmailBlock[][] {
   const count = b.type === "columns3" ? 3 : 2;
@@ -231,8 +242,8 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
       case "columns":
       case "columns3": {
         const cells = columnCells(original);
-        const w = Math.floor(100 / cells.length);
-        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;table-layout:fixed"><tr>${cells.map((c, i) => `<td valign="top" style="width:${w}%;padding:0 ${i === cells.length - 1 ? 0 : 6}px 0 ${i === 0 ? 0 : 6}px;font-size:14px;line-height:1.55;color:#222">${renderBlocksToHtml(c, vars)}</td>`).join("")}</tr></table>`;
+        const ws = columnWidths(original);
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;table-layout:fixed"><tr>${cells.map((c, i) => `<td valign="top" style="width:${ws[i]}%;padding:0 ${i === cells.length - 1 ? 0 : 6}px 0 ${i === 0 ? 0 : 6}px;font-size:14px;line-height:1.55;color:#222">${renderBlocksToHtml(c, vars)}</td>`).join("")}</tr></table>`;
       }
       case "hero": {
         const bg = b.bgColor ?? "#0f172a";
@@ -303,10 +314,51 @@ export function EmailDesigner({
   const dragData = useRef<{ kind: "new"; type: BlockType } | { kind: "move"; id: string } | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
-  const selected = blocks.find((b) => b.id === selectedId) ?? null;
+  const isCols = (b: EmailBlock) => b.type === "columns" || b.type === "columns3";
+  const selected = blocks.find((b) => b.id === selectedId) ?? blocks.filter(isCols).flatMap((b) => columnCells(b).flat()).find((b) => b.id === selectedId) ?? null;
 
   const update = (id: string, patch: Partial<EmailBlock>) =>
-    onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
+    onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : isCols(b) && b.cells?.some((c) => c.some((x) => x.id === id)) ? { ...b, cells: b.cells.map((c) => c.map((x) => (x.id === id ? { ...x, ...patch } : x))) } : b)));
+  const setCell = (rowId: string, i: number, fn: (cell: EmailBlock[]) => EmailBlock[]) =>
+    onChange(blocks.map((b) => (b.id === rowId ? { ...b, cells: columnCells(b).map((c, j) => (j === i ? fn(c) : c)) } : b)));
+  const insertInCell = (rowId: string, i: number, at: number, block: EmailBlock) => {
+    if (block.type === "footer" || isCols(block)) return;
+    if (block.type === "button") block = { ...block, bgColor: appearance.brand };
+    setCell(rowId, i, (c) => { const n = [...c]; n.splice(at, 0, block); return n; });
+    setSelectedId(block.id);
+  };
+  const dropInCell = (rowId: string, i: number, at: number) => {
+    const d = dragData.current; dragData.current = null; setDragOverIdx(null);
+    if (d?.kind === "new") insertInCell(rowId, i, at, createBlock(d.type));
+  };
+  const renderColumns = (row: EmailBlock) => {
+    const cells = columnCells(row);
+    const ws = columnWidths(row);
+    // materialise legacy text columns so children get stable ids
+    if (!row.cells) queueMicrotask(() => update(row.id, { cells }));
+    return (
+      <div className="flex gap-3 py-1" style={{ margin: "0 0 12px" }}>
+        {cells.map((cell, i) => (
+          <div key={i} style={{ width: `${ws[i]}%` }} className="min-w-0 rounded outline-dashed outline-1 outline-border/70 p-1"
+            onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); }}
+            onDrop={(e) => { e.stopPropagation(); dropInCell(row.id, i, cell.length); }}>
+            {cell.map((child, k) => (
+              <div key={child.id} className="my-1">
+                <BlockShell block={child} selected={selectedId === child.id} onSelect={() => setSelectedId(child.id)} brand={appearance.brand}
+                  onAdd={() => insertInCell(row.id, i, k + 1, createBlock("text"))} onLayout={() => {}}
+                  onDelete={() => { setCell(row.id, i, (c) => c.filter((x) => x.id !== child.id)); setSelectedId(null); }}
+                  onDuplicate={() => insertInCell(row.id, i, k + 1, { ...child, id: uid() })}
+                  onMoveUp={() => setCell(row.id, i, (c) => { const n = [...c]; [n[k - 1], n[k]] = [n[k], n[k - 1]]; return n; })}
+                  onMoveDown={() => setCell(row.id, i, (c) => { const n = [...c]; [n[k + 1], n[k]] = [n[k], n[k + 1]]; return n; })}
+                  canUp={k > 0} canDown={k < cell.length - 1} onDragStart={() => {}} onDragEnd={() => {}} vars={vars} />
+              </div>
+            ))}
+            <CellAdd onInsert={(type) => insertInCell(row.id, i, cell.length, createBlock(type))} empty={cell.length === 0} />
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   const remove = (id: string) => {
     const block = blocks.find((item) => item.id === id);
@@ -444,7 +496,8 @@ export function EmailDesigner({
                     onSelect={() => setSelectedId(b.id)}
                     brand={appearance.brand}
                     onAdd={() => insertAt(i + 1, createBlock("text"))}
-                    onLayout={(type) => update(b.id, { type, cells: columnCells({ ...b, type }) })}
+                    onLayout={(type) => update(b.id, { type, cells: columnCells({ ...b, type }), widths: undefined })}
+                    content={isCols(b) ? renderColumns(b) : undefined}
                     onDelete={() => remove(b.id)}
                     onDuplicate={() => duplicate(b.id)}
                     onMoveUp={() => move(b.id, -1)}
@@ -539,6 +592,7 @@ function BlockShell({
   brand,
   onAdd,
   onLayout,
+  content,
 }: {
   block: EmailBlock;
   selected: boolean;
@@ -555,8 +609,9 @@ function BlockShell({
   brand: string;
   onAdd: () => void;
   onLayout: (type: "columns" | "columns3") => void;
+  content?: React.ReactNode;
 }) {
-  const html = decorateMergePills(block.type === "divider" ? '<hr style="border:none;border-top:1px solid #e5e5e5;margin:0"/>' : renderBlocksToHtml([block], vars));
+  const html = content ? "" : decorateMergePills(block.type === "divider" ? '<hr style="border:none;border-top:1px solid #e5e5e5;margin:0"/>' : renderBlocksToHtml([block], vars));
   return (
     <div
       data-email-row={block.type}
@@ -598,7 +653,7 @@ function BlockShell({
           <Trash2 className="w-3 h-3" />
         </IconBtn>
       </div>
-      <div onClick={(e) => { if ((e.target as HTMLElement).closest("a")) e.preventDefault(); }} className={block.type === "spacer" || block.type === "divider" ? "" : "px-1 py-0.5"} dangerouslySetInnerHTML={{ __html: html }} />
+      {content ?? <div onClick={(e) => { if ((e.target as HTMLElement).closest("a")) e.preventDefault(); }} className={block.type === "spacer" || block.type === "divider" ? "" : "px-1 py-0.5"} dangerouslySetInnerHTML={{ __html: html }} />}
     </div>
   );
 }
@@ -631,39 +686,30 @@ function IconBtn({
   );
 }
 
-function ColumnsEditor({ block, onChange }: { block: EmailBlock; onChange: (patch: Partial<EmailBlock>) => void }) {
-  const cells = columnCells(block);
-  const [open, setOpen] = useState<string | null>(null);
-  const names = cells.length === 3 ? ["Left", "Middle", "Right"] : ["Left", "Right"];
-  const setCell = (i: number, next: EmailBlock[]) => onChange({ cells: cells.map((c, j) => (j === i ? next : c)) });
+function CellAdd({ onInsert, empty }: { onInsert: (type: BlockType) => void; empty: boolean }) {
+  const [open, setOpen] = useState(false);
   return (
-    <div className="space-y-3">
-      {cells.map((cell, i) => (
-        <div key={i} className="rounded border-hairline p-2 space-y-1.5">
-          <div className="text-[11px] font-medium">{names[i]} column</div>
-          {cell.length === 0 && <div className="text-[11px] text-muted-foreground">Empty column</div>}
-          {cell.map((child, k) => {
-            const label = PALETTE.find((p) => p.type === child.type)?.label ?? child.type;
-            const swap = (d: -1 | 1) => { const n = [...cell]; [n[k], n[k + d]] = [n[k + d], n[k]]; setCell(i, n); };
-            return (
-              <div key={child.id} className="rounded bg-surface/40">
-                <div className="flex items-center gap-0.5 px-1.5 py-1">
-                  <button type="button" className="flex-1 text-left text-xs" onClick={() => setOpen(open === child.id ? null : child.id)}>{label}</button>
-                  <IconBtn onClick={() => swap(-1)} disabled={k === 0} title="Move up"><ChevronUp className="w-3 h-3" /></IconBtn>
-                  <IconBtn onClick={() => swap(1)} disabled={k === cell.length - 1} title="Move down"><ChevronDown className="w-3 h-3" /></IconBtn>
-                  <IconBtn onClick={() => setCell(i, cell.filter((x) => x.id !== child.id))} title="Delete" danger><Trash2 className="w-3 h-3" /></IconBtn>
-                </div>
-                {open === child.id && <div className="border-t-hairline p-2"><Inspector block={child} onChange={(patch) => setCell(i, cell.map((x) => (x.id === child.id ? { ...x, ...patch } : x)))} /></div>}
-              </div>
-            );
-          })}
-          <select aria-label={`Add block to ${names[i].toLowerCase()} column`} value="" onChange={(e) => { if (!e.target.value) return; const nb = createBlock(e.target.value as BlockType); setCell(i, [...cell, nb]); setOpen(nb.id); }} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background">
-            <option value="">+ Add block…</option>
-            {COLUMN_CHILD_TYPES.map((t) => <option key={t} value={t}>{PALETTE.find((p) => p.type === t)?.label ?? t}</option>)}
-          </select>
-        </div>
-      ))}
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button type="button" aria-label="Add block to column" onClick={() => setOpen(!open)} className={`w-full rounded text-[11px] text-muted-foreground hover:text-primary hover:bg-primary/5 flex items-center justify-center gap-1 ${empty ? "py-6" : "py-1"}`}><Plus className="h-3 w-3" />{empty ? "Add block" : ""}</button>
+      {open && <div className="absolute left-1/2 top-full z-30 w-56 -translate-x-1/2 rounded-md border-hairline bg-popover p-2 shadow-md grid grid-cols-2 gap-1">{PALETTE.filter((p) => COLUMN_CHILD_TYPES.includes(p.type)).map((item) => <Button variant="ghost" size="sm" key={item.type} onClick={() => { onInsert(item.type); setOpen(false); }} className="justify-start text-xs"><item.icon className="h-3 w-3" />{item.label}</Button>)}</div>}
     </div>
+  );
+}
+
+function ColumnsEditor({ block, onChange }: { block: EmailBlock; onChange: (patch: Partial<EmailBlock>) => void }) {
+  const count = block.type === "columns3" ? 3 : 2;
+  const current = columnWidths(block).join("/");
+  return (
+    <Field label="Column widths">
+      <div className="grid grid-cols-2 gap-1.5">
+        {WIDTH_PRESETS[count].map((w) => (
+          <button key={w.join("/")} type="button" aria-pressed={current === w.join("/")} onClick={() => onChange({ widths: w })} className={`flex h-8 gap-0.5 rounded border p-1 ${current === w.join("/") ? "border-primary" : "border-border"}`} title={w.map((x) => `${x}%`).join(" / ")}>
+            {w.map((x, i) => <span key={i} style={{ width: `${x}%` }} className="rounded-sm bg-muted" />)}
+          </button>
+        ))}
+      </div>
+      <p className="mt-2 text-[11px] text-muted-foreground">Add blocks straight into each column on the canvas.</p>
+    </Field>
   );
 }
 
