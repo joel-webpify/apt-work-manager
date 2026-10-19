@@ -127,10 +127,12 @@ function StepListEditor({
   steps,
   onChange,
   depth = 0,
+  trigger = "broadcast",
 }: {
   steps: AutomationStep[];
   onChange: (next: AutomationStep[]) => void;
   depth?: number;
+  trigger?: string;
 }) {
   const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
   const editingEmail = steps.find((step) => step.id === editingEmailId);
@@ -149,7 +151,7 @@ function StepListEditor({
 
   return (
     <div className="space-y-2">
-      {editingEmail && <AutomationEmailEditor subject={editingEmail.emailSubject ?? ""} template={editingEmail.emailTemplate ?? "default"} onBack={() => setEditingEmailId(null)} onSave={(emailSubject, emailTemplate) => { update(editingEmail.id, { emailSubject, emailTemplate }); setEditingEmailId(null); }} />}
+      {editingEmail && <AutomationEmailEditor trigger={trigger} subject={editingEmail.emailSubject ?? ""} template={editingEmail.emailTemplate ?? "default"} onBack={() => setEditingEmailId(null)} onSave={(emailSubject, emailTemplate) => { update(editingEmail.id, { emailSubject, emailTemplate }); setEditingEmailId(null); }} />}
       <div className="divide-y divide-border border-hairline rounded-lg">
         {steps.map((s, idx) => {
           const Icon = stepMeta[s.type].icon;
@@ -294,6 +296,7 @@ function StepListEditor({
                       )}
                       {(s.ifSteps?.length ?? 0) > 0 && (
                         <StepListEditor
+                        trigger={trigger}
                           steps={s.ifSteps ?? []}
                           onChange={(next) => update(s.id, { ifSteps: next })}
                           depth={depth + 1}
@@ -312,6 +315,7 @@ function StepListEditor({
                       )}
                       {(s.elseSteps?.length ?? 0) > 0 && (
                         <StepListEditor
+                        trigger={trigger}
                           steps={s.elseSteps ?? []}
                           onChange={(next) => update(s.id, { elseSteps: next })}
                           depth={depth + 1}
@@ -610,7 +614,7 @@ export function AutomationBuilderDialog({
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Steps</span>
               </div>
-              <StepListEditor steps={steps} onChange={setSteps} />
+              <StepListEditor trigger={trigger} steps={steps} onChange={setSteps} />
             </div>
           </div>
 

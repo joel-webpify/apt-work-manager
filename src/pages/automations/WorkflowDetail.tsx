@@ -246,11 +246,13 @@ function ActionListEditor({
   onChange,
   stageNames,
   depth = 0,
+  trigger = "broadcast",
 }: {
   actions: WorkflowAction[];
   onChange: (next: WorkflowAction[]) => void;
   stageNames: string[];
   depth?: number;
+  trigger?: string;
 }) {
   const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
   const editingEmail = actions.find((action) => action.id === editingEmailId);
@@ -269,7 +271,7 @@ function ActionListEditor({
 
   return (
     <div className="space-y-2">
-      {editingEmail && <AutomationEmailEditor subject={editingEmail.emailSubject ?? ""} template={editingEmail.emailTemplate ?? "default"} onBack={() => setEditingEmailId(null)} onSave={(emailSubject, emailTemplate) => { update(editingEmail.id, { emailSubject, emailTemplate }); setEditingEmailId(null); }} />}
+      {editingEmail && <AutomationEmailEditor trigger={trigger} subject={editingEmail.emailSubject ?? ""} template={editingEmail.emailTemplate ?? "default"} onBack={() => setEditingEmailId(null)} onSave={(emailSubject, emailTemplate) => { update(editingEmail.id, { emailSubject, emailTemplate }); setEditingEmailId(null); }} />}
       {actions.map((a, idx) => {
         const Icon = actionIcons[a.type];
         return (
@@ -682,6 +684,7 @@ function ActionListEditor({
                     <div className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400">Version A</div>
                     {(a.aActions?.length ?? 0) > 0 && (
                       <ActionListEditor
+                        trigger={trigger}
                         actions={a.aActions ?? []}
                         onChange={(next) => update(a.id, { aActions: next })}
                         stageNames={stageNames}
@@ -694,6 +697,7 @@ function ActionListEditor({
                     <div className="text-[11px] font-medium text-fuchsia-600 dark:text-fuchsia-400">Version B</div>
                     {(a.bActions?.length ?? 0) > 0 && (
                       <ActionListEditor
+                        trigger={trigger}
                         actions={a.bActions ?? []}
                         onChange={(next) => update(a.id, { bActions: next })}
                         stageNames={stageNames}
@@ -726,6 +730,7 @@ function ActionListEditor({
                     </div>
                     {(a.ifActions?.length ?? 0) > 0 && (
                       <ActionListEditor
+                        trigger={trigger}
                         actions={a.ifActions ?? []}
                         onChange={(next) => update(a.id, { ifActions: next })}
                         stageNames={stageNames}
@@ -741,6 +746,7 @@ function ActionListEditor({
                     </div>
                     {(a.elseActions?.length ?? 0) > 0 && (
                       <ActionListEditor
+                        trigger={trigger}
                         actions={a.elseActions ?? []}
                         onChange={(next) => update(a.id, { elseActions: next })}
                         stageNames={stageNames}
@@ -1298,6 +1304,7 @@ export default function WorkflowDetail() {
                   <div className="text-sm font-medium">Then do this…</div>
                 </div>
                 <ActionListEditor
+                        trigger={draft.trigger}
                   actions={draft.actions}
                   onChange={(next) => patch({ actions: next })}
                   stageNames={stageNames}

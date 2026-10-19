@@ -9,5 +9,5 @@ export function ensureEmailFooter(blocks: EmailBlock[]): EmailBlock[] {
 }
 export function canDeleteEmailBlock(block: EmailBlock): boolean { return block.type !== "footer"; }
 export function decorateMergePills(html: string): string {
-  return html.split(/(<[^>]*>)/g).map((part) => part.startsWith("<") ? part : part.replace(/\{\{([a-z_]+)\}\}/g, '<span class="email-merge-pill">$1</span>')).join("");
+  return html.split(/(<[^>]*>)/g).map((part) => part.startsWith("<") ? part : part.replace(/\{\{([a-z_]+)(?:\|([^{}]*))?\}\}/g, '<span class="email-merge-pill">$1</span>')).join("");
 }

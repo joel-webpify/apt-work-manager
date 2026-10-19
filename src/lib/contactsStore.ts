@@ -41,6 +41,8 @@ function readExtras(): ExtrasMap {
     return {};
   }
 }
+export function getContactRecords() { return { imported: read(), extras: readExtras() }; }
+
 function writeExtras(map: ExtrasMap) {
   localStorage.setItem(EXTRAS_KEY, JSON.stringify(map));
   listeners.forEach((l) => l());
