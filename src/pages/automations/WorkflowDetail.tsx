@@ -72,6 +72,7 @@ import {
 } from "@/lib/workflowsStore";
 import { useStages } from "@/lib/stagesStore";
 import { TestRunDialog } from "@/components/automations/TestRunDialog";
+import { AutomationEmailEditor } from "@/components/email/AutomationEmailEditor";
 
 const actionIcons: Record<WorkflowActionType, typeof Mail> = {
   send_email: Mail,
@@ -251,6 +252,8 @@ function ActionListEditor({
   stageNames: string[];
   depth?: number;
 }) {
+  const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
+  const editingEmail = actions.find((action) => action.id === editingEmailId);
   const update = (id: string, patch: Partial<WorkflowAction>) =>
     onChange(actions.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   const remove = (id: string) => onChange(actions.filter((a) => a.id !== id));
@@ -266,6 +269,7 @@ function ActionListEditor({
 
   return (
     <div className="space-y-2">
+      {editingEmail && <AutomationEmailEditor subject={editingEmail.emailSubject ?? ""} template={editingEmail.emailTemplate ?? "default"} onBack={() => setEditingEmailId(null)} onSave={(emailSubject, emailTemplate) => { update(editingEmail.id, { emailSubject, emailTemplate }); setEditingEmailId(null); }} />}
       {actions.map((a, idx) => {
         const Icon = actionIcons[a.type];
         return (
@@ -317,6 +321,7 @@ function ActionListEditor({
                       <SelectItem value="welcome">Welcome</SelectItem>
                     </SelectContent>
                   </Select>
+                  <Btn onClick={() => setEditingEmailId(a.id)}><Pencil className="h-3.5 w-3.5" />Edit email</Btn>
                 </>
               )}
               {a.type === "send_sequence" && (

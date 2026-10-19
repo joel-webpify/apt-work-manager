@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AutomationEmailEditor } from "./AutomationEmailEditor";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -131,6 +132,8 @@ function StepListEditor({
   onChange: (next: AutomationStep[]) => void;
   depth?: number;
 }) {
+  const [editingEmailId, setEditingEmailId] = useState<string | null>(null);
+  const editingEmail = steps.find((step) => step.id === editingEmailId);
   const update = (id: string, patch: Partial<AutomationStep>) =>
     onChange(steps.map((s) => (s.id === id ? { ...s, ...patch } : s)));
   const remove = (id: string) => onChange(steps.filter((s) => s.id !== id));
@@ -146,6 +149,7 @@ function StepListEditor({
 
   return (
     <div className="space-y-2">
+      {editingEmail && <AutomationEmailEditor subject={editingEmail.emailSubject ?? ""} template={editingEmail.emailTemplate ?? "default"} onBack={() => setEditingEmailId(null)} onSave={(emailSubject, emailTemplate) => { update(editingEmail.id, { emailSubject, emailTemplate }); setEditingEmailId(null); }} />}
       <div className="divide-y divide-border border-hairline rounded-lg">
         {steps.map((s, idx) => {
           const Icon = stepMeta[s.type].icon;
@@ -183,6 +187,7 @@ function StepListEditor({
                         <SelectItem value="reminder">Reminder</SelectItem>
                       </SelectContent>
                     </Select>
+                    <Button variant="outline" size="sm" onClick={() => setEditingEmailId(s.id)}><Mail className="h-3.5 w-3.5" />Edit email</Button>
                   </>
                 )}
                 {s.type === "wait" && (

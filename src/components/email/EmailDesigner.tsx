@@ -1,4 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { readBusinessSettings, useBusinessSettings } from "@/lib/businessSettings";
+import { ensureEmailFooter, canDeleteEmailBlock, decorateMergePills } from "@/lib/emailEditor";
+import { InsertFieldButton } from "./MergeFields";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
+import { EmailAppearanceSettings, defaultEmailAppearance } from "./EmailAppearanceSettings";
 import {
   Heading as HeadingIcon,
   Type,
@@ -20,6 +26,7 @@ import {
   PanelBottom,
   PanelTop,
   Video,
+  Plus,
 } from "lucide-react";
 
 export type BlockType =
@@ -69,7 +76,7 @@ export interface EmailBlock {
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 
-type PaletteGroup = "Basic" | "Layout" | "Content" | "Brand";
+type PaletteGroup = "Basic" | "Content" | "Brand";
 type PaletteItem = { type: BlockType; label: string; icon: typeof Type; group: PaletteGroup };
 
 const PALETTE: PaletteItem[] = [
@@ -79,8 +86,8 @@ const PALETTE: PaletteItem[] = [
   { type: "image", label: "Image", icon: ImageIcon, group: "Basic" },
   { type: "divider", label: "Divider", icon: Minus, group: "Basic" },
   { type: "spacer", label: "Spacer", icon: MoveVertical, group: "Basic" },
-  { type: "columns", label: "2 columns", icon: Columns2, group: "Layout" },
-  { type: "columns3", label: "3 columns", icon: Columns3, group: "Layout" },
+  { type: "columns", label: "2 columns", icon: Columns2, group: "Content" },
+  { type: "columns3", label: "3 columns", icon: Columns3, group: "Content" },
   { type: "hero", label: "Hero", icon: PanelTop, group: "Content" },
   { type: "list", label: "Bulleted list", icon: ListIcon, group: "Content" },
   { type: "quote", label: "Quote", icon: Quote, group: "Content" },
@@ -150,10 +157,10 @@ export function createBlock(type: BlockType): EmailBlock {
     case "footer":
       return {
         ...base,
-        company: "Your company",
-        address: "123 Example Street, Bristol BS1 1AA",
+        company: "{{business_name}}",
+        address: "{{business_address}}",
         unsubLabel: "Unsubscribe",
-        url: "https://",
+        url: "{{unsubscribe_link}}",
         align: "center",
       };
   }
@@ -182,7 +189,10 @@ function inlineMd(text: string) {
 }
 
 export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, string> = {}) {
+  const business = readBusinessSettings();
   const parts = blocks.map((b) => {
+    if (b.type === "logo") b = { ...b, src: b.src || business.logo };
+    if (b.type === "footer") b = { ...b, company: business.name || "{{business_name}}", address: business.address || "{{business_address}}", url: "{{unsubscribe_link}}", unsubLabel: b.unsubLabel?.trim() || "Unsubscribe" };
     const a = b.align ?? "left";
     switch (b.type) {
       case "heading": {
@@ -248,7 +258,7 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
         return `<div style="text-align:${a};margin:8px 0 12px">${items}</div>`;
       }
       case "footer":
-        return `<div style="text-align:${a};margin:16px 0 0;padding-top:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:#888"><div style="font-weight:600;color:#666">${renderVars(b.company ?? "", vars)}</div><div>${renderVars(b.address ?? "", vars)}</div><div style="margin-top:6px"><a href="${b.url ?? "#"}" style="color:#888;text-decoration:underline">${renderVars(b.unsubLabel ?? "Unsubscribe", vars)}</a></div></div>`;
+        return `<div style="text-align:${a};margin:16px 0 0;padding:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:${b.color ?? "#888"};background:${b.bgColor ?? "transparent"}"><div style="font-weight:600">${inlineMd(renderVars(b.company ?? "", vars))}</div><div>${inlineMd(renderVars(b.address ?? "", vars))}</div><div style="margin-top:6px"><a href="{{unsubscribe_link}}" style="color:inherit;text-decoration:underline">${inlineMd(renderVars(b.unsubLabel ?? "Unsubscribe", vars))}</a></div></div>`;
     }
   });
   return parts.join("");
@@ -260,12 +270,21 @@ export function EmailDesigner({
   blocks,
   onChange,
   vars,
+  fullScreen = false,
+  device = "desktop",
+  paletteExtra,
 }: {
   blocks: EmailBlock[];
   onChange: (next: EmailBlock[]) => void;
   vars: Record<string, string>;
+  fullScreen?: boolean;
+  device?: "desktop" | "mobile";
+  paletteExtra?: React.ReactNode;
 }) {
-  const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const business = useBusinessSettings();
+  const [appearance, setAppearance] = useState(() => ({ ...defaultEmailAppearance, brand: business.brandColour }));
+  useEffect(() => { const next = ensureEmailFooter(blocks); if (next !== blocks) onChange(next); }, [blocks, onChange]);
   const dragData = useRef<{ kind: "new"; type: BlockType } | { kind: "move"; id: string } | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
@@ -275,6 +294,8 @@ export function EmailDesigner({
     onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
 
   const remove = (id: string) => {
+    const block = blocks.find((item) => item.id === id);
+    if (!block || !canDeleteEmailBlock(block)) return;
     onChange(blocks.filter((b) => b.id !== id));
     if (selectedId === id) setSelectedId(null);
   };
@@ -299,6 +320,8 @@ export function EmailDesigner({
   };
 
   const insertAt = (idx: number, block: EmailBlock) => {
+    if (block.type === "footer" && blocks.some((item) => item.type === "footer")) { setSelectedId(blocks.find((item) => item.type === "footer")?.id ?? null); return; }
+    if (block.type === "button") block = { ...block, bgColor: appearance.brand };
     const next = [...blocks];
     next.splice(idx, 0, block);
     onChange(next);
@@ -327,14 +350,14 @@ export function EmailDesigner({
     dragData.current = null;
   };
 
-  const groups: PaletteGroup[] = ["Basic", "Layout", "Content", "Brand"];
+  const groups: PaletteGroup[] = ["Basic", "Content", "Brand"];
 
   return (
-    <div className="grid grid-cols-[200px_1fr_240px] gap-3 min-h-[480px]">
+    <div className={fullScreen ? "grid h-full min-h-0 grid-cols-[240px_minmax(420px,1fr)_320px]" : "grid grid-cols-[200px_1fr_240px] gap-3 min-h-[480px]"}>
       {/* Palette */}
-      <div className="border-hairline rounded-lg bg-surface/40 p-2.5 overflow-y-auto max-h-[640px]">
+      <div className={fullScreen ? "border-r-hairline bg-background p-4 overflow-y-auto" : "border-hairline rounded-lg bg-surface/40 p-2.5 overflow-y-auto max-h-[640px]"}>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-1 mb-2">
-          Drag blocks
+          Blocks
         </div>
         {groups.map((g) => (
           <div key={g} className="mb-3 last:mb-0">
@@ -343,7 +366,8 @@ export function EmailDesigner({
               {PALETTE.filter((p) => p.group === g).map((p) => {
                 const Icon = p.icon;
                 return (
-                  <div
+                  <Button
+                    variant="outline"
                     key={p.type}
                     draggable
                     onDragStart={() => {
@@ -353,26 +377,24 @@ export function EmailDesigner({
                       dragData.current = null;
                       setDragOverIdx(null);
                     }}
-                    onClick={() => insertAt(blocks.length, createBlock(p.type))}
-                    className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-md text-[11px] bg-background border-hairline hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-center"
+                    onClick={() => insertAt(blocks.length, { ...createBlock(p.type), ...(p.type === "button" ? { bgColor: appearance.brand } : {}) })}
+                    className="h-auto flex flex-col items-center justify-center gap-2 px-2 py-3 text-xs font-normal cursor-grab active:cursor-grabbing text-center"
                     title="Drag into canvas or click to append"
                   >
                     <Icon className="w-4 h-4 text-foreground/70" strokeWidth={1.75} />
                     <span className="leading-tight">{p.label}</span>
-                  </div>
+                  </Button>
                 );
               })}
             </div>
           </div>
         ))}
-        <div className="text-[10px] text-muted-foreground px-1 mt-2 leading-snug">
-          Drag into the canvas or click to append. Use the side handle to reorder.
-        </div>
+        {paletteExtra}
       </div>
 
       {/* Canvas */}
-      <div className="border-hairline rounded-lg bg-gradient-to-b from-surface/40 to-surface/10 p-6 overflow-y-auto max-h-[640px]">
-        <div className="mx-auto max-w-[600px] bg-white rounded-lg shadow-md border border-border/60 p-6 min-h-[420px]">
+      <div onClick={() => setSelectedId(null)} style={{ backgroundColor: appearance.background }} className={fullScreen ? "p-6 overflow-auto" : "border-hairline rounded-lg p-6 overflow-y-auto max-h-[640px]"}>
+        <div aria-label="Email canvas" style={{ backgroundColor: appearance.contentBackground, fontFamily: appearance.fontFamily, width: device === "mobile" ? 375 : appearance.contentWidth, maxWidth: device === "mobile" ? undefined : "100%" }} className="mx-auto email-editor-paper border-hairline p-6 min-h-[420px]">
 
           {blocks.length === 0 ? (
             <div
@@ -390,6 +412,7 @@ export function EmailDesigner({
           ) : (
             <>
               <DropZone
+                onInsert={(type) => insertAt(0, createBlock(type))}
                 active={dragOverIdx === 0}
                 onDragOver={(e) => {
                   e.preventDefault();
@@ -404,6 +427,9 @@ export function EmailDesigner({
                     block={b}
                     selected={selectedId === b.id}
                     onSelect={() => setSelectedId(b.id)}
+                    brand={appearance.brand}
+                    onAdd={() => insertAt(i + 1, createBlock("text"))}
+                    onLayout={(type) => update(b.id, { type })}
                     onDelete={() => remove(b.id)}
                     onDuplicate={() => duplicate(b.id)}
                     onMoveUp={() => move(b.id, -1)}
@@ -420,6 +446,7 @@ export function EmailDesigner({
                     vars={vars}
                   />
                   <DropZone
+                    onInsert={(type) => insertAt(i + 1, createBlock(type))}
                     active={dragOverIdx === i + 1}
                     onDragOver={(e) => {
                       e.preventDefault();
@@ -436,12 +463,12 @@ export function EmailDesigner({
       </div>
 
       {/* Inspector */}
-      <div className="border-hairline rounded-md bg-surface/40 p-3">
+      <div data-email-properties className={fullScreen ? "border-l-hairline bg-background p-5 overflow-y-auto" : "border-hairline rounded-md bg-surface/40 p-3"}>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium mb-2">
-          {selected ? `${selected.type} block` : "Inspector"}
+          {selected ? `${selected.type} block` : ""}
         </div>
         {!selected ? (
-          <div className="text-xs text-muted-foreground">Select a block to edit its properties.</div>
+          <EmailAppearanceSettings value={appearance} onChange={(patch) => setAppearance((current) => ({ ...current, ...patch }))} />
         ) : (
           <Inspector block={selected} onChange={(patch) => update(selected.id, patch)} />
         )}
@@ -455,21 +482,29 @@ function DropZone({
   onDragOver,
   onDragLeave,
   onDrop,
+  onInsert,
 }: {
   active: boolean;
   onDragOver: (e: React.DragEvent) => void;
   onDragLeave: () => void;
   onDrop: () => void;
+  onInsert: (type: BlockType) => void;
 }) {
+  const [open, setOpen] = useState(false);
   return (
     <div
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
-      className={`transition-all rounded ${
-        active ? "h-8 my-1 bg-primary/10 border border-dashed border-primary" : "h-2"
-      }`}
-    />
+      onClick={(e) => e.stopPropagation()}
+      className={`group/insertion relative h-0 z-20 ${active ? "bg-primary/10" : ""}`}
+    >
+      <div className={`absolute inset-x-0 -top-2 flex h-4 items-center justify-center ${active || open ? "opacity-100" : "opacity-0 hover:opacity-100 focus-within:opacity-100"}`}>
+        <span className="absolute inset-x-0 h-px bg-primary" />
+        <Button variant="outline" size="icon" title="Add block here" aria-label="Add block here" onClick={() => setOpen(!open)} className="relative h-5 w-5 rounded-full text-primary"><Plus className="h-3 w-3" /></Button>
+      </div>
+      {open && <div className="absolute left-1/2 top-3 z-30 w-64 -translate-x-1/2 rounded-md border-hairline bg-popover p-2 shadow-md grid grid-cols-2 gap-1">{PALETTE.map((item) => <Button variant="ghost" size="sm" key={item.type} onClick={() => { onInsert(item.type); setOpen(false); }} className="justify-start text-xs"><item.icon className="h-3 w-3" />{item.label}</Button>)}</div>}
+    </div>
   );
 }
 
@@ -486,6 +521,9 @@ function BlockShell({
   onDragStart,
   onDragEnd,
   vars,
+  brand,
+  onAdd,
+  onLayout,
 }: {
   block: EmailBlock;
   selected: boolean;
@@ -499,14 +537,17 @@ function BlockShell({
   onDragStart: () => void;
   onDragEnd: () => void;
   vars: Record<string, string>;
+  brand: string;
+  onAdd: () => void;
+  onLayout: (type: "columns" | "columns3") => void;
 }) {
-  const html = renderBlocksToHtml([block], vars);
+  const html = decorateMergePills(block.type === "divider" ? '<hr style="border:none;border-top:1px solid #e5e5e5;margin:0"/>' : renderBlocksToHtml([block], vars));
   return (
     <div
-      onClick={onSelect}
-      className={`group relative rounded border transition-colors ${
-        selected ? "border-primary" : "border-transparent hover:border-border"
-      }`}
+      data-email-row={block.type}
+      onClick={(e) => { e.stopPropagation(); onSelect(); }}
+      style={selected ? { outline: `2px solid ${brand}` } : undefined}
+      className="group relative outline-offset-0"
     >
       <div
         draggable
@@ -520,11 +561,15 @@ function BlockShell({
         <GripVertical className="w-3 h-3" />
       </div>
       <div
-        className={`absolute -right-1 -top-3 z-10 items-center gap-0.5 bg-background border-hairline rounded shadow-sm px-0.5 py-0.5 ${
-          selected ? "flex" : "hidden group-hover:flex"
+        aria-label="Row controls"
+        className={`absolute right-0 -top-7 z-10 items-center gap-0.5 bg-background border-hairline rounded shadow-sm p-1 ${
+          selected ? "flex" : "hidden group-hover:flex group-focus-within:flex"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+        {["text", "heading", "quote", "columns", "columns3", "hero", "list"].includes(block.type) && <InsertFieldButton textBlock />}
+        {(block.type === "columns" || block.type === "columns3") && <select aria-label="Column layout" title="Column layout" value={block.type} onChange={(e) => onLayout(e.target.value as "columns" | "columns3")} className="h-5 text-xs bg-background"><option value="columns">2 columns</option><option value="columns3">3 columns</option></select>}
+        <IconBtn onClick={onAdd} title="Add row"><Plus className="w-3 h-3" /></IconBtn>
         <IconBtn onClick={onMoveUp} disabled={!canUp} title="Move up">
           <ChevronUp className="w-3 h-3" />
         </IconBtn>
@@ -534,11 +579,11 @@ function BlockShell({
         <IconBtn onClick={onDuplicate} title="Duplicate">
           <Copy className="w-3 h-3" />
         </IconBtn>
-        <IconBtn onClick={onDelete} title="Delete" danger>
+        <IconBtn onClick={onDelete} disabled={!canDeleteEmailBlock(block)} title={canDeleteEmailBlock(block) ? "Delete" : "Required footer"} danger>
           <Trash2 className="w-3 h-3" />
         </IconBtn>
       </div>
-      <div className="px-1 py-0.5" dangerouslySetInnerHTML={{ __html: html }} />
+      <div onClick={(e) => { if ((e.target as HTMLElement).closest("a")) e.preventDefault(); }} className={block.type === "spacer" || block.type === "divider" ? "" : "px-1 py-0.5"} dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }
@@ -557,7 +602,7 @@ function IconBtn({
   danger?: boolean;
 }) {
   return (
-    <button
+    <Button variant="ghost"
       type="button"
       onClick={onClick}
       disabled={disabled}
@@ -567,7 +612,7 @@ function IconBtn({
       }`}
     >
       {children}
-    </button>
+    </Button>
   );
 }
 
@@ -578,6 +623,9 @@ function Inspector({
   block: EmailBlock;
   onChange: (patch: Partial<EmailBlock>) => void;
 }) {
+  const business = useBusinessSettings();
+  const [logoOverride, setLogoOverride] = useState(Boolean(block.src));
+  useEffect(() => { setLogoOverride(Boolean(block.src)); }, [block.id]);
   return (
     <div className="space-y-2.5">
       {block.type === "heading" && (
@@ -737,7 +785,8 @@ function Inspector({
       )}
       {block.type === "logo" && (
         <>
-          <Field label="Logo URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <label className="flex items-center gap-2 text-xs"><Checkbox checked={logoOverride} onCheckedChange={(checked) => { setLogoOverride(checked === true); if (!checked) onChange({ src: "" }); }} />Override for this email</label>
+          {logoOverride ? <Field label="Logo URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field> : <div className="text-xs text-muted-foreground">{business.logo ? "Business logo" : "No business logo set"}</div>}
           <Field label={`Height — ${block.height ?? 40}px`}><input type="range" min={20} max={120} step={4} value={block.height ?? 40} onChange={(e) => onChange({ height: Number(e.target.value) })} className="w-full" /></Field>
           <AlignField value={block.align} onChange={(align) => onChange({ align })} />
         </>
@@ -778,10 +827,10 @@ function Inspector({
       )}
       {block.type === "footer" && (
         <>
-          <Field label="Company"><input value={block.company ?? ""} onChange={(e) => onChange({ company: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
-          <Field label="Address"><textarea value={block.address ?? ""} onChange={(e) => onChange({ address: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
-          <Field label="Unsub label"><input value={block.unsubLabel ?? ""} onChange={(e) => onChange({ unsubLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
-          <Field label="Unsub URL"><input value={block.url ?? ""} onChange={(e) => onChange({ url: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <div className="text-xs space-y-1"><div>{business.name || "Business name not set"}</div><div className="text-muted-foreground">{business.address || "Business address not set"}</div><div className="text-muted-foreground">Unsubscribe · Required</div></div>
+          <Field label="Unsubscribe label"><input value={block.unsubLabel ?? "Unsubscribe"} onChange={(e) => onChange({ unsubLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <div className="grid grid-cols-2 gap-2"><Field label="Background"><input type="color" value={block.bgColor ?? "#ffffff"} onChange={(e) => onChange({ bgColor: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field><Field label="Text colour"><input type="color" value={block.color ?? "#888888"} onChange={(e) => onChange({ color: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field></div>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
         </>
       )}
     </div>
@@ -799,7 +848,7 @@ function AlignField({
     <Field label="Alignment">
       <div className="flex items-center gap-1 border-hairline rounded p-0.5 w-fit">
         {(["left", "center", "right"] as const).map((a) => (
-          <button
+          <Button variant="ghost"
             key={a}
             type="button"
             onClick={() => onChange(a)}
@@ -810,7 +859,7 @@ function AlignField({
             }`}
           >
             {a}
-          </button>
+          </Button>
         ))}
       </div>
     </Field>

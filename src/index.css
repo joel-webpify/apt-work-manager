@@ -9,6 +9,9 @@
 
     --surface: 210 25% 97%;
     --surface-hover: 207 24% 94%;
+    --email-paper: 0 0% 100%;
+    --email-ink: 0 0% 13%;
+    --email-paper-shadow: 0 2px 12px hsl(207 29% 13% / 0.06);
 
     --card: 0 0% 100%;
     --card-foreground: 207 29% 13%;
@@ -77,6 +80,23 @@
 }
 
 @layer utilities {
+  .email-editor-paper {
+    background: hsl(var(--email-paper));
+    color: hsl(var(--email-ink));
+    box-shadow: var(--email-paper-shadow);
+    overflow-wrap: anywhere;
+  }
+  .email-merge-pill {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.85em;
+    font-family: ui-monospace, monospace;
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.2);
+    vertical-align: baseline;
+  }
   .border-hairline {
     border-width: 0.5px;
     border-style: solid;

@@ -1,4 +1,8 @@
 # Project notes
+- Business identity is stored separately from email drafts and read by email rendering; logo overrides use the existing src field, and required footer content uses existing footer fields so email schemas remain unchanged.
+- All email text inputs share a caret-aware merge-field picker; unresolved tokens are decorated only in canvas rendering, never in saved content.
+
+- Email editing uses a shared full-screen presentation shell; campaign content returns to its existing schedule/save flow, while automation editing only updates its existing subject/template fields so presentation changes do not introduce a new persistence model.
 
 - The office schedule lives in `src/components/schedule/` (ScheduleView + DayView) and is used only by the `/schedule` page. The pipeline page has no schedule view — it deep-links into jobs via `/pipeline?job=<id>`.
 - Travel time and smart-drop slotting come from `src/lib/travel.ts` (postcode-district heuristic, no map APIs). Dropping a job lands it in the first free slot with driving room; booking from the job card goes through `src/lib/booking.ts` (bookVisit/moveVisit/cancelVisit/suggestSlots), which wraps travel.ts so the card and schedule use the same slot rules.
