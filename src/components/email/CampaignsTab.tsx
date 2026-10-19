@@ -991,7 +991,11 @@ function CampaignBuilder({
     return (
       <EmailEditorPage
         initial={{ name, subject, preview, blocks, body, htmlSource, mode: editorMode }}
-        onBack={() => setStep(1)}
+        onBack={(draft) => {
+          setName(draft.name); setSubject(draft.subject); setPreview(draft.preview);
+          setBlocks(draft.blocks); setBody(draft.body); setHtmlSource(draft.htmlSource); setEditorMode(draft.mode);
+          setStep(1);
+        }}
         onSave={(draft) => {
           setName(draft.name);
           setSubject(draft.subject);

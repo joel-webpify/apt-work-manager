@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useDeferredValue, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { ArrowLeft, Undo2, Redo2, Monitor, Smartphone, Send, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,7 +28,7 @@ export const sampleEmailVars = {
 
 export function EmailEditorPage({ initial, onBack, onSave, children, canSave = true, previewEditable = true }: {
   initial: EmailEditorDraft;
-  onBack: () => void;
+  onBack: (draft: EmailEditorDraft) => void;
   onSave: (draft: EmailEditorDraft) => void;
   canSave?: boolean;
   previewEditable?: boolean;
@@ -43,6 +43,7 @@ export function EmailEditorPage({ initial, onBack, onSave, children, canSave = t
   const contacts = applyExtrasTo(mergeWithMock(sampleContacts, imported), extras);
   const contact = contacts.find((item) => item.id === contactId);
   const draft = history[index] ?? initial;
+  const savedDraft = useDeferredValue(draft);
   const vars = contact ? {
     ...sampleEmailVars, first_name: contact.name.split(" ")[0] ?? "",
     last_name: contact.name.split(" ").slice(1).join(" "), postcode: contact.postcode,
@@ -56,9 +57,9 @@ export function EmailEditorPage({ initial, onBack, onSave, children, canSave = t
   return createPortal(
     <section aria-label="Email editor" className="fixed inset-0 z-[60] flex flex-col bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b-hairline px-4 py-3">
-        <Button variant="ghost" size="icon" aria-label="Back" title="Back" onClick={onBack}><ArrowLeft /></Button>
+        <Button variant="ghost" size="icon" aria-label="Back" title="Back" onClick={() => onBack(draft)}><ArrowLeft /></Button>
         <Input aria-label="Email name" value={draft.name} onChange={(e) => edit({ name: e.target.value })} className="w-48 flex-1 border-transparent bg-transparent font-medium shadow-none min-w-32 max-w-72" />
-        <span role="status" title="Changes are kept in this editing session. Save applies them to the existing form." className="mr-auto inline-flex items-center gap-1 text-xs text-muted-foreground"><Check className="h-3 w-3" />Saved</span>
+        <span role="status" title="Changes are kept in this editing session. Save applies them to the existing form." className="mr-auto inline-flex items-center gap-1 text-xs text-muted-foreground"><Check className="h-3 w-3" />{savedDraft === draft ? "Saved" : "Saving…"}</span>
         <div className="flex items-center gap-1 border-r-hairline pr-2">
           <Button variant="ghost" size="icon" aria-label="Undo" title="Undo" disabled={index === 0} onClick={() => setIndex(index - 1)}><Undo2 /></Button>
           <Button variant="ghost" size="icon" aria-label="Redo" title="Redo" disabled={index === history.length - 1} onClick={() => setIndex(index + 1)}><Redo2 /></Button>
