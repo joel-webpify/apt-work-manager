@@ -46,7 +46,7 @@ export function MergeFieldsProvider({ children, trigger = "broadcast" }: { child
   const matches = Object.entries(mergeFieldGroups).map(([group, fields]) => ({ group, fields: fields.filter((key) => key.includes(search.toLowerCase().replace(/ /g, "_"))) })).filter((item) => item.fields.length);
   return <FallbackContext.Provider value={{ target: activeTarget, refresh }}><MergeContext.Provider value={open}>
     <div className="contents" onFocusCapture={(e) => { if (isTextTarget(e.target) && !e.target.closest("[data-merge-fallbacks]")) { lastTarget.current = e.target; setActiveTarget(e.target); } }} onInputCapture={(e) => {
-      refresh();
+      if (isTextTarget(e.target) && !e.target.closest("[data-merge-fallbacks]")) requestAnimationFrame(refresh);
       if (isTextTarget(e.target) && !e.target.closest("[data-merge-fallbacks]") && e.target.value.slice(0, e.target.selectionStart ?? 0).endsWith("{{")) open(e.target);
     }}>{children}</div>
     {anchor && createPortal(<>
@@ -72,7 +72,8 @@ export function FieldFallbacks() {
   const matches = [...new Map(Array.from(target.value.matchAll(/\{\{([a-z_]+)(?:\|([^{}]*))?\}\}/g), m => [m[1], m[2] || ''])).entries()];
   if (!matches.length) return null;
   return <div data-merge-fallbacks className="space-y-2 border-t-hairline pt-3"><h3 className="text-xs font-medium">Field fallbacks</h3>{matches.map(([key, value]) => <label key={key} className="block space-y-1 text-xs text-muted-foreground">{key}<Input aria-label={`Fallback for ${key}`} value={value} placeholder="Leave empty" onChange={e => {
-    const next = target.value.replace(new RegExp(`\\{\\{${key}(?:\\|[^{}]*)?\\}\\}`, 'g'), () => `{{${key}${e.target.value ? `|${e.target.value.replace(/[{}]/g, '')}` : ''}}}`);
+    const fallback = e.target.value.replace(/[{}]/g, '');
+    const next = target.value.replace(new RegExp(`\\{\\{${key}(?:\\|[^{}]*)?\\}\\}`, 'g'), () => `{{${key}${fallback ? `|${fallback}` : ''}}}`);
     const setter = Object.getOwnPropertyDescriptor(target instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, 'value')?.set;
     setter?.call(target,next); target.dispatchEvent(new Event('input',{ bubbles:true })); refresh();
   }} /></label>)}</div>;
