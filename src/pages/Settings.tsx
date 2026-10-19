@@ -5,10 +5,12 @@ import ChannelGroupsTab from "@/components/settings/ChannelGroupsTab";
 import PipelinesTab from "@/components/settings/PipelinesTab";
 import SurveysTab from "@/components/settings/SurveysTab";
 import TeamsTab from "@/components/settings/TeamsTab";
+import { BusinessSettingsTab } from "@/components/settings/BusinessSettingsTab";
 
-type Tab = "products" | "pipelines" | "surveys" | "teams" | "channels";
+type Tab = "products" | "pipelines" | "surveys" | "teams" | "channels" | "business";
 
 const tabs: { id: Tab; label: string }[] = [
+  { id: "business", label: "Business" },
   { id: "products", label: "Products & services" },
   { id: "pipelines", label: "Pipelines & stages" },
   { id: "surveys", label: "Site visit surveys" },
@@ -45,6 +47,7 @@ export default function Settings() {
         </div>
 
         {tab === "products" && <ProductsTab />}
+        {tab === "business" && <BusinessSettingsTab />}
         {tab === "pipelines" && <PipelinesTab />}
         {tab === "surveys" && <SurveysTab />}
         {tab === "teams" && <TeamsTab />}
