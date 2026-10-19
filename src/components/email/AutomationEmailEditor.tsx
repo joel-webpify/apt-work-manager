@@ -1,3 +1,4 @@
+import { FieldFallbacks } from "./MergeFields";
 import { EmailEditorPage } from "./EmailEditorPage";
 import { createBlock, renderBlocksToHtml } from "./EmailDesigner";
 import { Label } from "@/components/ui/label";
@@ -8,7 +9,8 @@ const templateLabels: Record<string, string> = {
   default: "Default template", review_request: "Review request", winback: "Win-back offer", reminder: "Reminder", welcome: "Welcome",
 };
 
-export function AutomationEmailEditor({ subject, template, onBack, onSave }: {
+export function AutomationEmailEditor({ subject, template, onBack, onSave, trigger = "broadcast" }: {
+  trigger?: string;
   subject: string;
   template: string;
   onBack: () => void;
@@ -16,6 +18,7 @@ export function AutomationEmailEditor({ subject, template, onBack, onSave }: {
 }) {
   return <EmailEditorPage
     initial={{ name: subject || "Automation email", subject, template, preview: "", blocks: [], body: "", htmlSource: "", mode: "visual" }}
+    trigger={trigger}
     previewEditable={false}
     onBack={onBack}
     onSave={(draft) => onSave(draft.subject, draft.template ?? "default")}
@@ -38,6 +41,7 @@ export function AutomationEmailEditor({ subject, template, onBack, onSave }: {
           <div aria-label="Email canvas" className={`email-editor-paper mx-auto border-hairline p-6 min-h-[420px] ${device === "mobile" ? "w-[375px]" : "w-full max-w-[600px]"}`} dangerouslySetInnerHTML={{ __html: decorateMergePills(renderBlocksToHtml(blocks, vars)) }} />
         </div>
         <aside className="border-l-hairline p-5 space-y-4">
+          <FieldFallbacks />
           <h2 className="text-sm font-medium">Email properties</h2>
           <div className="space-y-1"><div className="text-xs text-muted-foreground">Template</div><div className="text-sm">{templateLabels[draft.template ?? "default"] ?? draft.template}</div></div>
           <p className="text-xs text-muted-foreground">Sample layout only. Automation emails currently save a subject and template, not custom blocks or preview text.</p>

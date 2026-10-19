@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { readBusinessSettings, useBusinessSettings } from "@/lib/businessSettings";
 import { ensureEmailFooter, canDeleteEmailBlock, decorateMergePills } from "@/lib/emailEditor";
-import { InsertFieldButton } from "./MergeFields";
+import { InsertFieldButton, FieldFallbacks } from "./MergeFields";
+import { mergeText } from "@/lib/emailMergeFields";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { EmailAppearanceSettings, defaultEmailAppearance } from "./EmailAppearanceSettings";
@@ -169,11 +170,7 @@ export function createBlock(type: BlockType): EmailBlock {
 // ----- preview rendering -----
 
 function renderVars(text: string, vars: Record<string, string>) {
-  let out = text ?? "";
-  Object.entries(vars).forEach(([k, v]) => {
-    out = out.split(`{{${k}}}`).join(v);
-  });
-  return out;
+  return mergeText(text ?? "", vars, Object.keys(vars).length === 0);
 }
 
 function inlineMd(text: string) {
@@ -190,7 +187,9 @@ function inlineMd(text: string) {
 
 export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, string> = {}) {
   const business = readBusinessSettings();
-  const parts = blocks.map((b) => {
+  const parts = blocks.map((original) => {
+    let b = original;
+    for (const key of ["url", "src", "alt", "heroImage", "heroCtaUrl"] as const) if (b[key]) b = { ...b, [key]: renderVars(b[key] ?? "", vars).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;") };
     if (b.type === "logo") b = { ...b, src: b.src || business.logo };
     if (b.type === "footer") b = { ...b, company: business.name || "{{business_name}}", address: business.address || "{{business_address}}", url: "{{unsubscribe_link}}", unsubLabel: b.unsubLabel?.trim() || "Unsubscribe" };
     const a = b.align ?? "left";
@@ -202,7 +201,7 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
       case "text":
         return `<div style="text-align:${a};font-size:14px;line-height:1.55;margin:0 0 12px;color:#222">${inlineMd(renderVars(b.text ?? "", vars))}</div>`;
       case "button": {
-        const bg = b.bgColor ?? "#111111";
+        const bg = b.bgColor ?? business.brandColour;
         const fg = b.color ?? "#ffffff";
         return `<div style="text-align:${a};margin:8px 0 16px"><a href="${b.url ?? "#"}" style="display:inline-block;background:${bg};color:${fg};padding:10px 18px;border-radius:6px;font-size:14px;font-weight:500;text-decoration:none">${renderVars(b.label ?? "Button", vars)}</a></div>`;
       }
@@ -258,7 +257,7 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
         return `<div style="text-align:${a};margin:8px 0 12px">${items}</div>`;
       }
       case "footer":
-        return `<div style="text-align:${a};margin:16px 0 0;padding:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:${b.color ?? "#888"};background:${b.bgColor ?? "transparent"}"><div style="font-weight:600">${inlineMd(renderVars(b.company ?? "", vars))}</div><div>${inlineMd(renderVars(b.address ?? "", vars))}</div><div style="margin-top:6px"><a href="{{unsubscribe_link}}" style="color:inherit;text-decoration:underline">${inlineMd(renderVars(b.unsubLabel ?? "Unsubscribe", vars))}</a></div></div>`;
+        return `<div style="text-align:${a};margin:16px 0 0;padding:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:${b.color ?? "#888"};background:${b.bgColor ?? "transparent"}"><div style="font-weight:600">${inlineMd(renderVars(b.company ?? "", vars))}</div><div>${inlineMd(renderVars(b.address ?? "", vars))}</div><div style="margin-top:6px"><a href="${renderVars("{{unsubscribe_link}}", vars).replace(/"/g, "&quot;")}" style="color:inherit;text-decoration:underline">${inlineMd(renderVars(b.unsubLabel ?? "Unsubscribe", vars))}</a></div></div>`;
     }
   });
   return parts.join("");
@@ -628,6 +627,7 @@ function Inspector({
   useEffect(() => { setLogoOverride(Boolean(block.src)); }, [block.id]);
   return (
     <div className="space-y-2.5">
+      <FieldFallbacks />
       {block.type === "heading" && (
         <>
           <Field label="Text">
@@ -678,12 +678,12 @@ function Inspector({
             />
           </Field>
           <Field label="URL">
-            <input
+            <div className="relative"><input id="email-button-url"
               value={block.url ?? ""}
               onChange={(e) => onChange({ url: e.target.value })}
               placeholder="https://"
-              className="w-full h-7 text-xs px-2 rounded border-hairline bg-background"
-            />
+              className="w-full h-7 text-xs pl-2 pr-9 rounded border-hairline bg-background"
+            /><div className="absolute right-0 top-0"><InsertFieldButton inputId="email-button-url" /></div></div>
           </Field>
           <div className="grid grid-cols-2 gap-2">
             <Field label="Background">

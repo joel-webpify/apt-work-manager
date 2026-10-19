@@ -1,3 +1,4 @@
+import { FieldFallbacks } from "./MergeFields";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 
@@ -19,6 +20,7 @@ export function EmailAppearanceSettings({ value, onChange }: {
   onChange: (patch: Partial<EmailAppearance>) => void;
 }) {
   return <div className="space-y-5">
+    <FieldFallbacks />
     <h2 className="text-sm font-medium">Email settings</h2>
     {([['background', 'Background colour'], ['contentBackground', 'Content background'], ['brand', 'Brand / button colour']] as const).map(([key, label]) => <div key={key} className="flex items-center justify-between gap-3">
       <Label htmlFor={`email-${key}`} className="text-xs">{label}</Label>
