@@ -73,6 +73,20 @@ export interface EmailBlock {
   company?: string;
   address?: string;
   unsubLabel?: string;
+  /** Column rows: blocks inside each column. Legacy rows fall back to leftText/midText/rightText. */
+  cells?: EmailBlock[][];
+}
+
+const COLUMN_CHILD_TYPES: BlockType[] = ["heading", "text", "button", "image", "list", "quote", "divider", "spacer", "video", "social", "logo"];
+
+export function columnCells(b: EmailBlock): EmailBlock[][] {
+  const count = b.type === "columns3" ? 3 : 2;
+  const legacy = count === 3 ? [b.leftText, b.midText, b.rightText] : [b.leftText, b.rightText];
+  const base = b.cells ?? legacy.map((text, i) => (text ? [{ id: `${b.id}-c${i}`, type: "text" as BlockType, text, align: "left" as const }] : []));
+  const out = base.slice(0, count).map((c) => [...c]);
+  while (out.length < count) out.push([]);
+  if (base.length > count) out[count - 1].push(...base.slice(count).flat());
+  return out;
 }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -215,9 +229,11 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
       case "spacer":
         return `<div style="height:${b.height ?? 24}px"></div>`;
       case "columns":
-        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px"><tr><td valign="top" style="width:50%;padding-right:8px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.leftText ?? "", vars))}</td><td valign="top" style="width:50%;padding-left:8px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.rightText ?? "", vars))}</td></tr></table>`;
-      case "columns3":
-        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px"><tr><td valign="top" style="width:33%;padding-right:6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.leftText ?? "", vars))}</td><td valign="top" style="width:34%;padding:0 6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.midText ?? "", vars))}</td><td valign="top" style="width:33%;padding-left:6px;font-size:14px;line-height:1.55;color:#222">${inlineMd(renderVars(b.rightText ?? "", vars))}</td></tr></table>`;
+      case "columns3": {
+        const cells = columnCells(original);
+        const w = Math.floor(100 / cells.length);
+        return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 12px;table-layout:fixed"><tr>${cells.map((c, i) => `<td valign="top" style="width:${w}%;padding:0 ${i === cells.length - 1 ? 0 : 6}px 0 ${i === 0 ? 0 : 6}px;font-size:14px;line-height:1.55;color:#222">${renderBlocksToHtml(c, vars)}</td>`).join("")}</tr></table>`;
+      }
       case "hero": {
         const bg = b.bgColor ?? "#0f172a";
         const fg = b.color ?? "#ffffff";
@@ -428,7 +444,7 @@ export function EmailDesigner({
                     onSelect={() => setSelectedId(b.id)}
                     brand={appearance.brand}
                     onAdd={() => insertAt(i + 1, createBlock("text"))}
-                    onLayout={(type) => update(b.id, { type })}
+                    onLayout={(type) => update(b.id, { type, cells: columnCells({ ...b, type }) })}
                     onDelete={() => remove(b.id)}
                     onDuplicate={() => duplicate(b.id)}
                     onMoveUp={() => move(b.id, -1)}
@@ -615,6 +631,42 @@ function IconBtn({
   );
 }
 
+function ColumnsEditor({ block, onChange }: { block: EmailBlock; onChange: (patch: Partial<EmailBlock>) => void }) {
+  const cells = columnCells(block);
+  const [open, setOpen] = useState<string | null>(null);
+  const names = cells.length === 3 ? ["Left", "Middle", "Right"] : ["Left", "Right"];
+  const setCell = (i: number, next: EmailBlock[]) => onChange({ cells: cells.map((c, j) => (j === i ? next : c)) });
+  return (
+    <div className="space-y-3">
+      {cells.map((cell, i) => (
+        <div key={i} className="rounded border-hairline p-2 space-y-1.5">
+          <div className="text-[11px] font-medium">{names[i]} column</div>
+          {cell.length === 0 && <div className="text-[11px] text-muted-foreground">Empty column</div>}
+          {cell.map((child, k) => {
+            const label = PALETTE.find((p) => p.type === child.type)?.label ?? child.type;
+            const swap = (d: -1 | 1) => { const n = [...cell]; [n[k], n[k + d]] = [n[k + d], n[k]]; setCell(i, n); };
+            return (
+              <div key={child.id} className="rounded bg-surface/40">
+                <div className="flex items-center gap-0.5 px-1.5 py-1">
+                  <button type="button" className="flex-1 text-left text-xs" onClick={() => setOpen(open === child.id ? null : child.id)}>{label}</button>
+                  <IconBtn onClick={() => swap(-1)} disabled={k === 0} title="Move up"><ChevronUp className="w-3 h-3" /></IconBtn>
+                  <IconBtn onClick={() => swap(1)} disabled={k === cell.length - 1} title="Move down"><ChevronDown className="w-3 h-3" /></IconBtn>
+                  <IconBtn onClick={() => setCell(i, cell.filter((x) => x.id !== child.id))} title="Delete" danger><Trash2 className="w-3 h-3" /></IconBtn>
+                </div>
+                {open === child.id && <div className="border-t-hairline p-2"><Inspector block={child} onChange={(patch) => setCell(i, cell.map((x) => (x.id === child.id ? { ...x, ...patch } : x)))} /></div>}
+              </div>
+            );
+          })}
+          <select aria-label={`Add block to ${names[i].toLowerCase()} column`} value="" onChange={(e) => { if (!e.target.value) return; const nb = createBlock(e.target.value as BlockType); setCell(i, [...cell, nb]); setOpen(nb.id); }} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background">
+            <option value="">+ Add block…</option>
+            {COLUMN_CHILD_TYPES.map((t) => <option key={t} value={t}>{PALETTE.find((p) => p.type === t)?.label ?? t}</option>)}
+          </select>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function Inspector({
   block,
   onChange,
@@ -742,33 +794,7 @@ function Inspector({
       {block.type === "divider" && (
         <div className="text-xs text-muted-foreground">No options. Adds a thin horizontal rule.</div>
       )}
-      {block.type === "columns" && (
-        <>
-          <Field label="Left column">
-            <textarea
-              value={block.leftText ?? ""}
-              onChange={(e) => onChange({ leftText: e.target.value })}
-              rows={4}
-              className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono"
-            />
-          </Field>
-          <Field label="Right column">
-            <textarea
-              value={block.rightText ?? ""}
-              onChange={(e) => onChange({ rightText: e.target.value })}
-              rows={4}
-              className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono"
-            />
-          </Field>
-        </>
-      )}
-      {block.type === "columns3" && (
-        <>
-          <Field label="Left"><textarea value={block.leftText ?? ""} onChange={(e) => onChange({ leftText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
-          <Field label="Middle"><textarea value={block.midText ?? ""} onChange={(e) => onChange({ midText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
-          <Field label="Right"><textarea value={block.rightText ?? ""} onChange={(e) => onChange({ rightText: e.target.value })} rows={3} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background font-mono" /></Field>
-        </>
-      )}
+      {(block.type === "columns" || block.type === "columns3") && <ColumnsEditor block={block} onChange={onChange} />}
       {block.type === "hero" && (
         <>
           <Field label="Background image URL"><input value={block.heroImage ?? ""} onChange={(e) => onChange({ heroImage: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
