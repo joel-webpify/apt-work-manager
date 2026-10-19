@@ -350,7 +350,7 @@ export function EmailDesigner({
                   onDuplicate={() => insertInCell(row.id, i, k + 1, { ...child, id: uid() })}
                   onMoveUp={() => setCell(row.id, i, (c) => { const n = [...c]; [n[k - 1], n[k]] = [n[k], n[k - 1]]; return n; })}
                   onMoveDown={() => setCell(row.id, i, (c) => { const n = [...c]; [n[k + 1], n[k]] = [n[k], n[k + 1]]; return n; })}
-                  canUp={k > 0} canDown={k < cell.length - 1} onDragStart={() => {}} onDragEnd={() => {}} vars={vars} />
+                  nested canUp={k > 0} canDown={k < cell.length - 1} onDragStart={() => {}} onDragEnd={() => {}} vars={vars} />
               </div>
             ))}
             <CellAdd onInsert={(type) => insertInCell(row.id, i, cell.length, createBlock(type))} empty={cell.length === 0} />
@@ -593,6 +593,7 @@ function BlockShell({
   onAdd,
   onLayout,
   content,
+  nested,
 }: {
   block: EmailBlock;
   selected: boolean;
@@ -610,6 +611,7 @@ function BlockShell({
   onAdd: () => void;
   onLayout: (type: "columns" | "columns3") => void;
   content?: React.ReactNode;
+  nested?: boolean;
 }) {
   const html = content ? "" : decorateMergePills(block.type === "divider" ? '<hr style="border:none;border-top:1px solid #e5e5e5;margin:0"/>' : renderBlocksToHtml([block], vars));
   return (
@@ -617,15 +619,15 @@ function BlockShell({
       data-email-row={block.type}
       onClick={(e) => { e.stopPropagation(); onSelect(); }}
       style={selected ? { outline: `2px solid ${brand}` } : undefined}
-      className="group relative outline-offset-0"
+      className={`${nested ? "group/cell" : "group"} relative outline-offset-0`}
     >
       <div
         draggable
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
         className={`absolute -left-7 top-1/2 -translate-y-1/2 w-6 h-6 rounded items-center justify-center text-muted-foreground bg-background border-hairline cursor-grab active:cursor-grabbing transition-opacity ${
-          selected ? "flex" : "hidden group-hover:flex"
-        }`}
+          selected && !nested ? "flex" : "hidden"
+        } ${nested ? "" : "group-hover:flex"}`}
         title="Drag to reorder"
       >
         <GripVertical className="w-3 h-3" />
@@ -633,7 +635,7 @@ function BlockShell({
       <div
         aria-label="Row controls"
         className={`absolute right-0 -top-7 z-10 items-center gap-0.5 bg-background border-hairline rounded shadow-sm p-1 ${
-          selected ? "flex" : "hidden group-hover:flex group-focus-within:flex"
+          selected ? "flex" : nested ? "hidden group-hover/cell:flex" : "hidden group-hover:flex"
         }`}
         onClick={(e) => e.stopPropagation()}
       >
