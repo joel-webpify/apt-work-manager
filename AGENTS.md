@@ -1,4 +1,6 @@
 # Project notes
+- Business identity is stored separately from email drafts and read by email rendering; logo overrides use the existing src field, and required footer content uses existing footer fields so email schemas remain unchanged.
+- All email text inputs share a caret-aware merge-field picker; unresolved tokens are decorated only in canvas rendering, never in saved content.
 
 - Email editing uses a shared full-screen presentation shell; campaign content returns to its existing schedule/save flow, while automation editing only updates its existing subject/template fields so presentation changes do not introduce a new persistence model.
 

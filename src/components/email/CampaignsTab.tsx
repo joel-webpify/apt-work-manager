@@ -1012,8 +1012,6 @@ function CampaignBuilder({
           const modes = (
             <div className="space-y-3 border-t-hairline mt-5 pt-4">
               <div className="flex flex-wrap gap-1">{(["visual", "markdown", "html"] as const).map((mode) => <Button key={mode} variant={draft.mode === mode ? "secondary" : "ghost"} size="sm" onClick={() => edit({ mode })}>{mode === "visual" ? "Blocks" : mode === "html" ? "HTML" : "Markdown"}</Button>)}</div>
-              <div className="text-xs font-medium text-muted-foreground">Personalisation</div>
-              <div className="flex flex-wrap gap-1">{mergeVariables.map((v) => <Button key={v.key} variant="outline" size="sm" className="h-7 text-xs" title={`Copy {{${v.key}}}`} onClick={() => navigator.clipboard?.writeText(`{{${v.key}}}`).catch(() => {})}>{v.label}</Button>)}</div>
             </div>
           );
           if (draft.mode === "visual") return <EmailDesigner fullScreen device={device} blocks={draft.blocks} onChange={(blocks) => edit({ blocks })} vars={vars} paletteExtra={modes} />;

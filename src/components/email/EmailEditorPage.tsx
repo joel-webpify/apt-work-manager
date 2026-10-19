@@ -10,6 +10,10 @@ import { applyExtrasTo, mergeWithMock, useContactExtras, useImportedContacts } f
 import { toast } from "@/hooks/use-toast";
 import type { EmailBlock } from "./EmailDesigner";
 import { subjectNeedsLengthWarning } from "@/lib/emailEditor";
+import { MergeFieldsProvider, InsertFieldButton } from "./MergeFields";
+import { useBusinessSettings } from "@/lib/businessSettings";
+import { getJobs } from "@/lib/jobsStore";
+import { getInvoices } from "@/lib/invoicesStore";
 
 export interface EmailEditorDraft {
   name: string;
@@ -38,25 +42,30 @@ export function EmailEditorPage({ initial, onBack, onSave, children, canSave = t
   const [history, setHistory] = useState<EmailEditorDraft[]>([initial]);
   const [index, setIndex] = useState(0);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
-  const [contactId, setContactId] = useState("sample");
+  const [contactId, setContactId] = useState("fields");
+  const business = useBusinessSettings();
   const imported = useImportedContacts();
   const extras = useContactExtras();
   const contacts = applyExtrasTo(mergeWithMock(sampleContacts, imported), extras);
   const contact = contacts.find((item) => item.id === contactId);
   const draft = history[index] ?? initial;
   const savedDraft = useDeferredValue(draft);
-  const vars = contact ? {
-    ...sampleEmailVars, first_name: contact.name.split(" ")[0] ?? "",
+  const contactJobs = contact ? getJobs().filter((job) => job.contactId === contact.id) : [];
+  const vars: Record<string, string> = contact ? {
+    first_name: contact.name.split(" ")[0] ?? "", full_name: contact.name, company: "",
     last_name: contact.name.split(" ").slice(1).join(" "), postcode: contact.postcode,
-    last_job_date: contact.lastJob,
-  } : sampleEmailVars;
+    last_job_date: contact.lastJob, service_type: contactJobs[contactJobs.length - 1]?.service ?? "",
+    last_service_type: contactJobs[contactJobs.length - 1]?.service ?? "", total_jobs: String(contactJobs.length),
+    outstanding_balance: String(getInvoices().filter((invoice) => invoice.contactId === contact.id && ["Sent", "Overdue"].includes(invoice.status)).reduce((sum, invoice) => sum + invoice.items.reduce((total, item) => total + item.qty * item.unitPrice, 0), 0)),
+    booking_link: business.bookingLink, business_name: business.name, business_phone: business.phone, business_address: business.address, company_name: business.name,
+  } : {};
   const edit = (patch: Partial<EmailEditorDraft>) => {
     setHistory([...history.slice(0, index + 1), { ...draft, ...patch }]);
     setIndex(index + 1);
   };
 
   return createPortal(
-    <section aria-label="Email editor" className="fixed inset-0 z-[60] flex flex-col bg-background text-foreground">
+    <MergeFieldsProvider><section aria-label="Email editor" className="fixed inset-0 z-[60] flex flex-col bg-background text-foreground">
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b-hairline px-4 py-3">
         <Button variant="ghost" size="icon" aria-label="Back" title="Back" onClick={() => onBack(draft)}><ArrowLeft /></Button>
         <Input aria-label="Email name" value={draft.name} onChange={(e) => edit({ name: e.target.value })} className="w-48 flex-1 border-transparent bg-transparent font-medium shadow-none min-w-32 max-w-72" />
@@ -73,7 +82,7 @@ export function EmailEditorPage({ initial, onBack, onSave, children, canSave = t
           <Label htmlFor="email-preview-contact" className="whitespace-nowrap text-xs text-muted-foreground">Preview as</Label>
           <Select value={contactId} onValueChange={setContactId}>
             <SelectTrigger id="email-preview-contact" className="w-40"><SelectValue /></SelectTrigger>
-            <SelectContent className="z-[80]"><SelectItem value="sample">Sample contact</SelectItem>{contacts.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
+            <SelectContent className="z-[80]"><SelectItem value="fields">Merge fields</SelectItem>{contacts.map((item) => <SelectItem key={item.id} value={item.id}>{item.name}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <Button variant="outline" size="sm" onClick={() => toast({ title: "Test email not sent", description: "Email delivery is not connected in this demo." })}><Send />Send test email</Button>
@@ -83,14 +92,14 @@ export function EmailEditorPage({ initial, onBack, onSave, children, canSave = t
       <div className="grid shrink-0 grid-cols-1 gap-4 border-b-hairline px-6 py-4 sm:grid-cols-2">
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2"><Label htmlFor="editor-subject">Subject line</Label><span className={`text-xs tabular-nums ${subjectNeedsLengthWarning(draft.subject) ? "text-[hsl(var(--warning))]" : "text-muted-foreground"}`}>{draft.subject.length} characters{subjectNeedsLengthWarning(draft.subject) ? " · Above 60" : ""}</span></div>
-          <Input id="editor-subject" value={draft.subject} onChange={(e) => edit({ subject: e.target.value })} placeholder="What will land in their inbox?" />
+          <div className="relative"><Input id="editor-subject" className="pr-10" value={draft.subject} onChange={(e) => edit({ subject: e.target.value })} placeholder="What will land in their inbox?" /><div className="absolute right-1 top-1"><InsertFieldButton inputId="editor-subject" /></div></div>
         </div>
         <div className="space-y-2">
           <div className="flex items-center justify-between gap-2"><Label htmlFor="editor-preview">Preview text</Label><span className="text-xs tabular-nums text-muted-foreground">{draft.preview.length} characters</span></div>
-          <Input id="editor-preview" value={draft.preview} disabled={!previewEditable} title={previewEditable ? undefined : "Preview text is not stored by the current automation email model"} onChange={(e) => edit({ preview: e.target.value })} placeholder="Short preview shown after the subject" />
+          <div className="relative"><Input id="editor-preview" className="pr-10" value={draft.preview} disabled={!previewEditable} title={previewEditable ? undefined : "Preview text is not stored by the current automation email model"} onChange={(e) => edit({ preview: e.target.value })} placeholder="Short preview shown after the subject" />{previewEditable && <div className="absolute right-1 top-1"><InsertFieldButton inputId="editor-preview" /></div>}</div>
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">{children(draft, edit, vars, device)}</div>
-    </section>, document.body,
+    </section></MergeFieldsProvider>, document.body,
   );
 }

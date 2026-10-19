@@ -1,4 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { readBusinessSettings, useBusinessSettings } from "@/lib/businessSettings";
+import { ensureEmailFooter, canDeleteEmailBlock, decorateMergePills } from "@/lib/emailEditor";
+import { InsertFieldButton } from "./MergeFields";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { EmailAppearanceSettings, defaultEmailAppearance } from "./EmailAppearanceSettings";
 import {
@@ -153,10 +157,10 @@ export function createBlock(type: BlockType): EmailBlock {
     case "footer":
       return {
         ...base,
-        company: "Your company",
-        address: "123 Example Street, Bristol BS1 1AA",
+        company: "{{business_name}}",
+        address: "{{business_address}}",
         unsubLabel: "Unsubscribe",
-        url: "https://",
+        url: "{{unsubscribe_link}}",
         align: "center",
       };
   }
@@ -185,7 +189,10 @@ function inlineMd(text: string) {
 }
 
 export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, string> = {}) {
+  const business = readBusinessSettings();
   const parts = blocks.map((b) => {
+    if (b.type === "logo") b = { ...b, src: b.src || business.logo };
+    if (b.type === "footer") b = { ...b, company: business.name || "{{business_name}}", address: business.address || "{{business_address}}", url: "{{unsubscribe_link}}", unsubLabel: b.unsubLabel?.trim() || "Unsubscribe" };
     const a = b.align ?? "left";
     switch (b.type) {
       case "heading": {
@@ -251,7 +258,7 @@ export function renderBlocksToHtml(blocks: EmailBlock[], vars: Record<string, st
         return `<div style="text-align:${a};margin:8px 0 12px">${items}</div>`;
       }
       case "footer":
-        return `<div style="text-align:${a};margin:16px 0 0;padding-top:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:#888"><div style="font-weight:600;color:#666">${renderVars(b.company ?? "", vars)}</div><div>${renderVars(b.address ?? "", vars)}</div><div style="margin-top:6px"><a href="${b.url ?? "#"}" style="color:#888;text-decoration:underline">${renderVars(b.unsubLabel ?? "Unsubscribe", vars)}</a></div></div>`;
+        return `<div style="text-align:${a};margin:16px 0 0;padding:16px;border-top:1px solid #e5e5e5;font-size:11px;line-height:1.5;color:${b.color ?? "#888"};background:${b.bgColor ?? "transparent"}"><div style="font-weight:600">${inlineMd(renderVars(b.company ?? "", vars))}</div><div>${inlineMd(renderVars(b.address ?? "", vars))}</div><div style="margin-top:6px"><a href="{{unsubscribe_link}}" style="color:inherit;text-decoration:underline">${inlineMd(renderVars(b.unsubLabel ?? "Unsubscribe", vars))}</a></div></div>`;
     }
   });
   return parts.join("");
@@ -275,7 +282,9 @@ export function EmailDesigner({
   paletteExtra?: React.ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [appearance, setAppearance] = useState(defaultEmailAppearance);
+  const business = useBusinessSettings();
+  const [appearance, setAppearance] = useState(() => ({ ...defaultEmailAppearance, brand: business.brandColour }));
+  useEffect(() => { const next = ensureEmailFooter(blocks); if (next !== blocks) onChange(next); }, [blocks, onChange]);
   const dragData = useRef<{ kind: "new"; type: BlockType } | { kind: "move"; id: string } | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
@@ -285,6 +294,8 @@ export function EmailDesigner({
     onChange(blocks.map((b) => (b.id === id ? { ...b, ...patch } : b)));
 
   const remove = (id: string) => {
+    const block = blocks.find((item) => item.id === id);
+    if (!block || !canDeleteEmailBlock(block)) return;
     onChange(blocks.filter((b) => b.id !== id));
     if (selectedId === id) setSelectedId(null);
   };
@@ -309,6 +320,8 @@ export function EmailDesigner({
   };
 
   const insertAt = (idx: number, block: EmailBlock) => {
+    if (block.type === "footer" && blocks.some((item) => item.type === "footer")) { setSelectedId(blocks.find((item) => item.type === "footer")?.id ?? null); return; }
+    if (block.type === "button") block = { ...block, bgColor: appearance.brand };
     const next = [...blocks];
     next.splice(idx, 0, block);
     onChange(next);
@@ -450,7 +463,7 @@ export function EmailDesigner({
       </div>
 
       {/* Inspector */}
-      <div className={fullScreen ? "border-l-hairline bg-background p-5 overflow-y-auto" : "border-hairline rounded-md bg-surface/40 p-3"}>
+      <div data-email-properties className={fullScreen ? "border-l-hairline bg-background p-5 overflow-y-auto" : "border-hairline rounded-md bg-surface/40 p-3"}>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium mb-2">
           {selected ? `${selected.type} block` : ""}
         </div>
@@ -528,7 +541,7 @@ function BlockShell({
   onAdd: () => void;
   onLayout: (type: "columns" | "columns3") => void;
 }) {
-  const html = block.type === "divider" ? '<hr style="border:none;border-top:1px solid #e5e5e5;margin:0"/>' : renderBlocksToHtml([block], vars);
+  const html = decorateMergePills(block.type === "divider" ? '<hr style="border:none;border-top:1px solid #e5e5e5;margin:0"/>' : renderBlocksToHtml([block], vars));
   return (
     <div
       data-email-row={block.type}
@@ -554,6 +567,7 @@ function BlockShell({
         }`}
         onClick={(e) => e.stopPropagation()}
       >
+        {["text", "heading", "quote", "columns", "columns3", "hero", "list"].includes(block.type) && <InsertFieldButton textBlock />}
         {(block.type === "columns" || block.type === "columns3") && <select aria-label="Column layout" title="Column layout" value={block.type} onChange={(e) => onLayout(e.target.value as "columns" | "columns3")} className="h-5 text-xs bg-background"><option value="columns">2 columns</option><option value="columns3">3 columns</option></select>}
         <IconBtn onClick={onAdd} title="Add row"><Plus className="w-3 h-3" /></IconBtn>
         <IconBtn onClick={onMoveUp} disabled={!canUp} title="Move up">
