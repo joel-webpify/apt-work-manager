@@ -4,7 +4,7 @@ import { getJobs } from '@/lib/jobsStore';
 import { getQuotes } from '@/lib/quotesStore';
 import { getInvoices } from '@/lib/invoicesStore';
 import { readBusinessSettings } from '@/lib/businessSettings';
-import { effectiveItems, totals } from '@/lib/quoteUtils';
+import { resolveItems, totals } from '@/lib/quoteUtils';
 import { quoteLink } from '@/lib/shareLinks';
 
 export const mergeFieldGroups = {
@@ -99,7 +99,7 @@ export function resolveMergeFields(contact_id: string, context: MergeContext = {
     const crew = job?.assignments?.filter(a => a.date === assignment.date && a.start === assignment.start).map(a => employees.find(e => e.id === a.employeeId)).filter(e => e !== undefined) || [];
     Object.assign(values,{ booking_date:date(start.toISOString()), booking_time:formatMergeDate(start,locale,zone,'time'), booking_datetime:formatMergeDate(start,locale,zone,'datetime'), booking_end_time:formatMergeDate(end,locale,zone,'time'), technician_name:crew.map(e=>e.name).join(', '), technician_phone:crew.map(e=>e.phone).filter(Boolean).join(', '), booking_link:business.bookingLink });
   }
-  if (quote) Object.assign(values,{quote_number:quote.number,quote_amount:currency(totals(effectiveItems(quote)).total),quote_link:quoteLink(quote.id),quote_expiry_date:date(quote.validUntil)});
+  if (quote) Object.assign(values,{quote_number:quote.number,quote_amount:currency(totals(resolveItems(quote.items, quote.selection)).total),quote_link:quoteLink(quote.id),quote_expiry_date:date(quote.validUntil)});
   if (invoice) Object.assign(values,{invoice_number:invoice.number,invoice_amount:currency(totals(invoice.items).total),invoice_due_date:date(invoice.dueDate),days_overdue:String(invoice.status === 'Paid' ? 0 : Math.max(0,Math.floor((now.getTime()-Date.parse(invoice.dueDate))/86400000)))});
   // Only explicit event values fill fields with no existing source (secure links, promos, RUT/ROT, arrival windows).
   for (const [key,value] of Object.entries(context.values || {})) if (key in values) values[key] = value;
