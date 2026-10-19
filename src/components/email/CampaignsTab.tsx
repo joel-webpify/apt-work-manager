@@ -38,6 +38,8 @@ import { Btn, Pill } from "@/components/layout/PageShell";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { EmailDesigner, renderBlocksToHtml, createBlock, type EmailBlock, type BlockType } from "./EmailDesigner";
+import { EmailEditorPage } from "./EmailEditorPage";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
 type CampaignStatus = "Sent" | "Scheduled" | "Draft" | "Sending";
@@ -984,6 +986,46 @@ function CampaignBuilder({
       .replace(/\n/g, "<br/>");
     return withMd;
   }, [body]);
+
+  if (template && step === 2) {
+    return (
+      <EmailEditorPage
+        initial={{ name, subject, preview, blocks, body, htmlSource, mode: editorMode }}
+        onBack={() => setStep(1)}
+        onSave={(draft) => {
+          setName(draft.name);
+          setSubject(draft.subject);
+          setPreview(draft.preview);
+          setBlocks(draft.blocks);
+          setBody(draft.body);
+          setHtmlSource(draft.htmlSource);
+          setEditorMode(draft.mode);
+          setStep(3);
+        }}
+      >
+        {(draft, edit, vars, device) => {
+          const substitute = (value: string) => Object.entries(vars).reduce((text, [key, value]) => text.split(`{{${key}}}`).join(value), value);
+          const modes = (
+            <div className="space-y-3 border-t-hairline mt-5 pt-4">
+              <div className="flex flex-wrap gap-1">{(["visual", "markdown", "html"] as const).map((mode) => <Button key={mode} variant={draft.mode === mode ? "secondary" : "ghost"} size="sm" onClick={() => edit({ mode })}>{mode === "visual" ? "Blocks" : mode === "html" ? "HTML" : "Markdown"}</Button>)}</div>
+              <div className="text-xs font-medium text-muted-foreground">Personalisation</div>
+              <div className="flex flex-wrap gap-1">{mergeVariables.map((v) => <Button key={v.key} variant="outline" size="sm" className="h-7 text-xs" title={`Copy {{${v.key}}}`} onClick={() => navigator.clipboard?.writeText(`{{${v.key}}}`).catch(() => {})}>{v.label}</Button>)}</div>
+            </div>
+          );
+          if (draft.mode === "visual") return <EmailDesigner fullScreen device={device} blocks={draft.blocks} onChange={(blocks) => edit({ blocks })} vars={vars} paletteExtra={modes} />;
+          const escaped = substitute(draft.body).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/\*(.+?)\*/g, "<em>$1</em>").replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>').replace(/\n/g, "<br/>");
+          return <div className="grid h-full min-h-0 grid-cols-[240px_minmax(420px,1fr)_320px]">
+            <aside className="border-r-hairline overflow-auto p-4">{modes}</aside>
+            <div className="overflow-auto bg-surface-hover p-6"><iframe title="Email canvas" sandbox="" className={`email-editor-paper mx-auto block min-h-[600px] h-full ${device === "mobile" ? "w-[375px]" : "w-full max-w-[600px]"}`} srcDoc={draft.mode === "html" ? substitute(draft.htmlSource) : `<div style="font-family:Arial,sans-serif;padding:24px;font-size:14px;line-height:1.55">${escaped}</div>`} /></div>
+            <aside className="border-l-hairline overflow-auto p-5 space-y-3"><label htmlFor="email-source" className="text-xs font-medium">{draft.mode === "html" ? "HTML source" : "Body"}</label>
+              {draft.mode === "html" && <label className="flex items-center gap-2 text-xs cursor-pointer"><Upload className="h-4 w-4" />Upload .html<input type="file" accept=".html,.htm,text/html" className="hidden" onChange={async (e) => { const file = e.target.files?.[0]; if (file) edit({ htmlSource: await file.text() }); }} /></label>}
+              <textarea id="email-source" value={draft.mode === "html" ? draft.htmlSource : draft.body} onChange={(e) => edit(draft.mode === "html" ? { htmlSource: e.target.value } : { body: e.target.value })} className="w-full min-h-[400px] rounded-md border-hairline bg-background p-3 text-xs font-mono" />
+            </aside>
+          </div>;
+        }}
+      </EmailEditorPage>
+    );
+  }
 
   return (
     <Dialog open={!!template} onOpenChange={(o) => !o && onClose()}>

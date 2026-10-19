@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Heading as HeadingIcon,
   Type,
@@ -260,10 +261,16 @@ export function EmailDesigner({
   blocks,
   onChange,
   vars,
+  fullScreen = false,
+  device = "desktop",
+  paletteExtra,
 }: {
   blocks: EmailBlock[];
   onChange: (next: EmailBlock[]) => void;
   vars: Record<string, string>;
+  fullScreen?: boolean;
+  device?: "desktop" | "mobile";
+  paletteExtra?: React.ReactNode;
 }) {
   const [selectedId, setSelectedId] = useState<string | null>(blocks[0]?.id ?? null);
   const dragData = useRef<{ kind: "new"; type: BlockType } | { kind: "move"; id: string } | null>(null);
@@ -330,9 +337,9 @@ export function EmailDesigner({
   const groups: PaletteGroup[] = ["Basic", "Layout", "Content", "Brand"];
 
   return (
-    <div className="grid grid-cols-[200px_1fr_240px] gap-3 min-h-[480px]">
+    <div className={fullScreen ? "grid h-full min-h-0 grid-cols-[240px_minmax(420px,1fr)_320px]" : "grid grid-cols-[200px_1fr_240px] gap-3 min-h-[480px]"}>
       {/* Palette */}
-      <div className="border-hairline rounded-lg bg-surface/40 p-2.5 overflow-y-auto max-h-[640px]">
+      <div className={fullScreen ? "border-r-hairline bg-background p-4 overflow-y-auto" : "border-hairline rounded-lg bg-surface/40 p-2.5 overflow-y-auto max-h-[640px]"}>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold px-1 mb-2">
           Drag blocks
         </div>
@@ -343,7 +350,8 @@ export function EmailDesigner({
               {PALETTE.filter((p) => p.group === g).map((p) => {
                 const Icon = p.icon;
                 return (
-                  <div
+                  <Button
+                    variant="outline"
                     key={p.type}
                     draggable
                     onDragStart={() => {
@@ -354,25 +362,23 @@ export function EmailDesigner({
                       setDragOverIdx(null);
                     }}
                     onClick={() => insertAt(blocks.length, createBlock(p.type))}
-                    className="flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-md text-[11px] bg-background border-hairline hover:border-primary/50 hover:bg-primary/5 hover:shadow-sm cursor-grab active:cursor-grabbing transition-all text-center"
+                    className="h-auto flex flex-col items-center justify-center gap-2 px-2 py-3 text-xs font-normal cursor-grab active:cursor-grabbing text-center"
                     title="Drag into canvas or click to append"
                   >
                     <Icon className="w-4 h-4 text-foreground/70" strokeWidth={1.75} />
                     <span className="leading-tight">{p.label}</span>
-                  </div>
+                  </Button>
                 );
               })}
             </div>
           </div>
         ))}
-        <div className="text-[10px] text-muted-foreground px-1 mt-2 leading-snug">
-          Drag into the canvas or click to append. Use the side handle to reorder.
-        </div>
+        {paletteExtra}
       </div>
 
       {/* Canvas */}
-      <div className="border-hairline rounded-lg bg-gradient-to-b from-surface/40 to-surface/10 p-6 overflow-y-auto max-h-[640px]">
-        <div className="mx-auto max-w-[600px] bg-white rounded-lg shadow-md border border-border/60 p-6 min-h-[420px]">
+      <div className={fullScreen ? "bg-surface-hover p-6 overflow-auto" : "border-hairline rounded-lg bg-surface/40 p-6 overflow-y-auto max-h-[640px]"}>
+        <div aria-label="Email canvas" className={`mx-auto email-editor-paper border-hairline p-6 min-h-[420px] ${device === "mobile" ? "w-[375px]" : "w-full max-w-[600px]"}`}>
 
           {blocks.length === 0 ? (
             <div
@@ -436,9 +442,9 @@ export function EmailDesigner({
       </div>
 
       {/* Inspector */}
-      <div className="border-hairline rounded-md bg-surface/40 p-3">
+      <div className={fullScreen ? "border-l-hairline bg-background p-5 overflow-y-auto" : "border-hairline rounded-md bg-surface/40 p-3"}>
         <div className="text-[10px] uppercase tracking-wide text-muted-foreground font-medium mb-2">
-          {selected ? `${selected.type} block` : "Inspector"}
+          {selected ? `${selected.type} block` : "Properties"}
         </div>
         {!selected ? (
           <div className="text-xs text-muted-foreground">Select a block to edit its properties.</div>
@@ -538,7 +544,7 @@ function BlockShell({
           <Trash2 className="w-3 h-3" />
         </IconBtn>
       </div>
-      <div className="px-1 py-0.5" dangerouslySetInnerHTML={{ __html: html }} />
+      <div onClick={(e) => { if ((e.target as HTMLElement).closest("a")) e.preventDefault(); }} className="px-1 py-0.5" dangerouslySetInnerHTML={{ __html: html }} />
     </div>
   );
 }
