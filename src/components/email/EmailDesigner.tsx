@@ -579,7 +579,7 @@ function BlockShell({
         <IconBtn onClick={onDuplicate} title="Duplicate">
           <Copy className="w-3 h-3" />
         </IconBtn>
-        <IconBtn onClick={onDelete} title="Delete" danger>
+        <IconBtn onClick={onDelete} disabled={!canDeleteEmailBlock(block)} title={canDeleteEmailBlock(block) ? "Delete" : "Required footer"} danger>
           <Trash2 className="w-3 h-3" />
         </IconBtn>
       </div>
@@ -623,6 +623,9 @@ function Inspector({
   block: EmailBlock;
   onChange: (patch: Partial<EmailBlock>) => void;
 }) {
+  const business = useBusinessSettings();
+  const [logoOverride, setLogoOverride] = useState(Boolean(block.src));
+  useEffect(() => { setLogoOverride(Boolean(block.src)); }, [block.id]);
   return (
     <div className="space-y-2.5">
       {block.type === "heading" && (
@@ -782,7 +785,8 @@ function Inspector({
       )}
       {block.type === "logo" && (
         <>
-          <Field label="Logo URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <label className="flex items-center gap-2 text-xs"><Checkbox checked={logoOverride} onCheckedChange={(checked) => { setLogoOverride(checked === true); if (!checked) onChange({ src: "" }); }} />Override for this email</label>
+          {logoOverride ? <Field label="Logo URL"><input value={block.src ?? ""} onChange={(e) => onChange({ src: e.target.value })} placeholder="https://…" className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field> : <div className="text-xs text-muted-foreground">{business.logo ? "Business logo" : "No business logo set"}</div>}
           <Field label={`Height — ${block.height ?? 40}px`}><input type="range" min={20} max={120} step={4} value={block.height ?? 40} onChange={(e) => onChange({ height: Number(e.target.value) })} className="w-full" /></Field>
           <AlignField value={block.align} onChange={(align) => onChange({ align })} />
         </>
@@ -823,10 +827,10 @@ function Inspector({
       )}
       {block.type === "footer" && (
         <>
-          <Field label="Company"><input value={block.company ?? ""} onChange={(e) => onChange({ company: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
-          <Field label="Address"><textarea value={block.address ?? ""} onChange={(e) => onChange({ address: e.target.value })} rows={2} className="w-full text-xs px-2 py-1.5 rounded border-hairline bg-background" /></Field>
-          <Field label="Unsub label"><input value={block.unsubLabel ?? ""} onChange={(e) => onChange({ unsubLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
-          <Field label="Unsub URL"><input value={block.url ?? ""} onChange={(e) => onChange({ url: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <div className="text-xs space-y-1"><div>{business.name || "Business name not set"}</div><div className="text-muted-foreground">{business.address || "Business address not set"}</div><div className="text-muted-foreground">Unsubscribe · Required</div></div>
+          <Field label="Unsubscribe label"><input value={block.unsubLabel ?? "Unsubscribe"} onChange={(e) => onChange({ unsubLabel: e.target.value })} className="w-full h-7 text-xs px-2 rounded border-hairline bg-background" /></Field>
+          <div className="grid grid-cols-2 gap-2"><Field label="Background"><input type="color" value={block.bgColor ?? "#ffffff"} onChange={(e) => onChange({ bgColor: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field><Field label="Text colour"><input type="color" value={block.color ?? "#888888"} onChange={(e) => onChange({ color: e.target.value })} className="w-full h-7 rounded border-hairline bg-background" /></Field></div>
+          <AlignField value={block.align} onChange={(align) => onChange({ align })} />
         </>
       )}
     </div>
@@ -844,7 +848,7 @@ function AlignField({
     <Field label="Alignment">
       <div className="flex items-center gap-1 border-hairline rounded p-0.5 w-fit">
         {(["left", "center", "right"] as const).map((a) => (
-          <button
+          <Button variant="ghost"
             key={a}
             type="button"
             onClick={() => onChange(a)}
@@ -855,7 +859,7 @@ function AlignField({
             }`}
           >
             {a}
-          </button>
+          </Button>
         ))}
       </div>
     </Field>

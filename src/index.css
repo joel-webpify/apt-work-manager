@@ -86,6 +86,17 @@
     box-shadow: var(--email-paper-shadow);
     overflow-wrap: anywhere;
   }
+  .email-merge-pill {
+    display: inline-block;
+    border-radius: 4px;
+    padding: 1px 5px;
+    font-size: 0.85em;
+    font-family: ui-monospace, monospace;
+    background: hsl(var(--primary) / 0.12);
+    color: hsl(var(--primary));
+    border: 1px solid hsl(var(--primary) / 0.2);
+    vertical-align: baseline;
+  }
   .border-hairline {
     border-width: 0.5px;
     border-style: solid;
