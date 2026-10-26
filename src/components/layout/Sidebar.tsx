@@ -51,7 +51,7 @@ const groups: Group[] = [
     items: [
       { to: "/marketing", label: "Overview", icon: Radar, end: true },
       { to: "/marketing/gbp", label: "Google Business", icon: Store },
-      { to: "/marketing/social-organic", label: "Social posts", icon: Share2 },
+      { to: "/social", label: "Social", icon: Share2 },
       { to: "/meta-ads", label: "Meta Ads", icon: Target },
       { to: "/marketing/email", label: "Email", icon: Mail },
       { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
@@ -169,6 +169,13 @@ export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
                 <div className="hidden md:block pl-9 space-y-1 mt-1">
                   {["Campaigns", "Create", "Reports", "Leads", "Settings", "Activity"].map((page) => (
                     <NavLink key={page} to={`/meta-ads?view=${page}`} className="block text-xs text-muted-foreground hover:text-foreground py-1">{page}</NavLink>
+                  ))}
+                </div>
+              )}
+              {group.id === "marketing" && location.pathname === "/social" && (
+                <div className="hidden md:block pl-9 space-y-1 mt-1">
+                  {["Calendar", "Create", "Queue", "Media", "Inbox", "Analytics", "Settings", "Activity"].map((page) => (
+                    <NavLink key={page} to={`/social?view=${page}`} className="block text-xs text-muted-foreground hover:text-foreground py-1">{page}</NavLink>
                   ))}
                 </div>
               )}

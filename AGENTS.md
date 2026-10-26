@@ -1,4 +1,5 @@
 # Project notes
+- Organic Social is isolated under `/social` with React session state and pure scheduling/validation helpers; simulated posts and replies never write to real networks or legacy social stores.
 - Meta Ads is isolated under `/meta-ads` with shared pure mock helpers and React session state; never connect its simulated actions to real advertising services or existing Google Ads stores.
 - Business identity is stored separately from email drafts and read by email rendering; logo overrides use the existing src field, and required footer content uses existing footer fields so email schemas remain unchanged.
 - All email text inputs share a caret-aware merge-field picker; unresolved tokens are decorated only in canvas rendering, never in saved content.
