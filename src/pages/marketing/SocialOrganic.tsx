@@ -1,5 +1,5 @@
-import { PostScheduler } from "@/components/social/PostScheduler";
+import { Navigate } from "react-router-dom";
 
 export default function SocialOrganic() {
-  return <PostScheduler kind="organic" />;
+  return <Navigate to="/social" replace />;
 }
