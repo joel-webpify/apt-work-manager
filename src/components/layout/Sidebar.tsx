@@ -52,7 +52,7 @@ const groups: Group[] = [
       { to: "/marketing", label: "Overview", icon: Radar, end: true },
       { to: "/marketing/gbp", label: "Google Business", icon: Store },
       { to: "/marketing/social-organic", label: "Social posts", icon: Share2 },
-      { to: "/marketing/social-paid", label: "Social ads", icon: Target },
+      { to: "/meta-ads", label: "Meta Ads", icon: Target },
       { to: "/marketing/email", label: "Email", icon: Mail },
       { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
       { to: "/marketing/ads", label: "Google Ads", icon: Megaphone },
@@ -163,6 +163,13 @@ export function Sidebar({ onAskAI }: { onAskAI: () => void }) {
                       </NavLink>
                     );
                   })}
+                </div>
+              )}
+              {group.id === "marketing" && location.pathname.startsWith("/meta-ads") && (
+                <div className="hidden md:block pl-9 space-y-1 mt-1">
+                  {["Campaigns", "Create", "Reports", "Leads", "Settings", "Activity"].map((page) => (
+                    <NavLink key={page} to={`/meta-ads?view=${page}`} className="block text-xs text-muted-foreground hover:text-foreground py-1">{page}</NavLink>
+                  ))}
                 </div>
               )}
             </div>
