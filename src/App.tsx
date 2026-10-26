@@ -35,6 +35,7 @@ import MyDay from "./pages/field/MyDay";
 import FieldJob from "./pages/field/FieldJob";
 import MyStats from "./pages/field/MyStats";
 import MyWeek from "./pages/field/MyWeek";
+import MetaAds from "./pages/MetaAds";
 
 
 
@@ -78,6 +79,7 @@ const App = () => (
             </Route>
 
             <Route path="/whatsapp" element={<WhatsApp />} />
+            <Route path="/meta-ads" element={<MetaAds />} />
             <Route path="/automations" element={<Workflows />} />
             <Route path="/automations/sequences" element={<Sequences />} />
             <Route path="/automations/:id" element={<WorkflowDetail />} />

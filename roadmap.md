@@ -1,3 +1,8 @@
+# Meta Ads mockup
+- [x] Add isolated Swedish client data, campaign management and Dev mode.
+- [x] Add creation wizard, connection settings, leads, reports and activity.
+- [x] Verify simulated creation, lead changes, reconnection and reports.
+
 # WhatsApp campaign audiences
 - [x] Expand preset segments and customer filters with accurate eligibility counts.
 - [x] Verify filtering rules and campaign creation in the browser.

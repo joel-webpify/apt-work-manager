@@ -1,5 +1,5 @@
-import { AdsManager } from "@/components/social/ads/AdsManager";
+import { Navigate } from "react-router-dom";
 
 export default function SocialPaid() {
-  return <AdsManager />;
+  return <Navigate to="/meta-ads" replace />;
 }
