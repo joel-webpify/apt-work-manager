@@ -8,6 +8,7 @@ import {
   ArrowDown,
   Mail,
   MessageSquare,
+  MessageCircle,
   Clock,
   Hourglass,
   Sun,

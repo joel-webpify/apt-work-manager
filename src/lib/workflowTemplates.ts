@@ -14,6 +14,19 @@ const a = (id: string, action: Omit<WorkflowAction, "id">): WorkflowAction => ({
 
 export const workflowTemplates: WorkflowTemplate[] = [
   {
+    id: "tpl-wa-survey",
+    name: "Confirm survey booking on WhatsApp + reminder 24h before",
+    blurb: "Sends the booked time on WhatsApp straight away, then a reminder the day before.",
+    category: "Keep customers",
+    trigger: "visit_booked",
+    triggerConfig: { visitType: "survey" },
+    actions: [
+      a("t1", { type: "send_whatsapp", waTemplate: "survey_booked" }),
+      a("t2", { type: "wait_until", }),
+      a("t3", { type: "send_whatsapp", waTemplate: "visit_reminder" }),
+    ],
+  },
+  {
     id: "tpl-visit-reminder",
     name: "Remind the customer and crew before a visit",
     blurb: "A text to the customer the day before, and a heads-up to whoever is booked on it.",

@@ -66,7 +66,7 @@ const test = (c: typeof contacts[number], cond?: WorkflowCondition): boolean => 
   }
 };
 
-const messageTypes = ["send_email", "send_sms", "send_sequence", "payment_reminder"];
+const messageTypes = ["send_email", "send_sms", "send_whatsapp", "send_sequence", "payment_reminder"];
 
 const describe = (a: WorkflowAction): string => {
   switch (a.type) {
@@ -74,6 +74,8 @@ const describe = (a: WorkflowAction): string => {
       return `“${a.emailSubject || "No subject"}”`;
     case "send_sms":
       return a.smsMessage || "(empty message)";
+    case "send_whatsapp":
+      return `WhatsApp template “${a.waTemplate || "?"}” (skipped if no WhatsApp consent)`;
     case "send_sequence":
       return a.sequenceId || "(no follow-up picked)";
     case "notify_team":
