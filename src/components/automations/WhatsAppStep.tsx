@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { useWhatsApp } from "@/lib/whatsappStore";
+import { PhonePreview } from "@/components/whatsapp/PhonePreview";
 
 export function WhatsAppStep({ value, onChange }: { value?: string; onChange: (v: string) => void }) {
   const { templates } = useWhatsApp();
@@ -9,8 +11,9 @@ export function WhatsAppStep({ value, onChange }: { value?: string; onChange: (v
       {templates.map((t) => <option key={t.name} value={t.name} disabled={t.status !== "APPROVED"}>{t.name}{t.status !== "APPROVED" ? ` (${t.status.toLowerCase()})` : ""}</option>)}
     </select>
     {tpl && <>
-      <div className="rounded-md bg-surface p-2 text-xs">{tpl.body}</div>
+      <div className="origin-top scale-[0.8] -mb-20"><PhonePreview template={tpl} values={Object.fromEntries(tpl.vars.map((v) => [v, `[${v}]`]))} /></div>
       <div className="text-[10px] text-muted-foreground">{tpl.vars.map((v, i) => `{{${i + 1}}} = ${v}`).join(" · ")} · Skipped when the contact has no mobile number or WhatsApp consent.</div>
+      <Link to={`/whatsapp?tab=templates&edit=${tpl.name}`} className="text-xs text-primary">Edit template</Link>
     </>}
   </div>;
 }
