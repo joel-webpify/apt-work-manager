@@ -4,10 +4,11 @@ import { ProductsTab } from "@/components/forms/ProductsTab";
 import ChannelGroupsTab from "@/components/settings/ChannelGroupsTab";
 import PipelinesTab from "@/components/settings/PipelinesTab";
 import SurveysTab from "@/components/settings/SurveysTab";
+import WhatsAppTab from "@/components/settings/WhatsAppTab";
 import TeamsTab from "@/components/settings/TeamsTab";
 import { BusinessSettingsTab } from "@/components/settings/BusinessSettingsTab";
 
-type Tab = "products" | "pipelines" | "surveys" | "teams" | "channels" | "business";
+type Tab = "products" | "pipelines" | "surveys" | "teams" | "channels" | "business" | "whatsapp";
 
 const tabs: { id: Tab; label: string }[] = [
   { id: "business", label: "Business" },
@@ -16,6 +17,7 @@ const tabs: { id: Tab; label: string }[] = [
   { id: "surveys", label: "Site visit surveys" },
   { id: "teams", label: "Teams" },
   { id: "channels", label: "Channel grouping" },
+  { id: "whatsapp", label: "WhatsApp" },
 ];
 
 export default function Settings() {
@@ -52,6 +54,7 @@ export default function Settings() {
         {tab === "surveys" && <SurveysTab />}
         {tab === "teams" && <TeamsTab />}
         {tab === "channels" && <ChannelGroupsTab />}
+        {tab === "whatsapp" && <WhatsAppTab />}
       </PageBody>
     </>
   );

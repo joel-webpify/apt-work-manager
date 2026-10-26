@@ -72,11 +72,13 @@ import {
 } from "@/lib/workflowsStore";
 import { useStages } from "@/lib/stagesStore";
 import { TestRunDialog } from "@/components/automations/TestRunDialog";
+import { WhatsAppStep } from "@/components/automations/WhatsAppStep";
 import { AutomationEmailEditor } from "@/components/email/AutomationEmailEditor";
 
 const actionIcons: Record<WorkflowActionType, typeof Mail> = {
   send_email: Mail,
   send_sms: MessageSquare,
+  send_whatsapp: MessageCircle,
   send_sequence: Repeat,
   notify_team: Bell,
   remind_owner: BellRing,
@@ -106,6 +108,7 @@ const actionIcons: Record<WorkflowActionType, typeof Mail> = {
 const actionTones: Record<WorkflowActionType, string> = {
   send_email: "text-blue-500 bg-blue-500/10",
   send_sms: "text-blue-500 bg-blue-500/10",
+  send_whatsapp: "text-emerald-500 bg-emerald-500/10",
   send_sequence: "text-blue-500 bg-blue-500/10",
   notify_team: "text-sky-500 bg-sky-500/10",
   remind_owner: "text-sky-500 bg-sky-500/10",
@@ -148,6 +151,8 @@ const newAction = (type: WorkflowActionType): WorkflowAction => {
       return { id, type, emailSubject: "New email", emailTemplate: "default" };
     case "send_sms":
       return { id, type, smsMessage: "" };
+    case "send_whatsapp":
+      return { id, type, waTemplate: "survey_booked" };
     case "send_sequence":
       return { id, type, sequenceId: "" };
     case "notify_team":
@@ -473,6 +478,7 @@ function ActionListEditor({
                   </div>
                 </>
               )}
+              {a.type === "send_whatsapp" && <WhatsAppStep value={a.waTemplate} onChange={(v) => update(a.id, { waTemplate: v })} />}
               {a.type === "send_sms" && (
                 <>
                   <Textarea
@@ -828,6 +834,7 @@ function FlowActions({ actions }: { actions: WorkflowAction[] }) {
         let summary = "";
         if (a.type === "send_email") summary = a.emailSubject || "Untitled email";
         else if (a.type === "send_sms") summary = a.smsMessage || "(no message)";
+        else if (a.type === "send_whatsapp") summary = a.waTemplate ? `WhatsApp: ${a.waTemplate}` : "(pick template)";
         else if (a.type === "send_sequence") summary = a.sequenceId || "(pick follow-up)";
         else if (a.type === "notify_team") summary = `${a.notifyChannel} → ${a.notifyRecipients || "team"}`;
         else if (a.type === "remind_owner") summary = a.reminderMessage || "(no reminder)";

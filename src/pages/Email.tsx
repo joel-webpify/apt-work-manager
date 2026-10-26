@@ -3,6 +3,7 @@ import { PageHeader, PageBody, Btn, Pill } from "@/components/layout/PageShell";
 import { Plus, Zap, Pencil, Mail, Clock, Tag, CheckSquare, GitBranch } from "lucide-react";
 import { automations as initialAutomations } from "@/data/mockData";
 import { CampaignsTab } from "@/components/email/CampaignsTab";
+import { WhatsAppCampaignsTab } from "@/components/email/WhatsAppCampaignsTab";
 import { AutomationBuilderDialog, type BuilderAutomation, type TriggerType } from "@/components/email/AutomationBuilderDialog";
 
 const triggerLabels: Record<string, string> = {
@@ -50,7 +51,7 @@ const seed: BuilderAutomation[] = initialAutomations.map((a, i) => ({
 }));
 
 export default function Email() {
-  const [tab, setTab] = useState<"campaigns" | "automations">("campaigns");
+  const [tab, setTab] = useState<"campaigns" | "whatsapp" | "automations">("campaigns");
   const [list, setList] = useState<BuilderAutomation[]>(seed);
   const [editing, setEditing] = useState<BuilderAutomation | null>(null);
   const [open, setOpen] = useState(false);
@@ -90,7 +91,7 @@ export default function Email() {
       />
       <PageBody>
         <div className="flex border-b-hairline mb-4 -mt-2">
-          {(["campaigns", "automations"] as const).map((t) => (
+          {(["campaigns", "whatsapp", "automations"] as const).map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -98,13 +99,15 @@ export default function Email() {
                 tab === t ? "border-primary text-foreground font-medium" : "border-transparent text-muted-foreground hover:text-foreground"
               }`}
             >
-              {t}
+              {t === "whatsapp" ? "WhatsApp" : t}
             </button>
           ))}
         </div>
 
         {tab === "campaigns" ? (
           <CampaignsTab />
+        ) : tab === "whatsapp" ? (
+          <WhatsAppCampaignsTab />
         ) : (
           <div className="space-y-2">
             {list.map((a) => (
