@@ -13,3 +13,4 @@
 
 - Email merge field catalog, trigger availability and record resolution live in one shared module; editor-only fallbacks use token syntax and preserve existing schemas. Resolve against existing stores and explicit event context, never invented secure links or unrelated records.
 - WhatsApp is a mockup module at `/whatsapp` (Inbox, Campaigns, Templates, Results; components in `src/components/whatsapp/`): templates, conversations, consent and campaigns live in `src/lib/whatsappStore.ts` (localStorage) with no Meta calls, so the UI can be demoed before a real connection exists.
+- WhatsApp audience selection uses a shared pure selector over merged contact records and extras; campaign counts come from matched records and consent checks, not segment scaling, so filters and recipient counts stay consistent.

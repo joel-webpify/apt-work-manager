@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { AudienceFilters } from "./whatsappAudience";
 
 // Mockup only: nothing here talks to Meta. Templates, consent and sends live in localStorage.
 export type TemplateStatus = "APPROVED" | "PENDING" | "REJECTED";
@@ -9,7 +10,7 @@ export interface WaTemplate { name: string; category: TemplateCategory; language
 export interface WaChatMessage { id: string; dir: "in" | "out"; text: string; at: string; template?: string }
 export interface WaConversation { id: string; contactId: string; name: string; phone: string; jobId?: string; unread: number; messages: WaChatMessage[] }
 export type WaConsent = "not_set" | "utility" | "all" | "opted_out";
-export interface WaCampaign { id: string; name: string; template: string; segment: string; status: "Draft" | "Scheduled" | "Sent"; scheduledFor?: string; recipients: number; skipped: number; delivered: number; failed: number; read: number }
+export interface WaCampaign { id: string; name: string; template: string; segment: string; audienceFilters?: AudienceFilters; contactIds?: string[]; status: "Draft" | "Scheduled" | "Sent"; scheduledFor?: string; recipients: number; skipped: number; delivered: number; failed: number; read: number }
 export interface WaMessage { id: string; contactId: string; template: string; at: string; status: "sent" | "delivered" | "read" | "failed" | "skipped"; reason?: string }
 
 const seedTemplates: WaTemplate[] = [
@@ -120,6 +121,6 @@ export function validateTemplate(t: Pick<WaTemplate, "name" | "body" | "buttons"
 /** Splits an audience into receivers and skips with reasons. */
 export function audienceSplit(people: { id: string; phone: string }[], consents: Record<string, WaConsent>, category: TemplateCategory) {
   const reasons: Record<string, number> = {}; let ok = 0;
-  for (const p of people) { const r = canSend(consents[p.id], p.phone, category); if (r.ok) ok++; else reasons[r.reason!] = (reasons[r.reason!] ?? 0) + 1; }
+  for (const p of people) { const r = canSend(consents[p.id], p.phone, category); if (r.ok) ok++; else if (r.reason) reasons[r.reason] = (reasons[r.reason] ?? 0) + 1; }
   return { receive: ok, skipped: people.length - ok, reasons };
 }
