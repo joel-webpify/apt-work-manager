@@ -1,3 +1,7 @@
+# WhatsApp campaign audiences
+- [x] Expand preset segments and customer filters with accurate eligibility counts.
+- [x] Verify filtering rules and campaign creation in the browser.
+
 # Email editor refactor
 - [x] Expand field groups, insertion controls and editable fallbacks.
 - [x] Resolve fields from existing customer, booking, job, quote, invoice and business records with locale/timezone/currency formatting.
