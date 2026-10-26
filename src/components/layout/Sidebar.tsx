@@ -22,6 +22,7 @@ import {
   Repeat,
   Radar,
   HardHat,
+  MessageCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +54,7 @@ const groups: Group[] = [
       { to: "/marketing/social-organic", label: "Social posts", icon: Share2 },
       { to: "/marketing/social-paid", label: "Social ads", icon: Target },
       { to: "/marketing/email", label: "Email", icon: Mail },
+      { to: "/whatsapp", label: "WhatsApp", icon: MessageCircle },
       { to: "/marketing/ads", label: "Google Ads", icon: Megaphone },
     ],
   },

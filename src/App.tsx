@@ -12,6 +12,7 @@ import Contacts from "./pages/Contacts";
 import Forms from "./pages/Forms";
 import Email from "./pages/Email";
 import Ads from "./pages/Ads";
+import WhatsApp from "./pages/WhatsApp";
 import Reporting from "./pages/Reporting";
 import Tracking from "./pages/Tracking";
 import Settings from "./pages/Settings";
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="ads" element={<Ads />} />
             </Route>
 
+            <Route path="/whatsapp" element={<WhatsApp />} />
             <Route path="/automations" element={<Workflows />} />
             <Route path="/automations/sequences" element={<Sequences />} />
             <Route path="/automations/:id" element={<WorkflowDetail />} />
