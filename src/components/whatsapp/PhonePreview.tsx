@@ -5,7 +5,7 @@ import { useBusinessSettings } from "@/lib/businessSettings";
 
 export function PhonePreview({ template, values = {}, className = "" }: { template?: Partial<WaTemplate>; values?: Record<string, string>; className?: string }) {
   const business = useBusinessSettings();
-  const body = template?.body ? fillTemplate(template.body, (template.vars ?? []).map((k) => values[k] || "")) : "";
+  const body = template?.body ? fillTemplate(template.body, (template.vars ?? []).map((k) => values[k] || `[${k}]`)) : "";
   const h = template?.header;
   const MediaIcon = h?.type === "video" ? Video : h?.type === "document" ? FileText : ImageIcon;
   return <div className={`mx-auto w-[300px] rounded-[2.2rem] border-hairline bg-card p-2 shadow-sm ${className}`}>
