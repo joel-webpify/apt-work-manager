@@ -1,7 +1,7 @@
 # Social mockup
-- [ ] Add session-local posts, media, conversations and scheduling rules.
-- [ ] Build calendar, composer, queue, media, inbox, analytics, settings and activity.
-- [ ] Verify scheduling, approvals, replies and client switching.
+- [x] Add session-local posts, media, conversations and scheduling rules.
+- [x] Build initial calendar, composer, queue, media, inbox, analytics, settings and activity screens.
+- [x] Verify scheduling, approvals, replies and client switching.
 
 # Meta Ads mockup
 - [x] Add isolated Swedish client data, campaign management and Dev mode.
