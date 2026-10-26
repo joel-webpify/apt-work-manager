@@ -12,3 +12,4 @@
 - The job-card booking dialog uses responsive desktop/mobile layouts in `BookingSchedulePreview` for an in-place day preview from the same job assignments; selecting a time only updates the booking form, so previewing never creates a visit.
 
 - Email merge field catalog, trigger availability and record resolution live in one shared module; editor-only fallbacks use token syntax and preserve existing schemas. Resolve against existing stores and explicit event context, never invented secure links or unrelated records.
+- WhatsApp is a mockup: templates, consent, campaigns and sends live in `src/lib/whatsappStore.ts` (localStorage) with no Meta calls, so the UI can be demoed before a real connection exists.

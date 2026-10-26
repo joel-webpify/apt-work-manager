@@ -36,6 +36,7 @@ export type WorkflowTrigger =
 export type WorkflowActionType =
   | "send_email"
   | "send_sms"
+  | "send_whatsapp"
   | "send_sequence"
   | "notify_team"
   | "remind_owner"
@@ -76,6 +77,8 @@ export interface WorkflowAction {
   emailTemplate?: string;
   // send_sms
   smsMessage?: string;
+  // send_whatsapp (template name; variables come from the template mapping)
+  waTemplate?: string;
   // send_sequence
   sequenceId?: string;
   // tags
@@ -410,7 +413,7 @@ export const countSteps = (actions: WorkflowAction[]): number =>
     0,
   );
 
-const messageTypes: WorkflowActionType[] = ["send_email", "send_sms", "send_sequence", "payment_reminder"];
+const messageTypes: WorkflowActionType[] = ["send_email", "send_sms", "send_whatsapp", "send_sequence", "payment_reminder"];
 const flatten = (actions: WorkflowAction[]): WorkflowAction[] =>
   actions.flatMap((a) => [
     a,
@@ -443,6 +446,8 @@ export const checkWorkflow = (w: Workflow): string[] => {
     warnings.push("One of the emails has no subject line.");
   if (all.some((a) => a.type === "send_sms" && !a.smsMessage?.trim()))
     warnings.push("One of the text messages is empty.");
+  if (all.some((a) => a.type === "send_whatsapp" && !a.waTemplate))
+    warnings.push("A WhatsApp step has no template chosen.");
   if (all.some((a) => (a.type === "add_tag" || a.type === "remove_tag") && !a.tag?.trim()))
     warnings.push("One label step has no label chosen.");
   if (all.some((a) => a.type === "webhook" && !a.webhookUrl?.trim()))
@@ -493,6 +498,7 @@ export const triggerMeta: Record<WorkflowTrigger, { label: string; group: string
 export const actionMeta: Record<WorkflowActionType, { label: string; group: string }> = {
   send_email: { label: "Send an email", group: "Get in touch" },
   send_sms: { label: "Send a text message", group: "Get in touch" },
+  send_whatsapp: { label: "Send a WhatsApp message", group: "Get in touch" },
   send_sequence: { label: "Start an email follow-up", group: "Get in touch" },
   notify_team: { label: "Tell the team", group: "Get in touch" },
   remind_owner: { label: "Remind the job owner", group: "Get in touch" },

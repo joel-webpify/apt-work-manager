@@ -1,3 +1,4 @@
+import { ContactWhatsApp } from "@/components/contacts/ContactWhatsApp";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -220,6 +221,8 @@ export function ContactPanel({ contact, onClose }: { contact: Contact; onClose: 
                    <option value="opted_out">Opted out</option>
                  </select>
                </section>
+
+               <ContactWhatsApp contactId={contact.id} />
 
                <section>
                  <div className="mb-2 flex items-center justify-between">
