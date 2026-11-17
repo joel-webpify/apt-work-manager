@@ -1,11 +1,13 @@
-import { MessageCircle, Mail, FileText, Facebook, Phone, MessageSquare, type LucideIcon } from "lucide-react";
+import { MessageCircle, Mail, FileText, Facebook, Instagram, MessageSquareQuote, Phone, MessageSquare, type LucideIcon } from "lucide-react";
 import type { InboundChannel } from "@/lib/inboxMock";
 
 export const channelMeta: Record<InboundChannel, { label: string; icon: LucideIcon; cls: string }> = {
   whatsapp: { label: "WhatsApp", icon: MessageCircle, cls: "bg-success/15 text-success" },
   email: { label: "Email", icon: Mail, cls: "bg-primary/10 text-primary" },
   webform: { label: "Web form", icon: FileText, cls: "bg-accent text-accent-foreground" },
-  facebook: { label: "Facebook", icon: Facebook, cls: "bg-primary/15 text-primary" },
+  facebook: { label: "Facebook DM", icon: Facebook, cls: "bg-info/15 text-info" },
+  instagram: { label: "Instagram DM", icon: Instagram, cls: "bg-social-instagram/15 text-social-instagram" },
+  comment: { label: "Comment", icon: MessageSquareQuote, cls: "bg-secondary text-secondary-foreground" },
   call: { label: "Call", icon: Phone, cls: "bg-warning/15 text-warning" },
   sms: { label: "SMS", icon: MessageSquare, cls: "bg-muted text-foreground" },
 };

@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { buildMock, filterConversations, slaState, threadForContact, type InboundChannel, type Message, type ReplyChannel, type StatusFilter, type Conversation } from "@/lib/inboxMock";
+import { buildMock, defaultReplyChannel, filterConversations, slaState, threadForContact, type InboundChannel, type Message, type ReplyChannel, type StatusFilter, type Conversation } from "@/lib/inboxMock";
 import { ConversationList } from "@/components/inbox/ConversationList";
 import { Timeline } from "@/components/inbox/Timeline";
 import { ContextPanel } from "@/components/inbox/ContextPanel";
@@ -33,17 +33,18 @@ export default function Inbox() {
   const current = convs.find((c) => c.id === (selected ?? rows[0]?.conv.id));
   const contact = current && contactOf(current.contactId);
   const thread = contact ? threadForContact(contact.id, convs, msgs) : [];
-  const lastIn = [...thread].reverse().find((m) => m.direction === "in")?.channel;
-  const defaultCh: ReplyChannel = lastIn === "email" || lastIn === "webform" ? "email" : lastIn === "call" ? "sms" : "whatsapp";
+  const defaultCh: ReplyChannel = defaultReplyChannel(thread);
 
   const select = (id: string) => { setSelected(id); setMobileThread(true); setConvs((cs) => cs.map((c) => c.id === id ? { ...c, unread: false } : c)); };
   const patchContactConvs = (fn: (c: Conversation) => Conversation) => setConvs((cs) => cs.map((c) => c.contactId === contact!.id ? fn(c) : c));
   const addMsg = (m: Omit<Message, "id" | "createdAt">) => { const t = Date.now(); setNow(t); setMsgs((ms) => [...ms, { ...m, id: `m${t}`, createdAt: new Date(t).toISOString() }]); return new Date(t).toISOString(); };
 
   const send = (ch: ReplyChannel, body: string, subject?: string) => {
-    const at = addMsg({ conversationId: current!.id, channel: ch, direction: "out", body, subject });
+    const lastComment = [...thread].reverse().find((m) => m.channel === "comment");
+    const target = ch === "comment" && lastComment ? lastComment.conversationId : current!.id;
+    const at = addMsg({ conversationId: target, channel: ch, direction: "out", body, subject, ...(ch === "comment" && lastComment ? { network: lastComment.network, post: lastComment.post } : {}) });
     patchContactConvs((c) => ({ ...c, firstResponseAt: c.firstResponseAt ?? at, lastMessageAt: c.id === current!.id ? at : c.lastMessageAt, status: c.status === "open" ? "replied" : c.status, unread: false }));
-    toast.success(`Sent via ${ch === "sms" ? "SMS" : ch === "email" ? "Email" : "WhatsApp"} (demo)`);
+    toast.success(ch === "comment" ? "Public reply posted (demo)" : `Sent via ${{ sms: "SMS", email: "Email", whatsapp: "WhatsApp", facebook: "Facebook DM", instagram: "Instagram DM" }[ch]} (demo)`);
   };
   const action = (a: "lead" | "survey" | "job") => {
     const text = { lead: "Converted to lead · added to Sales pipeline", survey: "Survey requested · pick a slot in Schedule", job: "Job created · Installation pipeline" }[a];

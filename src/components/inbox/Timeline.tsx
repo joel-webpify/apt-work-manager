@@ -4,11 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Info, Send, CheckCircle2 } from "lucide-react";
-import type { InboxContact, Message, ReplyChannel } from "@/lib/inboxMock";
+import { replyChannelsFor, type InboxContact, type Message, type ReplyChannel } from "@/lib/inboxMock";
 import { ChannelIcon, channelMeta } from "./channels";
 
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+
+const replyLabel = (c: ReplyChannel) => c === "comment" ? "Public reply" : channelMeta[c].label;
 
 export function Timeline({ contact, messages, defaultChannel, onSend, onBack, onInfo }: {
   contact: InboxContact; messages: Message[]; defaultChannel: ReplyChannel;
@@ -21,6 +23,7 @@ export function Timeline({ contact, messages, defaultChannel, onSend, onBack, on
   useEffect(() => { setCh(defaultChannel); setBody(""); setSubject(""); }, [contact.id, defaultChannel]);
   useEffect(() => { end.current?.scrollIntoView({ block: "end" }); }, [messages.length, contact.id]);
   const used = [...new Set(messages.map((m) => m.channel))];
+  const options = replyChannelsFor(messages);
   let lastDay = "";
   const send = () => { if (!body.trim()) return; onSend(ch, body.trim(), ch === "email" ? subject || "Re: your enquiry" : undefined); setBody(""); setSubject(""); };
 
@@ -50,6 +53,9 @@ export function Timeline({ contact, messages, defaultChannel, onSend, onBack, on
           ) : (
             <div className={cn("flex", m.direction === "out" ? "justify-end" : "justify-start")}>
               <div className={cn("max-w-[75%] rounded-2xl px-3 py-2 text-sm", m.direction === "out" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm border bg-background")}>
+                {m.channel === "comment" && m.post && <div className={cn("mb-1.5 rounded-md border-l-2 px-2 py-1 text-[11px]", m.direction === "out" ? "border-primary-foreground/60 bg-primary-foreground/10" : "border-border bg-muted")}>
+                  {m.direction === "out" ? "Public reply on" : "Commented on"} {m.network === "instagram" ? "Instagram" : "Facebook"} post: “{m.post}”
+                </div>}
                 {m.subject && <div className="mb-1 text-xs font-semibold">{m.subject}</div>}
                 <div className="whitespace-pre-line">{m.body}</div>
                 <div className={cn("mt-1 flex items-center gap-1 text-[10px]", m.direction === "out" ? "justify-end opacity-80" : "text-muted-foreground")}>
@@ -63,18 +69,18 @@ export function Timeline({ contact, messages, defaultChannel, onSend, onBack, on
       <div ref={end} />
     </div>
     <div className="space-y-2 border-t p-3">
-      <div className="flex gap-1" role="radiogroup" aria-label="Reply channel">
-        {(["whatsapp", "sms", "email"] as ReplyChannel[]).map((c) => {
+      <div className="flex flex-wrap gap-1" role="radiogroup" aria-label="Reply channel">
+        {options.map((c) => {
           const Icon = channelMeta[c].icon;
           return <button key={c} role="radio" aria-checked={ch === c} onClick={() => setCh(c)} className={cn("flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs", ch === c ? "border-primary bg-primary/10 font-medium" : "text-muted-foreground")}>
-            <Icon className="h-3.5 w-3.5" />{channelMeta[c].label}
+            <Icon className="h-3.5 w-3.5" />{replyLabel(c)}
           </button>;
         })}
-        <span className="ml-auto self-center text-[11px] text-muted-foreground">To {ch === "email" ? contact.email : contact.phone}</span>
+        <span className="ml-auto self-center text-[11px] text-muted-foreground">{ch === "comment" ? "Visible to everyone on the post" : ch === "facebook" || ch === "instagram" ? `Private message to ${contact.name.split(" ")[0]}` : `To ${ch === "email" ? contact.email : contact.phone}`}</span>
       </div>
       {ch === "email" && <Input placeholder="Subject" value={subject} onChange={(e) => setSubject(e.target.value)} />}
       <div className="flex gap-2">
-        <Textarea rows={2} placeholder={`Reply via ${channelMeta[ch].label}…`} value={body} onChange={(e) => setBody(e.target.value)}
+        <Textarea rows={2} placeholder={ch === "comment" ? "Write a public reply…" : `Reply via ${replyLabel(ch)}…`} value={body} onChange={(e) => setBody(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) send(); }} className="min-h-0 resize-none" />
         <Button onClick={send} disabled={!body.trim()} className="self-end"><Send className="mr-1 h-4 w-4" />Send</Button>
       </div>

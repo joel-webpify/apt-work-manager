@@ -4,7 +4,7 @@ import { ChannelIcon, channelMeta, relTime } from "./channels";
 
 const slaCls = { fast: "bg-success/15 text-success", slow: "bg-warning/15 text-warning", overdue: "bg-destructive/15 text-destructive" } as const;
 const slaLabel = { fast: "<5m", slow: "15m+", overdue: "Overdue" } as const;
-const channels: (InboundChannel | "all")[] = ["all", "whatsapp", "email", "webform", "facebook", "call"];
+const channels: (InboundChannel | "all")[] = ["all", "whatsapp", "email", "webform", "facebook", "instagram", "comment", "call"];
 
 export function SlaChip({ sla }: { sla: ReturnType<typeof slaState> }) {
   if (!sla) return null;
@@ -39,14 +39,17 @@ export function ConversationList({ rows, all, status, channel, selected, now, on
       {rows.length === 0 && <p className="p-6 text-center text-sm text-muted-foreground">Nothing here. Nice work.</p>}
       {rows.map(({ conv, contact, last, sla }) =>
         <button key={conv.id} onClick={() => onSelect(conv.id)} className={cn("flex w-full gap-3 border-b px-3 py-3 text-left hover:bg-muted/50", selected === conv.id && "bg-muted")}>
-          <ChannelIcon channel={conv.channel} />
+          <span className="relative h-fit">
+            <ChannelIcon channel={conv.channel} />
+            {conv.channel === "comment" && conv.network && <span className="absolute -bottom-1 -right-1 rounded-full ring-2 ring-background"><ChannelIcon channel={conv.network} size="sm" /></span>}
+          </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className={cn("truncate text-sm", conv.unread ? "font-semibold" : "font-medium")}>{contact.name}</span>
               <span className="ml-auto shrink-0 text-[11px] text-muted-foreground">{relTime(conv.lastMessageAt, now)}</span>
             </div>
             <div className="mt-0.5 flex items-center gap-2">
-              <p className={cn("flex-1 truncate text-xs", conv.unread ? "text-foreground" : "text-muted-foreground")}>{last.direction === "out" ? "You: " : ""}{last.body.split("\n")[0]}</p>
+              <p className={cn("flex-1 truncate text-xs", conv.unread ? "text-foreground" : "text-muted-foreground")}>{last.channel === "comment" && last.network ? `${last.network === "instagram" ? "Instagram" : "Facebook"} comment · ` : ""}{last.direction === "out" ? "You: " : ""}{last.body.split("\n")[0]}</p>
               <SlaChip sla={sla} />
               {conv.unread && <span className="h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Unread" />}
             </div>
