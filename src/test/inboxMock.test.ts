@@ -9,6 +9,7 @@ describe("inbox SLA", () => {
   it("under 5 minutes is green", () => expect(slaState(conv(), at(3), now)).toBe("fast"));
   it("15+ minutes is amber", () => expect(slaState(conv(), at(20), now)).toBe("slow"));
   it("over 60 minutes is overdue", () => expect(slaState(conv(), at(61), now)).toBe("overdue"));
+  it("no chip once booked", () => expect(slaState(conv({ status: "booked" }), at(90), now)).toBeNull());
   it("no chip once replied", () => expect(slaState(conv({ firstResponseAt: at(1) }), at(90), now)).toBeNull());
 });
 

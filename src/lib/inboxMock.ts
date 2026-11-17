@@ -10,7 +10,7 @@ export type Sla = "fast" | "slow" | "overdue" | null;
 
 /** SLA chip for conversations awaiting a first reply. Measured from the first inbound message. */
 export function slaState(conv: Conversation, firstInboundAt: string, now: number): Sla {
-  if (conv.firstResponseAt || conv.status === "done") return null;
+  if (conv.firstResponseAt || conv.status !== "open") return null;
   const mins = (now - new Date(firstInboundAt).getTime()) / 60000;
   if (mins > 60) return "overdue";
   if (mins >= 15) return "slow";
@@ -22,7 +22,7 @@ export type StatusFilter = "needs" | "all" | "done";
 export function filterConversations(list: Conversation[], status: StatusFilter, channel: InboundChannel | "all") {
   return list.filter((c) => {
     if (channel !== "all" && c.channel !== channel) return false;
-    if (status === "needs") return c.status !== "done" && !c.firstResponseAt;
+    if (status === "needs") return c.status === "open" && !c.firstResponseAt;
     if (status === "done") return c.status === "done";
     return true;
   });
