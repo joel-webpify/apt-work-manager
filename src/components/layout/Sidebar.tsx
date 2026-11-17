@@ -23,6 +23,7 @@ import {
   Radar,
   HardHat,
   MessageCircle,
+  Inbox as InboxIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,7 +33,7 @@ type Group = { id: string; label?: string; items: Item[] };
 const groups: Group[] = [
   {
     id: "top",
-    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard, end: true }],
+    items: [{ to: "/", label: "Dashboard", icon: LayoutDashboard, end: true }, { to: "/inbox", label: "Inbox", icon: InboxIcon }],
   },
   {
     id: "crm",
