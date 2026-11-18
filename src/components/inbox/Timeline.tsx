@@ -59,7 +59,7 @@ export function Timeline({ contact, messages, defaultChannel, onSend, onBack, on
                 {m.subject && <div className="mb-1 text-xs font-semibold">{m.subject}</div>}
                 <div className="whitespace-pre-line">{m.body}</div>
                 <div className={cn("mt-1 flex items-center gap-1 text-[10px]", m.direction === "out" ? "justify-end opacity-80" : "text-muted-foreground")}>
-                  <ChannelIcon channel={m.channel} size="sm" />{channelMeta[m.channel].label} · {fmtTime(m.createdAt)}
+                  {m.direction === "out" ? (() => { const I = channelMeta[m.channel].icon; return <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary-foreground/20"><I className="h-3 w-3" /></span>; })() : <ChannelIcon channel={m.channel} size="sm" />}{m.channel === "comment" && m.direction === "out" ? "Public reply" : channelMeta[m.channel].label} · {fmtTime(m.createdAt)}
                 </div>
               </div>
             </div>
