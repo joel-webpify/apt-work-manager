@@ -6,14 +6,16 @@ import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Info, Send, CheckCircle2 } from "lucide-react";
 import { replyChannelsFor, type InboxContact, type Message, type ReplyChannel } from "@/lib/inboxMock";
 import { ChannelIcon, channelMeta } from "./channels";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { initials } from "./ConversationList";
 
 const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const fmtTime = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
 const replyLabel = (c: ReplyChannel) => c === "comment" ? "Public reply" : channelMeta[c].label;
 
-export function Timeline({ contact, messages, defaultChannel, onSend, onBack, onInfo }: {
-  contact: InboxContact; messages: Message[]; defaultChannel: ReplyChannel;
+export function Timeline({ contact, messages, defaultChannel, statusText, onSend, onBack, onInfo }: {
+  contact: InboxContact; statusText: string; messages: Message[]; defaultChannel: ReplyChannel;
   onSend: (ch: ReplyChannel, body: string, subject?: string) => void; onBack: () => void; onInfo: () => void;
 }) {
   const [ch, setCh] = useState<ReplyChannel>(defaultChannel);
@@ -28,16 +30,17 @@ export function Timeline({ contact, messages, defaultChannel, onSend, onBack, on
   const send = () => { if (!body.trim()) return; onSend(ch, body.trim(), ch === "email" ? subject || "Re: your enquiry" : undefined); setBody(""); setSubject(""); };
 
   return <div className="flex h-full flex-col">
-    <div className="flex items-center gap-2 border-b px-4 py-3">
+    <div className="flex items-center gap-3 border-b px-4 py-3">
       <Button variant="ghost" size="icon" className="md:hidden" onClick={onBack} aria-label="Back"><ArrowLeft className="h-4 w-4" /></Button>
+      <Avatar className="hidden sm:flex"><AvatarFallback>{initials(contact.name)}</AvatarFallback></Avatar>
       <div className="min-w-0 flex-1">
         <div className="truncate font-semibold">{contact.name}</div>
-        <div className="text-xs text-muted-foreground">{contact.postcode}</div>
+        <div className="truncate text-sm text-muted-foreground">{statusText} · {contact.postcode}</div>
       </div>
-      <div className="flex gap-1">{used.map((c) => <ChannelIcon key={c} channel={c} size="sm" />)}</div>
+      <div className="hidden gap-1 sm:flex">{used.map((c) => <ChannelIcon key={c} channel={c} size="sm" />)}</div>
       <Button variant="ghost" size="icon" className="xl:hidden" onClick={onInfo} aria-label="Contact details"><Info className="h-4 w-4" /></Button>
     </div>
-    <div className="flex-1 space-y-3 overflow-y-auto bg-muted/30 px-4 py-4">
+    <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
       {messages.map((m) => {
         const day = fmtDay(m.createdAt);
         const divider = day !== lastDay ? (lastDay = day) : null;
@@ -46,14 +49,14 @@ export function Timeline({ contact, messages, defaultChannel, onSend, onBack, on
           {m.direction === "system" ? (
             <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 text-success" />{m.body} · {fmtTime(m.createdAt)}</div>
           ) : m.channel === "call" ? (
-            <div className="mx-auto flex max-w-md items-start gap-2 rounded-lg border bg-background px-3 py-2 text-sm">
+            <div className="mx-auto flex max-w-md items-start gap-2 rounded-lg border px-3 py-2 text-sm">
               <ChannelIcon channel="call" size="sm" />
               <div><div className="text-xs font-medium">{m.durationSec ? `Call · ${Math.floor(m.durationSec / 60)}m ${m.durationSec % 60}s` : "Missed call"} · {fmtTime(m.createdAt)}</div><div className="text-muted-foreground">{m.body}</div></div>
             </div>
           ) : (
             <div className={cn("flex", m.direction === "out" ? "justify-end" : "justify-start")}>
-              <div className={cn("max-w-[75%] rounded-2xl px-3 py-2 text-sm", m.direction === "out" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm border bg-background")}>
-                {m.channel === "comment" && m.post && <div className={cn("mb-1.5 rounded-md border-l-2 px-2 py-1 text-[11px]", m.direction === "out" ? "border-primary-foreground/60 bg-primary-foreground/10" : "border-border bg-muted")}>
+              <div className={cn("max-w-[80%] rounded-2xl px-4 py-2 text-sm", m.direction === "out" ? "rounded-br-sm bg-primary text-primary-foreground" : "rounded-bl-sm bg-muted")}>
+                {m.channel === "comment" && m.post && <div className={cn("mb-1.5 rounded-md border-l-2 px-2 py-1 text-[11px]", m.direction === "out" ? "border-primary-foreground/60 bg-primary-foreground/10" : "border-border bg-background")}>
                   {m.direction === "out" ? "Public reply on" : "Commented on"} {m.network === "instagram" ? "Instagram" : "Facebook"} post: “{m.post}”
                 </div>}
                 {m.subject && <div className="mb-1 text-xs font-semibold">{m.subject}</div>}
