@@ -22,12 +22,13 @@ export const filterMeta: Record<Exclude<ChannelFilter, "all">, { label: string; 
 
 /** Icon for a message: comments use their network's icon so Facebook/Instagram each have one icon. */
 export function iconFor(channel: InboundChannel, network?: "facebook" | "instagram"): LucideIcon {
-  return channel === "comment" && network ? channelMeta[network].icon : channelMeta[channel].icon;
+  const meta = channel === "comment" && network ? channelMeta[network] : channelMeta[channel];
+  return meta?.icon ?? MessageSquare;
 }
 
 export function labelFor(channel: InboundChannel, network?: "facebook" | "instagram") {
   if (channel === "comment" && network) return `${network === "instagram" ? "Instagram" : "Facebook"} comment`;
-  return channelMeta[channel].label;
+  return channelMeta[channel]?.label ?? "Message";
 }
 
 export function ChannelIcon({ channel, network, size = "md" }: { channel: InboundChannel; network?: "facebook" | "instagram"; size?: "sm" | "md" }) {
