@@ -1,12 +1,12 @@
 import { Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
-import { slaState, type Conversation, type InboxContact, type InboundChannel, type Message, type StatusFilter } from "@/lib/inboxMock";
-import { ChannelIcon, channelMeta, relTime } from "./channels";
+import { filterKey, slaState, type ChannelFilter, type Conversation, type InboxContact, type InboundChannel, type Message, type StatusFilter } from "@/lib/inboxMock";
+import { filterMeta, iconFor, labelFor, relTime } from "./channels";
 
 const slaCls = { fast: "bg-success text-primary-foreground", slow: "bg-warning text-foreground", overdue: "bg-destructive text-destructive-foreground" } as const;
 const slaLabel = { fast: "<5m", slow: "15m+", overdue: "Overdue" } as const;
-const channels: (InboundChannel | "all")[] = ["all", "whatsapp", "email", "webform", "facebook", "instagram", "comment", "call"];
+const channels: ChannelFilter[] = ["all", "whatsapp", "email", "facebook", "instagram", "review"];
 
 export function SlaChip({ sla }: { sla: ReturnType<typeof slaState> }) {
   if (!sla) return null;
@@ -14,9 +14,8 @@ export function SlaChip({ sla }: { sla: ReturnType<typeof slaState> }) {
 }
 
 export function ChannelBadge({ channel, network }: { channel: InboundChannel; network?: "facebook" | "instagram" }) {
-  const meta = channel === "comment" && network ? channelMeta[network] : channelMeta[channel];
-  const Icon = meta.icon;
-  const label = channel === "comment" && network ? `${network === "instagram" ? "Instagram" : "Facebook"} comment` : channelMeta[channel].label;
+  const Icon = iconFor(channel, network);
+  const label = labelFor(channel, network);
   return <span className="inline-flex items-center gap-1 rounded-full border bg-background px-2 py-0.5 text-[11px] text-foreground">
     <Icon className="h-3 w-3" />{label}
   </span>;
@@ -26,8 +25,8 @@ export const initials = (n: string) => n.split(" ").map((p) => p[0]).join("").sl
 
 interface Props {
   rows: { conv: Conversation; contact: InboxContact; last: Message; sla: ReturnType<typeof slaState> }[];
-  all: Conversation[]; status: StatusFilter; channel: InboundChannel | "all"; selected?: string; now: number; query: string;
-  onStatus: (s: StatusFilter) => void; onChannel: (c: InboundChannel | "all") => void; onSelect: (id: string) => void; onQuery: (q: string) => void;
+  all: Conversation[]; status: StatusFilter; channel: ChannelFilter; selected?: string; now: number; query: string;
+  onStatus: (s: StatusFilter) => void; onChannel: (c: ChannelFilter) => void; onSelect: (id: string) => void; onQuery: (q: string) => void;
 }
 
 export function ConversationList({ rows, all, status, channel, selected, now, query, onStatus, onChannel, onSelect, onQuery }: Props) {
@@ -45,13 +44,15 @@ export function ConversationList({ rows, all, status, channel, selected, now, qu
         {([["needs", "Needs reply"], ["all", "All"], ["done", "Done"]] as const).map(([id, l]) =>
           <button key={id} onClick={() => onStatus(id)} className={cn("rounded px-2 py-1.5", status === id ? "bg-background font-medium shadow-sm" : "text-muted-foreground")}>{l}</button>)}
       </div>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-0.5">
         {channels.map((c) => {
-          const count = c === "all" ? all.length : all.filter((x) => x.channel === c).length;
+          const count = c === "all" ? all.length : all.filter((x) => filterKey(x) === c).length;
           const active = channel === c;
-          return <button key={c} onClick={() => onChannel(c)} title={c === "all" ? "All channels" : channelMeta[c].label} aria-pressed={active}
-            className={cn("flex items-center gap-1 rounded-full border px-2 py-1 text-xs", active ? "border-primary bg-primary/10 text-foreground" : "text-muted-foreground hover:text-foreground")}>
-            {c === "all" ? "All" : <ChannelIcon channel={c} size="sm" />}<span>{count}</span>
+          const Icon = c === "all" ? null : filterMeta[c].icon;
+          const label = c === "all" ? "All channels" : filterMeta[c].label;
+          return <button key={c} onClick={() => onChannel(c)} title={label} aria-label={label} aria-pressed={active}
+            className={cn("flex items-center gap-1 rounded-full border px-2 py-1 text-xs", active ? "border-foreground bg-foreground text-background" : "text-muted-foreground hover:text-foreground")}>
+            {Icon ? <Icon className="h-3.5 w-3.5" /> : "All"}<span>{count}</span>
           </button>;
         })}
       </div>

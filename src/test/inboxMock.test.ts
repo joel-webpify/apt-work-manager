@@ -27,5 +27,15 @@ describe("comments and DMs", () => {
   it("plain threads only offer WhatsApp, SMS and email", () => expect(replyChannelsFor([msg({})])).toEqual(["whatsapp", "sms", "email"]));
   it("comments default to a public reply", () => expect(defaultReplyChannel([msg({ channel: "comment", network: "facebook" })])).toBe("comment"));
   it("Instagram DMs default to an Instagram DM", () => expect(defaultReplyChannel([msg({ channel: "instagram" })])).toBe("instagram"));
-  it("comment channel filter", () => expect(filterConversations([conv({ id: "a", channel: "comment" }), conv({ id: "b" })], "all", "comment").map((c) => c.id)).toEqual(["a"]));
+  it("Facebook filter covers both Facebook DMs and Facebook comments", () =>
+    expect(filterConversations([conv({ id: "a", channel: "comment", network: "facebook" }), conv({ id: "b", channel: "facebook" }), conv({ id: "c", channel: "comment", network: "instagram" })], "all", "facebook").map((c) => c.id)).toEqual(["a", "b"]));
+  it("Instagram comments sit under the Instagram filter", () =>
+    expect(filterConversations([conv({ id: "a", channel: "comment", network: "instagram" }), conv({ id: "b", channel: "instagram" })], "all", "instagram").map((c) => c.id)).toEqual(["a", "b"]));
+});
+
+describe("Google reviews", () => {
+  const msg = (p: Partial<Message>): Message => ({ id: "m", conversationId: "x", channel: "review", direction: "in", body: "", createdAt: at(1), rating: 5, ...p });
+  it("reviews default to a public reply on Google", () => expect(defaultReplyChannel([msg({})])).toBe("review"));
+  it("a review thread offers a reply on Google", () => expect(replyChannelsFor([msg({})])).toContain("review"));
+  it("review filter", () => expect(filterConversations([conv({ id: "a", channel: "review" }), conv({ id: "b" })], "all", "review").map((c) => c.id)).toEqual(["a"]));
 });

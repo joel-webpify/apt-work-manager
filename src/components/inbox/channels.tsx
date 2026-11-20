@@ -1,22 +1,45 @@
-import { MessageCircle, Mail, FileText, Facebook, Instagram, MessageSquareQuote, Phone, MessageSquare, type LucideIcon } from "lucide-react";
-import type { InboundChannel } from "@/lib/inboxMock";
+import { MessageCircle, Mail, Facebook, Instagram, MessageSquareQuote, MessageSquare, Star, type LucideIcon } from "lucide-react";
+import type { ChannelFilter, InboundChannel } from "@/lib/inboxMock";
 
-export const channelMeta: Record<InboundChannel, { label: string; icon: LucideIcon; cls: string }> = {
-  whatsapp: { label: "WhatsApp", icon: MessageCircle, cls: "bg-success/15 text-success" },
-  email: { label: "Email", icon: Mail, cls: "bg-primary/10 text-primary" },
-  webform: { label: "Web form", icon: FileText, cls: "bg-accent text-accent-foreground" },
-  facebook: { label: "Facebook DM", icon: Facebook, cls: "bg-info/15 text-info" },
-  instagram: { label: "Instagram DM", icon: Instagram, cls: "bg-social-instagram/15 text-social-instagram" },
-  comment: { label: "Comment", icon: MessageSquareQuote, cls: "bg-secondary text-secondary-foreground" },
-  call: { label: "Call", icon: Phone, cls: "bg-warning/15 text-warning" },
-  sms: { label: "SMS", icon: MessageSquare, cls: "bg-muted text-foreground" },
+/** Channel icons are deliberately monochrome: the icon shape tells channels apart, not colour. */
+export const channelMeta: Record<InboundChannel, { label: string; icon: LucideIcon }> = {
+  whatsapp: { label: "WhatsApp", icon: MessageCircle },
+  email: { label: "Email", icon: Mail },
+  facebook: { label: "Facebook DM", icon: Facebook },
+  instagram: { label: "Instagram DM", icon: Instagram },
+  comment: { label: "Comment", icon: MessageSquareQuote },
+  review: { label: "Google review", icon: Star },
+  sms: { label: "SMS", icon: MessageSquare },
 };
 
-export function ChannelIcon({ channel, size = "md" }: { channel: InboundChannel; size?: "sm" | "md" }) {
-  const m = channelMeta[channel];
-  const Icon = m.icon;
-  const box = size === "sm" ? "h-5 w-5" : "h-7 w-7";
-  return <span title={m.label} aria-label={m.label} className={`inline-flex shrink-0 items-center justify-center rounded-full ${box} ${m.cls}`}><Icon className={size === "sm" ? "h-3 w-3" : "h-3.5 w-3.5"} /></span>;
+export const filterMeta: Record<Exclude<ChannelFilter, "all">, { label: string; icon: LucideIcon }> = {
+  whatsapp: { label: "WhatsApp", icon: MessageCircle },
+  email: { label: "Email", icon: Mail },
+  facebook: { label: "Facebook (DMs and comments)", icon: Facebook },
+  instagram: { label: "Instagram (DMs and comments)", icon: Instagram },
+  review: { label: "Google reviews", icon: Star },
+};
+
+/** Icon for a message: comments use their network's icon so Facebook/Instagram each have one icon. */
+export function iconFor(channel: InboundChannel, network?: "facebook" | "instagram"): LucideIcon {
+  return channel === "comment" && network ? channelMeta[network].icon : channelMeta[channel].icon;
+}
+
+export function labelFor(channel: InboundChannel, network?: "facebook" | "instagram") {
+  if (channel === "comment" && network) return `${network === "instagram" ? "Instagram" : "Facebook"} comment`;
+  return channelMeta[channel].label;
+}
+
+export function ChannelIcon({ channel, network, size = "md" }: { channel: InboundChannel; network?: "facebook" | "instagram"; size?: "sm" | "md" }) {
+  const Icon = iconFor(channel, network);
+  const label = labelFor(channel, network);
+  return <span title={label} aria-label={label} className="inline-flex shrink-0 items-center justify-center text-current"><Icon className={size === "sm" ? "h-3.5 w-3.5" : "h-4 w-4"} /></span>;
+}
+
+export function Stars({ rating }: { rating: number }) {
+  return <span className="inline-flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
+    {[1, 2, 3, 4, 5].map((i) => <Star key={i} className={`h-3.5 w-3.5 ${i <= rating ? "fill-current" : "opacity-30"}`} />)}
+  </span>;
 }
 
 export function relTime(iso: string, now: number) {
